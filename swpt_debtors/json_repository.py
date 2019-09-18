@@ -2,12 +2,17 @@ import json
 import re
 
 
-class InvalidPath(Exception):
+ARCHIVES_PROPERTY = '_archives'
+WRITABLES_PROPERTY = '_writables'
+SEALED_PROPERTY = '_sealed'
+
+
+class PathError(Exception):
     """Invalid JSON repository path."""
 
 
-class ForbiddenOverride(Exception):
-    """Attempted override of a non-writable property."""
+class NotWritableError(Exception):
+    """Attempted write to a non-writable property."""
 
 
 class JSONReporitory:
@@ -22,7 +27,7 @@ class JSONReporitory:
                 if JSONReporitory.PART.match(part):
                     yield part
                 else:
-                    raise InvalidPath
+                    raise PathError
 
     def _iter_values(self, path):
         value = self.obj
@@ -31,12 +36,14 @@ class JSONReporitory:
             try:
                 value = value[part]
             except (TypeError, KeyError):
-                raise InvalidPath
+                raise PathError
             yield value
 
     def get(self, path):
-        *_, last = self._iter_values(path)
-        return last
+        obj = self.obj
+        for part in self._iter_parts(path):
+            obj = getitem(obj, part)
+        return obj
 
     def set(self, path, new_value):
         parts_iter = self._iter_parts(path)
@@ -53,8 +60,44 @@ class JSONReporitory:
                 raise ForbiddenOverride
 
 
-def _getitem(value, key):
+def get_archives(obj):
+    archives = obj.get(ARCHIVES_PROPERTY)
+    return archives if isinstance(archives, list) else []
+
+
+def get_writables(obj):
+    writables = obj.get(WRITABLES_PROPERTY)
+    return writables if isinstance(writables, list) else []
+
+
+def is_sealed(obj):
+    is_sealed = obj.get(SEALED_PROPERTY)
+    return is_sealed if isinstance(is_sealed, bool) else True
+
+
+def getitem(obj, key):
     try:
-        return value[key]
+        item = obj[key]
     except (TypeError, KeyError):
-        raise InvalidPath
+        raise PathError
+    if key in get_archives(obj):
+        if isinstance(item, list) and len(item) > 0:
+            item = item[-1]
+        else:
+            raise PathError
+    return item
+
+
+def setitem(obj, key, value):
+    if not isinstance(obj, dict):
+        raise PathError
+    if key not in obj and is_sealed(obj):
+        raise NotWritableError
+    if key in obj and key not in get_writables(obj):
+        raise NotWritableError
+    if key in get_archives(obj):
+        archived_values = obj.get(key)
+        if not isinstance(archived_values, list):
+            archived_values = []
+        archived_values.append(value)
+    obj[key] = value
