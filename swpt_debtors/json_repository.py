@@ -1,10 +1,14 @@
 import json
 import re
+from typing import NamedTuple
+from datetime import datetime, timezone
 
 
-ARCHIVES_PROPERTY = '_archives'
-WRITABLES_PROPERTY = '_writables'
-SEALED_PROPERTY = '_sealed'
+ARCHIVES_PROPNAME = '_archives'
+WRITABLES_PROPNAME = '_writables'
+IS_SEALED_PROPNAME = '_sealed'
+VALUES_PROPNAME = '_values'
+TIMESTAMPS_PROPNAME = '_timestamps'
 
 
 class PathError(Exception):
@@ -15,11 +19,15 @@ class NotWritableError(Exception):
     """Attempted write to a non-writable property."""
 
 
+class MetapropsPermissionError(Exception):
+    """Attempted forbidden meta-property change."""
+
+
 class JSONReporitory:
     PART = re.compile(r'^[A-Za-z0-9_]+$')
 
     def __init__(self, s):
-        self.obj = json.loads(s)
+        self.obj = json.loads(s, object_hook=_json_object_hook)
 
     def _iter_parts(self, path):
         if path:
@@ -45,59 +53,168 @@ class JSONReporitory:
             obj = getitem(obj, part)
         return obj
 
-    def set(self, path, new_value):
-        parts_iter = self._iter_parts(path)
-        for value in self._iter_values(path):
-            # TODO: what if the type is not right?
-            _writables = value.get('_writables', [])
-            _archives = value.get('_archives', [])
-            _sealed = value.get('_sealed', False)
+    # def set(self, path, new_value):
+    #     parts_iter = self._iter_parts(path)
+    #     for value in self._iter_values(path):
+    #         # TODO: what if the type is not right?
+    #         _writables = value.get('_writables', [])
+    #         _archives = value.get('_archives', [])
+    #         _sealed = value.get('_sealed', False)
 
-            part = next(parts_iter)
-            if _sealed and part not in value:
-                raise ForbiddenOverride
-            if part not in _writables:
-                raise ForbiddenOverride
-
-
-def get_archives(obj):
-    archives = obj.get(ARCHIVES_PROPERTY)
-    return archives if isinstance(archives, list) else []
+    #         part = next(parts_iter)
+    #         if _sealed and part not in value:
+    #             raise ForbiddenOverride
+    #         if part not in _writables:
+    #             raise ForbiddenOverride
 
 
-def get_writables(obj):
-    writables = obj.get(WRITABLES_PROPERTY)
-    return writables if isinstance(writables, list) else []
-
-
-def is_sealed(obj):
-    is_sealed = obj.get(SEALED_PROPERTY)
-    return is_sealed if isinstance(is_sealed, bool) else True
+# def set_metaprops(obj, new_archives: set, new_writables: set, new_is_sealed: bool):
+#     old_writables = set(get_writables(obj))
+#     old_archives = set(get_archives(obj))
+#     old_is_sealed = is_sealed(obj)
+#     if old_is_sealed and not new_is_sealed:
+#         raise MetapropsPermissionError('Can not unseal a sealed object.')
+#     if old_archives - new_archives:
+#         raise MetapropsPermissionError('Can not change an archived property to a regular one.')
+#     if new_archives & old_writables:
+#         pass
+#     if old_is_sealed and new_archives - old_writables:
+#         raise MetapropsPermissionError('Can not change an archived property to a regular one.')
+#     if all([k in old_archives for k in archives]):
+#         obj[ARCHIVES_PROPERTY] = archives
 
 
 def getitem(obj, key):
-    if not isinstance(obj, dict):
+    if not isinstance(obj, ItemsDict):
         raise PathError
     if key not in obj:
         raise PathError
     item = obj[key]
-    if key in get_archives(obj):
-        if not isinstance(item, list) or len(item) == 0:
+    if key in obj.archives:
+        if not isinstance(item, ItemsArchive):
             raise PathError
-        return item[-1]
+        return item.get_last_value()
     return item
 
 
-def setitem(obj, key, value):
-    if not isinstance(obj, dict):
-        raise PathError
-    if key not in obj and is_sealed(obj):
-        raise NotWritableError
-    if key in obj and key not in get_writables(obj):
-        raise NotWritableError
-    if key in get_archives(obj):
-        archived_values = obj.get(key)
-        if not isinstance(archived_values, list):
-            archived_values = []
-        archived_values.append(value)
-    obj[key] = value
+# def setitem(obj, key, value):
+#     if not isinstance(obj, dict):
+#         raise PathError
+#     if key not in obj and get_is_sealed(obj):
+#         raise NotWritableError
+#     if key in obj and key not in get_writables(obj):
+#         raise NotWritableError
+#     if key in get_archives(obj):
+#         archive = obj.get(key)
+#         if not isinstance(ItemsArchive, list):
+#             archive = ItemsArchive(values=[], timestamps=[])
+#         archive.add_item(value, datetime.now(tz=timezone.utc))
+#         value = archive
+#     obj[key] = value
+
+
+class ItemsDict:
+    """Represents a dictionary of values."""
+
+    def __init__(self, obj):
+        self.obj = obj.copy()
+        self.obj.pop(VALUES_PROPNAME, None)
+        self.obj.pop(TIMESTAMPS_PROPNAME, None)
+        archives = self.obj.pop(ARCHIVES_PROPNAME, None)
+        writables = self.obj.pop(WRITABLES_PROPNAME, None)
+        is_sealed = self.obj.pop(IS_SEALED_PROPNAME, None)
+        self.archives = set(archives) if isinstance(archives, list) else set()
+        self.writables = set(writables) if isinstance(writables, list) else set()
+        self.is_sealed = is_sealed if isinstance(is_sealed, bool) else True
+
+    def _setitem(self, key, value):
+        obj = self.obj
+        if key not in obj and self.is_sealed:
+            raise NotWritableError()
+        if key in obj and key not in self.writables:
+            raise NotWritableError
+        if key in self.archives:
+            try:
+                v = obj[key]
+            except KeyError:
+                archive = ItemsArchive([], [])
+            else:
+                archive = v if isinstance(v, ItemsArchive) else ItemsArchive([], [])
+            archive.add_item(value, datetime.now(tz=timezone.utc))
+            value = archive
+        obj[key] = value
+
+    def asdict(self):
+        d = {
+            ARCHIVES_PROPNAME: self.archives,
+            WRITABLES_PROPNAME: self.writables,
+            IS_SEALED_PROPNAME: self.is_sealed,
+        }
+        d.update(self.obj)
+        return d
+
+    def update(self, new):
+        if self.archives - new.archives:
+            raise MetapropsPermissionError('Can not change an archived property to a regular one.')
+        self.archives = new.archives
+        for key, value in new.obj.items():
+            self._setitem(key, value)
+
+    #     old_writables = set(get_writables(obj))
+    #     old_archives = set(get_archives(obj))
+    #     old_is_sealed = is_sealed(obj)
+    #     if old_is_sealed and not new_is_sealed:
+    #         raise MetapropsPermissionError('Can not unseal a sealed object.')
+    #     if old_archives - new_archives:
+    #         raise MetapropsPermissionError('Can not change an archived property to a regular one.')
+    #     if new_archives & old_writables:
+    #         pass
+    #     if old_is_sealed and new_archives - old_writables:
+    #         raise MetapropsPermissionError('Can not change an archived property to a regular one.')
+    #     if all([k in old_archives for k in archives]):
+    #         obj[ARCHIVES_PROPERTY] = archives
+
+    def getitem(self, key):
+        try:
+            item = self.obj[key]
+        except KeyError:
+            raise PathError
+        if key in self.archives:
+            if not isinstance(item, ItemsArchive):
+                raise PathError
+            return item.get_last_value()
+        return item
+
+
+class ItemsArchive(NamedTuple):
+    """Represents an archive of values."""
+
+    values: list
+    timestamps: list
+
+    def add_item(self, value, timestamp):
+        self.values.append(value)
+        self.timestamps.append(timestamp)
+
+    def get_last_value(self):
+        return self.values[-1]
+
+    def get_last_timestamp(self):
+        return self.timestamps[-1]
+
+
+def _json_object_hook(obj):
+    try:
+        values = obj[VALUES_PROPNAME]
+        timestamps = obj[TIMESTAMPS_PROPNAME]
+        if isinstance(values, list) and isinstance(timestamps, list) and len(values) == len(timestamps) > 0:
+            return ItemsArchive(values=values, timestamps=timestamps)
+    except KeyError:
+        pass
+    return ItemsDict(obj)
+
+
+def _json_default_hook(obj):
+    if isinstance(obj, ItemsArchive):
+        return {VALUES_PROPNAME: obj.values, TIMESTAMPS_PROPNAME: obj.timestamps}
+    raise TypeError
