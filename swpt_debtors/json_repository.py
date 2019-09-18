@@ -76,15 +76,15 @@ def is_sealed(obj):
 
 
 def getitem(obj, key):
-    try:
-        item = obj[key]
-    except (TypeError, KeyError):
+    if not isinstance(obj, dict):
         raise PathError
+    if key not in obj:
+        raise PathError
+    item = obj[key]
     if key in get_archives(obj):
-        if isinstance(item, list) and len(item) > 0:
-            item = item[-1]
-        else:
+        if not isinstance(item, list) or len(item) == 0:
             raise PathError
+        return item[-1]
     return item
 
 
