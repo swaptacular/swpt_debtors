@@ -9,7 +9,7 @@ class PathError(Exception):
     """Invalid JSON repository path."""
 
 
-class ForbiddenUpdateError(Exception):
+class ForbiddenChangeError(Exception):
     """Attempted a forbidden update."""
 
 
@@ -43,14 +43,14 @@ class JSONReporitory:
         current_part = ''
         while True:
             if not isinstance(obj, Pledge):
-                raise ForbiddenUpdateError(path=current_part)
+                raise ForbiddenChangeError(path=current_part)
             try:
                 part = next(parts_iter)
             except StopIteration:
                 pass
             current_part = f'{current_part}/{part}'
-            if obj.is_update_forbidden(part):
-                raise ForbiddenUpdateError(path=current_part)
+            if obj.is_change_forbidden(part):
+                raise ForbiddenChangeError(path=current_part)
 
 
 class Pledge(abc.MutableMapping):
@@ -95,13 +95,13 @@ class Pledge(abc.MutableMapping):
         return self._obj[key]
 
     def __setitem__(self, key, value):
-        if self.is_update_forbidden(key):
-            raise ForbiddenUpdateError(key)
+        if self.is_change_forbidden(key):
+            raise ForbiddenChangeError(key)
         self._obj[key] = value
 
     def __delitem__(self, key):
-        if self.is_update_forbidden(key):
-            raise ForbiddenUpdateError(key)
+        if self.is_sealed or self.is_change_forbidden(key):
+            raise ForbiddenChangeError(key)
         del self._obj[key]
 
     def __iter__(self):
@@ -110,11 +110,11 @@ class Pledge(abc.MutableMapping):
     def __len__(self):
         return len(self._obj)
 
-    def is_update_forbidden(self, key):
+    def is_change_forbidden(self, key):
         extends_sealed = key not in self and self.is_sealed
-        updates_reserved = key in Pledge.RESERVED_PROPNAMES
-        updates_not_writable = key in self and key not in self.writables
-        return extends_sealed or updates_reserved or updates_not_writable
+        changes_reserved = key in Pledge.RESERVED_PROPNAMES
+        changes_not_writable = key in self and key not in self.writables
+        return extends_sealed or changes_reserved or changes_not_writable
 
     def revise(self, new_version):
         removed_keys = (k for k in self if k not in new_version)
