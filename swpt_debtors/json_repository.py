@@ -16,8 +16,8 @@ class ForbiddenChangeError(Exception):
 class JSONReporitory:
     URL_PART = re.compile(r'^[A-Za-z0-9_]+$')
 
-    def __init__(self, s):
-        self._obj = json.loads(s, object_hook=_json_object_hook)
+    def __init__(self, json_str):
+        self._obj = json.loads(json_str, object_hook=_json_object_hook)
 
     def _get_path_parts(self, path):
         parts = []
@@ -49,10 +49,8 @@ class JSONReporitory:
             return obj
         return _get_json_property(obj, propname)
 
-    def put(self, path, value):
-        if isinstance(value, dict):
-            value = Pledge(value, created_at=datetime.now(tz=timezone.utc))
-
+    def put(self, path, json_str):
+        value = json.loads(json_str, object_hook=_json_object_hook)
         obj, propname = self._follow_path(path)
         if propname is None:
             prop = obj
