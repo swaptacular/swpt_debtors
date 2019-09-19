@@ -45,7 +45,7 @@ class JSONReporitory:
 
     def get(self, path):
         obj, propname = self._follow_path(path)
-        return obj if propname is None else obj.get_json_property(propname)
+        return obj if propname is None else _get_json_property(obj, propname)
 
     def put(self, path, value):
         if isinstance(value, dict):
@@ -58,7 +58,7 @@ class JSONReporitory:
                 return
             except ForbiddenChangeError:
                 pass
-            prop = obj.get_json_property(propname)
+            prop = _get_json_property(obj, propname)
         else:
             prop = obj
 
@@ -71,7 +71,7 @@ class JSONReporitory:
         obj, propname = self._follow_path(path)
         if propname is None:
             raise ForbiddenChangeError
-        obj.delete_json_property(propname)
+        _delete_json_property(obj, propname)
 
 
 class Pledge(abc.MutableMapping):
@@ -135,18 +135,6 @@ class Pledge(abc.MutableMapping):
         asdict = str(self.asdict())
         return f'Pledge({asdict})'
 
-    def get_json_property(self, propname):
-        try:
-            return self[propname]
-        except KeyError:
-            raise PathError
-
-    def delete_json_property(self, propname):
-        try:
-            del self[propname]
-        except KeyError:
-            raise PathError
-
     def is_change_forbidden(self, key):
         extends_sealed = key not in self and self.is_sealed
         changes_reserved = key in Pledge.RESERVED_PROPNAMES
@@ -183,3 +171,17 @@ def _json_default(obj):
     if isinstance(obj, Pledge):
         return obj.asdict()
     raise TypeError
+
+
+def _get_json_property(obj, propname):
+    try:
+        return obj[propname]
+    except KeyError:
+        raise PathError
+
+
+def _delete_json_property(obj, propname):
+    try:
+        del obj[propname]
+    except KeyError:
+        raise PathError
