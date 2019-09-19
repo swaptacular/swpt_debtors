@@ -45,7 +45,7 @@ class JSONReporitory:
 
     def get(self, path):
         obj, propname = self._follow_path(path)
-        return obj if propname is None else obj.get_property(propname)
+        return obj if propname is None else obj.get_json_property(propname)
 
     def set(self, path, value):
         obj, propname = self._follow_path(path)
@@ -56,7 +56,7 @@ class JSONReporitory:
                 return
             except ForbiddenChangeError:
                 pass
-            prop = obj.get_property(propname)
+            prop = obj.get_json_property(propname)
         else:
             prop = obj
 
@@ -127,7 +127,7 @@ class Pledge(abc.MutableMapping):
         asdict = str(self.asdict())
         return f'Pledge({asdict})'
 
-    def get_property(self, propname):
+    def get_json_property(self, propname):
         try:
             return self[propname]
         except KeyError:
