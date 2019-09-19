@@ -6,14 +6,14 @@ import iso8601
 
 
 class PathError(Exception):
-    """Invalid JSON repository path."""
+    """Invalid repository path."""
 
 
-class ForbiddenChangeError(Exception):
-    """Attempted a forbidden update."""
+class IllegalChange(Exception):
+    """Attempted illegal change."""
 
 
-class JSONReporitory:
+class PledgesReporitory:
     URL_PART = re.compile(r'^[A-Za-z0-9_]+$')
 
     def __init__(self, json_str):
@@ -23,7 +23,7 @@ class JSONReporitory:
         parts = []
         if path:
             for part in path.split('/'):
-                if JSONReporitory.URL_PART.match(part):
+                if PledgesReporitory.URL_PART.match(part):
                     parts.append(part)
                 else:
                     raise PathError
@@ -59,19 +59,19 @@ class JSONReporitory:
             try:
                 obj[propname] = value
                 return
-            except ForbiddenChangeError:
+            except IllegalChange:
                 pass
             prop = _get_json_property(obj, propname)
 
         # If the property is a pledge, try to revise it.
         if not isinstance(prop, Pledge):
-            raise ForbiddenChangeError
+            raise IllegalChange
         prop.revise(value)
 
     def delete(self, path):
         obj, propname = self._follow_path(path)
         if propname is None:
-            raise ForbiddenChangeError
+            raise IllegalChange
         _delete_json_property(obj, propname)
 
 
@@ -115,12 +115,12 @@ class Pledge(abc.MutableMapping):
 
     def __setitem__(self, key, value):
         if self.is_change_forbidden(key):
-            raise ForbiddenChangeError
+            raise IllegalChange
         self._obj[key] = value
 
     def __delitem__(self, key):
         if self.is_sealed or self.is_change_forbidden(key):
-            raise ForbiddenChangeError
+            raise IllegalChange
         del self._obj[key]
 
     def __iter__(self):
