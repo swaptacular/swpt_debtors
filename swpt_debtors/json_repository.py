@@ -47,7 +47,7 @@ class JSONReporitory:
         obj, propname = self._follow_path(path)
         return obj if propname is None else obj.get_json_property(propname)
 
-    def set(self, path, value):
+    def put(self, path, value):
         obj, propname = self._follow_path(path)
         if propname is not None:
             # Try to override the value of the property directly.
