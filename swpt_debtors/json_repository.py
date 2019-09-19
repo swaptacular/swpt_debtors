@@ -43,12 +43,20 @@ class JSONReporitory:
         return obj
 
     def set(self, path, value):
+        # TODO: this is a nonsense.
         obj = self.obj
-        for part in self._iter_parts(path):
+        parts_iter = self._iter_parts(path)
+        current_part = ''
+        while True:
             if not isinstance(obj, ItemsDict):
-                raise PathError
+                raise ForbiddenUpdateError(path=current_part)
+            try:
+                part = next(parts_iter)
+            except StopIteration:
+                pass
+            current_part = f'{current_part}/{part}'
             if obj.is_update_forbidden(part):
-                raise ForbiddenUpdateError(obj, part)
+                raise ForbiddenUpdateError(path=current_part)
 
 
 class ItemsDict:
