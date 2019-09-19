@@ -45,24 +45,27 @@ class JSONReporitory:
 
     def get(self, path):
         obj, propname = self._follow_path(path)
-        return obj if propname is None else _get_json_property(obj, propname)
+        if propname is None:
+            return obj
+        return _get_json_property(obj, propname)
 
     def put(self, path, value):
         if isinstance(value, dict):
             value = Pledge(value, created_at=datetime.now(tz=timezone.utc))
+
         obj, propname = self._follow_path(path)
-        if propname is not None:
-            # Try to override the value of the property directly.
+        if propname is None:
+            prop = obj
+        else:
+            # Try to override the value of the property.
             try:
                 obj[propname] = value
                 return
             except ForbiddenChangeError:
                 pass
             prop = _get_json_property(obj, propname)
-        else:
-            prop = obj
 
-        # If the value is a dictionary, try to revise it.
+        # If the property is a pledge, try to revise it.
         if not isinstance(prop, Pledge):
             raise ForbiddenChangeError
         prop.revise(value)
