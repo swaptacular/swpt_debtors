@@ -29,41 +29,49 @@ class JSONReporitory:
                     raise ValueError
         return parts
 
-    def get(self, path):
+    def _follow_path(self, path):
         obj = self._obj
-        obj_is_overwritable = False
         parts = self._get_path_parts(path)
-        for n, part in enumerate(parts):
-            is_change_forbidden = obj.is_change_forbidden(part) if isinstance(obj, Pledge) else True
-            try:
-                obj = obj[part]
-            except (TypeError, KeyError):
-                raise PathError(obj, obj_is_overwritable, parts[:n + 1])
-            obj_is_overwritable = not is_change_forbidden
-        return obj, obj_is_overwritable
-
-    def put(self, path, value):
-        # TODO: this is a nonsense.
-        obj = self._obj
-        try:
-            obj, obj_is_overwritable = self.get(path)
-        except PathError as e:
-            obj, obj_is_overwritable, parts = e.args
-
-        if obj_is_overwritable:
-            pass
-        parts_iter = self._get_path_parts(path)
-        current_part = ''
-        while True:
+        if parts:
+            for part in parts[:-1]:
+                try:
+                    obj = obj[part]
+                except (TypeError, KeyError):
+                    raise PathError
             if not isinstance(obj, Pledge):
-                raise ForbiddenChangeError(path=current_part)
+                raise PathError
+            return obj, parts[-1]
+        return obj, None
+
+    def get(self, path):
+        obj, propname = self._follow_path(path)
+        if propname is None:
+            return obj
+        try:
+            return obj[propname]
+        except KeyError:
+            raise PathError
+
+    def set(self, path, value):
+        if path == '':
+            prop = self._obj
+        else:
+            # First, we try to override the value of the property.
+            obj, propname = self._follow_path(path)
             try:
-                part = next(parts_iter)
-            except StopIteration:
-                pass
-            current_part = f'{current_part}/{part}'
-            if obj.is_change_forbidden(part):
-                raise ForbiddenChangeError(path=current_part)
+                obj[propname] = value
+                return
+            except ForbiddenChangeError:
+                try:
+                    prop = obj[propname]
+                except KeyError:
+                    raise PathError
+
+        # By now we know that the value of the property can not be
+        # overridden. So we try to revise it.
+        if not isinstance(prop, Pledge):
+            raise ForbiddenChangeError
+        prop.revise(value)
 
 
 class Pledge(abc.MutableMapping):
