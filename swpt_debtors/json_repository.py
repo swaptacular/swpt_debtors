@@ -89,7 +89,7 @@ class Pledge(abc.MutableMapping):
                 pass
 
         for propname in Pledge.RESERVED_PROPNAMES:
-            del self._obj[propname]
+            self._obj.pop(propname, None)
 
     def __getitem__(self, key):
         return self._obj[key]
