@@ -26,15 +26,12 @@ class JSONReporitory:
                 if JSONReporitory.URL_PART.match(part):
                     parts.append(part)
                 else:
-                    raise ValueError
+                    raise PathError
         return parts
 
     def _follow_path(self, path):
         obj = self._obj
-        try:
-            parts = self._get_path_parts(path)
-        except ValueError:
-            raise PathError
+        parts = self._get_path_parts(path)
         if parts:
             for part in parts[:-1]:
                 try:
@@ -48,19 +45,20 @@ class JSONReporitory:
 
     def get(self, path):
         obj, propname = self._follow_path(path)
-        return obj if propname is None else obj.get_prop(propname)
+        return obj if propname is None else obj.get_property(propname)
 
     def set(self, path, value):
         obj, propname = self._follow_path(path)
-        if propname is None:
-            prop = obj
-        else:
+        if propname is not None:
             # Try to override the value of the property directly.
             try:
                 obj[propname] = value
                 return
             except ForbiddenChangeError:
-                prop = obj.get_prop(propname)
+                pass
+            prop = obj.get_property(propname)
+        else:
+            prop = obj
 
         # Try to revise the value of the property.
         if not isinstance(prop, Pledge):
@@ -111,12 +109,12 @@ class Pledge(abc.MutableMapping):
 
     def __setitem__(self, key, value):
         if self.is_change_forbidden(key):
-            raise ForbiddenChangeError(key)
+            raise ForbiddenChangeError
         self._obj[key] = value
 
     def __delitem__(self, key):
         if self.is_sealed or self.is_change_forbidden(key):
-            raise ForbiddenChangeError(key)
+            raise ForbiddenChangeError
         del self._obj[key]
 
     def __iter__(self):
@@ -129,7 +127,7 @@ class Pledge(abc.MutableMapping):
         asdict = str(self.asdict())
         return f'Pledge({asdict})'
 
-    def get_prop(self, propname):
+    def get_property(self, propname):
         try:
             return self[propname]
         except KeyError:
