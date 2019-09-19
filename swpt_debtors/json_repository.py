@@ -48,6 +48,8 @@ class JSONReporitory:
         return obj if propname is None else obj.get_json_property(propname)
 
     def put(self, path, value):
+        if isinstance(value, dict):
+            value = Pledge(value, created_at=datetime.now(tz=timezone.utc))
         obj, propname = self._follow_path(path)
         if propname is not None:
             # Try to override the value of the property directly.
