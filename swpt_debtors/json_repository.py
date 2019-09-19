@@ -65,6 +65,12 @@ class JSONReporitory:
             raise ForbiddenChangeError
         prop.revise(value)
 
+    def delete(self, path):
+        obj, propname = self._follow_path(path)
+        if propname is None:
+            raise ForbiddenChangeError
+        obj.delete_json_property(propname)
+
 
 class Pledge(abc.MutableMapping):
     """Represents a dictionary of values and a revising policy."""
@@ -130,6 +136,12 @@ class Pledge(abc.MutableMapping):
     def get_json_property(self, propname):
         try:
             return self[propname]
+        except KeyError:
+            raise PathError
+
+    def delete_json_property(self, propname):
+        try:
+            del self[propname]
         except KeyError:
             raise PathError
 
