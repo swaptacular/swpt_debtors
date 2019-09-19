@@ -60,7 +60,7 @@ class JSONReporitory:
         else:
             prop = obj
 
-        # Try to revise the value of the property.
+        # If the value is a dictionary, try to revise it.
         if not isinstance(prop, Pledge):
             raise ForbiddenChangeError
         prop.revise(value)
