@@ -17,29 +17,42 @@ class JSONReporitory:
     PART = re.compile(r'^[A-Za-z0-9_]+$')
 
     def __init__(self, s):
-        self.obj = json.loads(s, object_hook=_json_object_hook)
+        self._obj = json.loads(s, object_hook=_json_object_hook)
 
-    def _iter_parts(self, path):
+    def _get_path_parts(self, path):
+        parts = []
         if path:
             for part in path.split('/'):
                 if JSONReporitory.PART.match(part):
-                    yield part
+                    parts.append(part)
                 else:
-                    raise PathError
+                    raise ValueError
+        return parts
 
     def get(self, path):
-        obj = self.obj
-        for part in self._iter_parts(path):
+        obj = self._obj
+        obj_is_overwritable = False
+        parts = self._get_path_parts(path)
+        for n, part in enumerate(parts):
+            is_change_forbidden = obj.is_change_forbidden(part) if isinstance(obj, Pledge) else True
             try:
                 obj = obj[part]
             except (TypeError, KeyError):
-                raise PathError
-        return obj
+                raise PathError(obj, obj_is_overwritable, parts[:n + 1])
+            obj_is_overwritable = not is_change_forbidden
+        return obj, obj_is_overwritable
 
-    def set(self, path, value):
+    def put(self, path, value):
         # TODO: this is a nonsense.
-        obj = self.obj
-        parts_iter = self._iter_parts(path)
+        obj = self._obj
+        try:
+            obj, obj_is_overwritable = self.get(path)
+        except PathError as e:
+            obj, obj_is_overwritable, parts = e.args
+
+        if obj_is_overwritable:
+            pass
+        parts_iter = self._get_path_parts(path)
         current_part = ''
         while True:
             if not isinstance(obj, Pledge):
