@@ -79,9 +79,9 @@ class Pledge(abc.MutableMapping):
     """Represents a dictionary of values and a revising policy."""
 
     WRITABLES_PROPNAME = '$writable'
-    IS_SEALED_PROPNAME = '$isSealed'
-    CREATED_AT_PROPNAME = '$createdAt'
-    REVISED_AT_PROPNAME = '$revisedAt'
+    IS_SEALED_PROPNAME = '$sealed'
+    CREATED_AT_PROPNAME = '$created'
+    REVISED_AT_PROPNAME = '$revised'
 
     RESERVED_PROPNAMES = {
         WRITABLES_PROPNAME,
@@ -155,9 +155,9 @@ class Pledge(abc.MutableMapping):
         if not self.is_sealed:
             d[Pledge.IS_SEALED_PROPNAME] = False
         if self.created_at:
-            d[Pledge.CREATED_AT_PROPNAME] = self.created_at.isoformat()
+            d[Pledge.CREATED_AT_PROPNAME] = self.created_at.isoformat(timespec='seconds')
         if self.revised_at:
-            d[Pledge.REVISED_AT_PROPNAME] = self.revised_at.isoformat()
+            d[Pledge.REVISED_AT_PROPNAME] = self.revised_at.isoformat(timespec='seconds')
         return d
 
 
