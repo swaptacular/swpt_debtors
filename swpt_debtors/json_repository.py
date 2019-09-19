@@ -2,6 +2,7 @@ import json
 import re
 from datetime import datetime, timezone
 from collections import abc
+from functools import partial
 import iso8601
 
 
@@ -17,7 +18,7 @@ class PledgesReporitory:
     URL_PART = re.compile(r'^[A-Za-z0-9_]+$')
 
     def __init__(self, json_str):
-        self._obj = json.loads(json_str, object_hook=_json_object_hook)
+        self._obj = json.loads(json_str, object_hook=partial(_json_object_hook, None))
 
     def _get_path_parts(self, path):
         parts = []
@@ -50,7 +51,8 @@ class PledgesReporitory:
         return _get_json_property(obj, propname)
 
     def put(self, path, json_str):
-        value = json.loads(json_str, object_hook=_json_object_hook)
+        current_ts = datetime.now(tz=timezone.utc)
+        value = json.loads(json_str, object_hook=partial(_json_object_hook, current_ts))
         obj, propname = self._follow_path(path)
         if propname is None:
             prop = obj
@@ -90,7 +92,7 @@ class Pledge(abc.MutableMapping):
         REVISED_AT_PROPNAME,
     }
 
-    def __init__(self, obj):
+    def __init__(self, obj, created_at=None):
         assert isinstance(obj, dict)
         self._obj = obj.copy()
 
@@ -98,14 +100,17 @@ class Pledge(abc.MutableMapping):
         writables = writables if isinstance(writables, list) else []
         self.writables = [s for s in writables if isinstance(s, str)]
         self.is_sealed = self._obj.get(Pledge.IS_SEALED_PROPNAME) is not False
-        try:
-            self.created_at = iso8601.parse_date(self._obj.get(Pledge.CREATED_AT_PROPNAME))
-        except iso8601.ParseError:
-            self.created_at = datetime.now(tz=timezone.utc)
-        try:
-            self.revised_at = iso8601.parse_date(self._obj.get(Pledge.REVISED_AT_PROPNAME))
-        except iso8601.ParseError:
-            self.revised_at = None
+        self.created_at = created_at
+        self.revised_at = None
+        if created_at is None:
+            try:
+                self.created_at = iso8601.parse_date(self._obj.get(Pledge.CREATED_AT_PROPNAME))
+            except iso8601.ParseError:
+                pass
+            try:
+                self.revised_at = iso8601.parse_date(self._obj.get(Pledge.REVISED_AT_PROPNAME))
+            except iso8601.ParseError:
+                pass
 
         for propname in Pledge.RESERVED_PROPNAMES:
             self._obj.pop(propname, None)
@@ -161,8 +166,8 @@ class Pledge(abc.MutableMapping):
         return d
 
 
-def _json_object_hook(obj):
-    return Pledge(obj)
+def _json_object_hook(created_at, obj):
+    return Pledge(obj, created_at)
 
 
 def _json_default(obj):
