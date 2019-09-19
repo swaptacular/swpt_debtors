@@ -1,14 +1,8 @@
 import json
 import re
-from typing import NamedTuple
 from datetime import datetime, timezone
-
-
-ARCHIVES_PROPNAME = '_archives'
-WRITABLES_PROPNAME = '_writables'
-IS_SEALED_PROPNAME = '_sealed'
-VALUES_PROPNAME = '_values'
-TIMESTAMPS_PROPNAME = '_timestamps'
+from collections import abc
+import iso8601
 
 
 class PathError(Exception):
@@ -48,7 +42,7 @@ class JSONReporitory:
         parts_iter = self._iter_parts(path)
         current_part = ''
         while True:
-            if not isinstance(obj, ItemsDict):
+            if not isinstance(obj, Pledge):
                 raise ForbiddenUpdateError(path=current_part)
             try:
                 part = next(parts_iter)
@@ -59,100 +53,96 @@ class JSONReporitory:
                 raise ForbiddenUpdateError(path=current_part)
 
 
-class ItemsDict:
-    """Represents a dictionary of values."""
+class Pledge(abc.MutableMapping):
+    """Represents a dictionary of values and a revising policy."""
 
-    def __init__(self, obj):
+    WRITABLES_PROPNAME = '$writable'
+    IS_SEALED_PROPNAME = '$isSealed'
+    CREATED_AT_PROPNAME = '$createdAt'
+    REVISED_AT_PROPNAME = '$revisedAt'
+
+    RESERVED_PROPNAMES = {
+        WRITABLES_PROPNAME,
+        IS_SEALED_PROPNAME,
+        CREATED_AT_PROPNAME,
+        REVISED_AT_PROPNAME,
+    }
+
+    def __init__(self, obj, created_at=None):
         assert isinstance(obj, dict)
-        self.obj = obj.copy()
-        self.obj.pop(VALUES_PROPNAME, None)
-        self.obj.pop(TIMESTAMPS_PROPNAME, None)
-        archives = self.obj.pop(ARCHIVES_PROPNAME, None)
-        writables = self.obj.pop(WRITABLES_PROPNAME, None)
-        is_sealed = self.obj.pop(IS_SEALED_PROPNAME, None)
-        self.archives = {str(a) for a in archives} if isinstance(archives, list) else set()
-        self.writables = {str(w) for w in writables} if isinstance(writables, list) else set()
-        self.is_sealed = is_sealed if isinstance(is_sealed, bool) else True
+        self._obj = obj.copy()
 
-    def _setitem(self, key, value):
-        if self.is_update_forbidden(key):
-            raise ForbiddenUpdateError(self, key)
-        if key in self.archives:
+        writables = self._obj.get(Pledge.WRITABLES_PROPNAME)
+        writables = writables if isinstance(writables, list) else []
+        self.writables = [s for s in writables if isinstance(s, str)]
+        self.is_sealed = self._obj.get(Pledge.IS_SEALED_PROPNAME) is not False
+        self.created_at = created_at
+        self.revised_at = None
+        if created_at is None:
             try:
-                item = self.obj[key]
-            except KeyError:
-                archive = ItemsArchive([], [])
-            else:
-                archive = item if isinstance(item, ItemsArchive) else ItemsArchive([], [])
-            archive.add_item(value, datetime.now(tz=timezone.utc))
-            value = archive
-        self.obj[key] = value
+                self.created_at = iso8601.parse_date(self._obj.get(Pledge.CREATED_AT_PROPNAME))
+            except iso8601.ParseError:
+                pass
+            try:
+                self.revised_at = iso8601.parse_date(self._obj.get(Pledge.REVISED_AT_PROPNAME))
+            except iso8601.ParseError:
+                pass
 
-    def is_update_forbidden(self, key):
-        extends_sealed = key not in self.obj and self.is_sealed
-        updates_not_writable = key in self.obj and key not in self.writables
-        return extends_sealed or updates_not_writable
-
-    def asdict(self):
-        d = {
-            ARCHIVES_PROPNAME: sorted(self.archives),
-            WRITABLES_PROPNAME: sorted(self.writables),
-            IS_SEALED_PROPNAME: self.is_sealed,
-        }
-        d.update(self.obj)
-        return d
-
-    def update(self, new):
-        self.archives = self.archives | new.archives
-        for key, value in new.obj.items():
-            self._setitem(key, value)
-        self.writables = self.writables & new.writables
-        self.is_sealed = self.is_sealed or new.is_sealed
+        for propname in Pledge.RESERVED_PROPNAMES:
+            del self._obj[propname]
 
     def __getitem__(self, key):
-        item = self.obj[key]
-        if key in self.archives:
-            if not isinstance(item, ItemsArchive):
-                raise KeyError
-            return item.get_last_value()
-        return item
+        return self._obj[key]
 
+    def __setitem__(self, key, value):
+        if self.is_update_forbidden(key):
+            raise ForbiddenUpdateError(key)
+        self._obj[key] = value
 
-class ItemsArchive(NamedTuple):
-    """Represents an archive of values."""
+    def __delitem__(self, key):
+        if self.is_update_forbidden(key):
+            raise ForbiddenUpdateError(key)
+        del self._obj[key]
 
-    values: list
-    timestamps: list
+    def __iter__(self):
+        return iter(self._obj)
 
-    def add_item(self, value, timestamp):
-        self.values.append(value)
-        self.timestamps.append(timestamp)
+    def __len__(self):
+        return len(self._obj)
 
-    def get_last_value(self):
-        return self.values[-1]
+    def is_update_forbidden(self, key):
+        extends_sealed = key not in self and self.is_sealed
+        updates_reserved = key in Pledge.RESERVED_PROPNAMES
+        updates_not_writable = key in self and key not in self.writables
+        return extends_sealed or updates_reserved or updates_not_writable
 
-    def get_last_timestamp(self):
-        return self.timestamps[-1]
+    def revise(self, new_version):
+        removed_keys = (k for k in self if k not in new_version)
+        for key in removed_keys:
+            del self[key]
+        self.update(new_version)
+        self.writables = self.writables & new_version.writables
+        self.is_sealed = self.is_sealed or new_version.is_sealed
+        self.revised_at = datetime.now(tz=timezone.utc)
 
     def asdict(self):
-        return {
-            VALUES_PROPNAME: self.values,
-            TIMESTAMPS_PROPNAME: self.timestamps,
-        }
+        d = self._obj.copy()
+        if self.writables:
+            d[Pledge.WRITABLES_PROPNAME] = sorted(self.writables)
+        if not self.is_sealed:
+            d[Pledge.IS_SEALED_PROPNAME] = False
+        if self.created_at:
+            d[Pledge.CREATED_AT_PROPNAME] = self.created_at.isoformat()
+        if self.revised_at:
+            d[Pledge.REVISED_AT_PROPNAME] = self.revised_at.isoformat()
+        return d
 
 
 def _json_object_hook(obj):
-    try:
-        values = obj[VALUES_PROPNAME]
-        timestamps = obj[TIMESTAMPS_PROPNAME]
-        if isinstance(values, list) and isinstance(timestamps, list) and len(values) == len(timestamps) > 0:
-            return ItemsArchive(values=values, timestamps=timestamps)
-    except KeyError:
-        pass
-    return ItemsDict(obj)
+    return Pledge(obj)
 
 
-def _json_default_hook(obj):
-    if isinstance(obj, (ItemsArchive, ItemsDict)):
+def _json_default(obj):
+    if isinstance(obj, Pledge):
         return obj.asdict()
     raise TypeError
