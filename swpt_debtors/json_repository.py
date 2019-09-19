@@ -14,7 +14,7 @@ class ForbiddenChangeError(Exception):
 
 
 class JSONReporitory:
-    PART = re.compile(r'^[A-Za-z0-9_]+$')
+    URL_PART = re.compile(r'^[A-Za-z0-9_]+$')
 
     def __init__(self, s):
         self._obj = json.loads(s, object_hook=_json_object_hook)
@@ -23,7 +23,7 @@ class JSONReporitory:
         parts = []
         if path:
             for part in path.split('/'):
-                if JSONReporitory.PART.match(part):
+                if JSONReporitory.URL_PART.match(part):
                     parts.append(part)
                 else:
                     raise ValueError
@@ -31,7 +31,10 @@ class JSONReporitory:
 
     def _follow_path(self, path):
         obj = self._obj
-        parts = self._get_path_parts(path)
+        try:
+            parts = self._get_path_parts(path)
+        except ValueError:
+            raise PathError
         if parts:
             for part in parts[:-1]:
                 try:
@@ -45,30 +48,21 @@ class JSONReporitory:
 
     def get(self, path):
         obj, propname = self._follow_path(path)
-        if propname is None:
-            return obj
-        try:
-            return obj[propname]
-        except KeyError:
-            raise PathError
+        return obj if propname is None else obj.get_prop(propname)
 
     def set(self, path, value):
-        if path == '':
-            prop = self._obj
+        obj, propname = self._follow_path(path)
+        if propname is None:
+            prop = obj
         else:
-            # First, we try to override the value of the property.
-            obj, propname = self._follow_path(path)
+            # Try to override the value of the property directly.
             try:
                 obj[propname] = value
                 return
             except ForbiddenChangeError:
-                try:
-                    prop = obj[propname]
-                except KeyError:
-                    raise PathError
+                prop = obj.get_prop(propname)
 
-        # By now we know that the value of the property can not be
-        # overridden. So we try to revise it.
+        # Try to revise the value of the property.
         if not isinstance(prop, Pledge):
             raise ForbiddenChangeError
         prop.revise(value)
@@ -130,6 +124,16 @@ class Pledge(abc.MutableMapping):
 
     def __len__(self):
         return len(self._obj)
+
+    def __repr__(self):
+        asdict = str(self.asdict())
+        return f'Pledge({asdict})'
+
+    def get_prop(self, propname):
+        try:
+            return self[propname]
+        except KeyError:
+            raise PathError
 
     def is_change_forbidden(self, key):
         extends_sealed = key not in self and self.is_sealed
