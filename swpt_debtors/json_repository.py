@@ -15,16 +15,8 @@ class PathError(Exception):
     """Invalid JSON repository path."""
 
 
-class NotWritableError(Exception):
-    """Attempted write to a non-writable property."""
-
-
-class SealedError(Exception):
-    """Attempted to extend a sealed object."""
-
-
-class MetapropsPermissionError(Exception):
-    """Attempted forbidden meta-property change."""
+class ForbiddenUpdateError(Exception):
+    """Attempted a forbidden update."""
 
 
 class JSONReporitory:
@@ -50,6 +42,14 @@ class JSONReporitory:
                 raise PathError
         return obj
 
+    def set(self, path, value):
+        obj = self.obj
+        for part in self._iter_parts(path):
+            if not isinstance(obj, ItemsDict):
+                raise PathError
+            if obj.is_update_forbidden(part):
+                raise ForbiddenUpdateError(obj, part)
+
 
 class ItemsDict:
     """Represents a dictionary of values."""
@@ -67,21 +67,23 @@ class ItemsDict:
         self.is_sealed = is_sealed if isinstance(is_sealed, bool) else True
 
     def _setitem(self, key, value):
-        obj = self.obj
-        if key not in obj and self.is_sealed:
-            raise SealedError()
-        if key in obj and key not in self.writables:
-            raise NotWritableError
+        if self.is_update_forbidden(key):
+            raise ForbiddenUpdateError(self, key)
         if key in self.archives:
             try:
-                item = obj[key]
+                item = self.obj[key]
             except KeyError:
                 archive = ItemsArchive([], [])
             else:
                 archive = item if isinstance(item, ItemsArchive) else ItemsArchive([], [])
             archive.add_item(value, datetime.now(tz=timezone.utc))
             value = archive
-        obj[key] = value
+        self.obj[key] = value
+
+    def is_update_forbidden(self, key):
+        extends_sealed = key not in self.obj and self.is_sealed
+        updates_not_writable = key in self.obj and key not in self.writables
+        return extends_sealed or updates_not_writable
 
     def asdict(self):
         d = {
