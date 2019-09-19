@@ -90,7 +90,7 @@ class Pledge(abc.MutableMapping):
         REVISED_AT_PROPNAME,
     }
 
-    def __init__(self, obj, created_at=None):
+    def __init__(self, obj):
         assert isinstance(obj, dict)
         self._obj = obj.copy()
 
@@ -98,17 +98,14 @@ class Pledge(abc.MutableMapping):
         writables = writables if isinstance(writables, list) else []
         self.writables = [s for s in writables if isinstance(s, str)]
         self.is_sealed = self._obj.get(Pledge.IS_SEALED_PROPNAME) is not False
-        self.created_at = created_at
-        self.revised_at = None
-        if created_at is None:
-            try:
-                self.created_at = iso8601.parse_date(self._obj.get(Pledge.CREATED_AT_PROPNAME))
-            except iso8601.ParseError:
-                pass
-            try:
-                self.revised_at = iso8601.parse_date(self._obj.get(Pledge.REVISED_AT_PROPNAME))
-            except iso8601.ParseError:
-                pass
+        try:
+            self.created_at = iso8601.parse_date(self._obj.get(Pledge.CREATED_AT_PROPNAME))
+        except iso8601.ParseError:
+            self.created_at = datetime.now(tz=timezone.utc)
+        try:
+            self.revised_at = iso8601.parse_date(self._obj.get(Pledge.REVISED_AT_PROPNAME))
+        except iso8601.ParseError:
+            self.revised_at = None
 
         for propname in Pledge.RESERVED_PROPNAMES:
             self._obj.pop(propname, None)
