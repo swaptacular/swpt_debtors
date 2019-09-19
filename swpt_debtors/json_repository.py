@@ -47,8 +47,10 @@ class PledgesReporitory:
     def get(self, path):
         obj, propname = self._follow_path(path)
         if propname is None:
-            return obj
-        return _get_json_property(obj, propname)
+            prop = obj
+        else:
+            prop = _get_json_property(obj, propname)
+        return json.dumps(prop, default=_json_default)
 
     def put(self, path, json_str):
         current_ts = datetime.now(tz=timezone.utc)
