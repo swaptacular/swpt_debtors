@@ -18,33 +18,31 @@ class Limit(NamedTuple):
     cutoff: date  # the limit will stop to be enforced at this date
 
 
-def _unpack_limits(values: Optional[List], kickoffs: Optional[List], cutoffs: Optional[List]) -> List[Limit]:
-    values = values or []
-    kickoffs = kickoffs or []
-    cutoffs = cutoffs or []
-    return [Limit(*t) for t in zip(values, kickoffs, cutoffs) if all(x is not None for x in t)]
-
-
-def _pack_limits(limits: List[Limit]) -> Tuple[List, List, List]:
-    values = []
-    kickoffs = []
-    cutoffs = []
-    for limit in limits:
-        values.append(limit.value)
-        kickoffs.append(limit.kickoff)
-        cutoffs.append(limit.cutoff)
-    return values, kickoffs, cutoffs
-
-
 def _limit_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrname: str):
+    def unpack_limits(values: Optional[List], kickoffs: Optional[List], cutoffs: Optional[List]) -> List[Limit]:
+        values = values or []
+        kickoffs = kickoffs or []
+        cutoffs = cutoffs or []
+        return [Limit(*t) for t in zip(values, kickoffs, cutoffs) if all(x is not None for x in t)]
+
+    def pack_limits(limits: List[Limit]) -> Tuple[List, List, List]:
+        values = []
+        kickoffs = []
+        cutoffs = []
+        for limit in limits:
+            values.append(limit.value)
+            kickoffs.append(limit.kickoff)
+            cutoffs.append(limit.cutoff)
+        return values, kickoffs, cutoffs
+
     def getter(self):
         values = getattr(self, values_attrname)
         kickoffs = getattr(self, kickoffs_attrname)
         cutoffs = getattr(self, cutoffs_attrname)
-        return _unpack_limits(values, kickoffs, cutoffs)
+        return unpack_limits(values, kickoffs, cutoffs)
 
     def setter(self, value):
-        values, kickoffs, cutoffs = _pack_limits(value)
+        values, kickoffs, cutoffs = pack_limits(value)
         setattr(self, values_attrname, values)
         setattr(self, kickoffs_attrname, kickoffs)
         setattr(self, cutoffs_attrname, cutoffs)
