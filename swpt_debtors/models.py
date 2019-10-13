@@ -1,7 +1,7 @@
 import datetime
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import func
+from sqlalchemy.sql.expression import func, null, or_
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
 
 MIN_INT32 = -1 << 31
@@ -52,7 +52,19 @@ class Signal(db.Model):
 class Debtor(db.Model):
     STATUS_TERMINATED_FLAG = 1
 
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    debtor_id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
+    last_change_seqnum = db.Column(
+        db.Integer,
+        nullable=False,
+        default=1,
+        comment='Incremented (with wrapping) on every change.',
+    )
+    last_change_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        nullable=False,
+        default=get_now_utc,
+        comment='Updated on every increment of `last_change_seqnum`. Must never decrease.',
+    )
     status = db.Column(
         db.SmallInteger,
         nullable=False,
@@ -62,13 +74,16 @@ class Debtor(db.Model):
         db.BigInteger,
         default=0,
         comment="The total issued amount with a negative sign. Normally, it will be a "
-                "negative number or zero. A positive value, although theoretically "
-                "possible, should be very rare. NULL means that the debtor's account "
-                "has been overflown.",
+                "negative number or a zero. A positive value, although theoretically "
+                "possible, should be very rare. A `NULL` means that the balance is unknown.",
+    )
+    balance_last_change_seqnum = db.Column(
+        db.Integer,
+        comment='Updated on each change of the `balance`.',
     )
     balance_last_update_ts = db.Column(
         db.TIMESTAMP(timezone=True),
-        comment='Updated on each change the `balance`.',
+        comment='Updated on each change of the `balance`.',
     )
     interest_rate_target = db.Column(
         db.REAL,
@@ -78,73 +93,53 @@ class Debtor(db.Model):
                 "accumulate on creditors' accounts. The actual interest rate could be "
                 "different if interest rate limits are enforced.",
     )
+
+    # Ballance Lower Limits
+    bll_values = db.Column(
+        pg.ARRAY(db.BigInteger, dimensions=1),
+        comment='Enforced lower limits for the `balance` column. Each element in  '
+                'this array should have a corresponding element in the `bll_kickoffs` '
+                'and `bll_cutoffs` arrays (the kickoff and cutoff dates for the limits). '
+                'A `NULL` is the same as an empty array.',
+    )
+    bll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    bll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+
+    # Interest Rate Lower Limits
+    irll_values = db.Column(
+        pg.ARRAY(db.BigInteger, dimensions=1),
+        comment='Enforced interest rate lower limits. Each element in this array '
+                'should have a corresponding element in the `irll_kickoffs` and '
+                '`irll_cutoffs` arrays (the kickoff and cutoff dates for the limits). '
+                'A `NULL` is the same as an empty array.',
+    )
+    irll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+
+    # Interest Rate Upper Limits
+    irul_values = db.Column(
+        pg.ARRAY(db.BigInteger, dimensions=1),
+        comment='Enforced interest rate upper limits. Each element in this array '
+                'should have a corresponding element in the `irul_kickoffs` and '
+                '`irul_cutoffs` arrays (the kickoff and cutoff dates for the limits). '
+                'A `NULL` is the same as an empty array.',
+    )
+    irul_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    irul_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+
     __table_args__ = (
         db.CheckConstraint((interest_rate_target > -100.0) & (interest_rate_target <= 100.0)),
+        db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
+        db.CheckConstraint(or_(bll_kickoffs == null(), func.array_ndims(bll_kickoffs) == 1)),
+        db.CheckConstraint(or_(bll_cutoffs == null(), func.array_ndims(bll_cutoffs) == 1)),
+        db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
+        db.CheckConstraint(or_(irll_kickoffs == null(), func.array_ndims(irll_kickoffs) == 1)),
+        db.CheckConstraint(or_(irll_cutoffs == null(), func.array_ndims(irll_cutoffs) == 1)),
+        db.CheckConstraint(or_(irul_values == null(), func.array_ndims(irul_values) == 1)),
+        db.CheckConstraint(or_(irul_kickoffs == null(), func.array_ndims(irul_kickoffs) == 1)),
+        db.CheckConstraint(or_(irul_cutoffs == null(), func.array_ndims(irul_cutoffs) == 1)),
         {
-            'comment': 'Represents a debtor.',
-        }
-    )
-
-
-class BalanceLowerLimit(db.Model):
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    balance_lower_limit_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    value = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The value under which the `debtor.balance` should not go.',
-    )
-    cutoff_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        comment='The limit will not be enforced after this moment in time.'
-    )
-    created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
-    __table_args__ = (
-        {
-            'comment': 'Represents an enforced lower limit for `debtor.balance`.',
-        }
-    )
-
-
-class InterestRateLowerLimit(db.Model):
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    interest_rate_lower_limit_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    value = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The value under which the interest rate should not go.',
-    )
-    cutoff_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        comment='The limit will not be enforced after this moment in time.'
-    )
-    created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
-    __table_args__ = (
-        {
-            'comment': 'Represents an enforced lower limit for the interest rate.',
-        }
-    )
-
-
-class InterestRateUpperLimit(db.Model):
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    interest_rate_upper_limit_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    value = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The value above which the interest rate should not go.',
-    )
-    cutoff_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        comment='The limit will not be enforced after this moment in time.'
-    )
-    created_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
-    __table_args__ = (
-        {
-            'comment': 'Represents an enforced upper limit for the interest rate.',
+            'comment': "Represents debtor's principal information.",
         }
     )
 
@@ -153,23 +148,17 @@ class ChangedDebtorInfoSignal(Signal):
     """Sent when debtor's principal information has changed."""
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
+    change_seqnum = db.Column(db.Integer, primary_key=True)
+    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
     status = db.Column(db.SmallInteger, nullable=False)
     balance = db.Column(db.BigInteger)
-    balance_ll_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1), nullable=False)
-    balance_ll_cutoffs = db.Column(pg.ARRAY(db.TIMESTAMP(timezone=True), dimensions=1), nullable=False)
     interest_rate_target = db.Column(db.REAL, nullable=False)
-    interest_rate_ll_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1), nullable=False)
-    interest_rate_ll_cutoffs = db.Column(pg.ARRAY(db.TIMESTAMP(timezone=True), dimensions=1), nullable=False)
-    interest_rate_ul_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1), nullable=False)
-    interest_rate_ul_cutoffs = db.Column(pg.ARRAY(db.TIMESTAMP(timezone=True), dimensions=1), nullable=False)
-    __table_args__ = (
-        db.CheckConstraint(func.array_ndims(balance_ll_values) == 1),
-        db.CheckConstraint(func.array_ndims(balance_ll_cutoffs) == 1),
-        db.CheckConstraint(func.cardinality(balance_ll_values) == func.cardinality(balance_ll_cutoffs)),
-        db.CheckConstraint(func.array_ndims(interest_rate_ll_values) == 1),
-        db.CheckConstraint(func.array_ndims(interest_rate_ll_cutoffs) == 1),
-        db.CheckConstraint(func.cardinality(interest_rate_ll_values) == func.cardinality(interest_rate_ll_cutoffs)),
-        db.CheckConstraint(func.array_ndims(interest_rate_ul_values) == 1),
-        db.CheckConstraint(func.array_ndims(interest_rate_ul_cutoffs) == 1),
-        db.CheckConstraint(func.cardinality(interest_rate_ul_values) == func.cardinality(interest_rate_ul_cutoffs)),
-    )
+    bll_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
+    bll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    bll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    irll_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
+    irll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    irul_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
+    irul_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    irul_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
