@@ -14,7 +14,7 @@ MAX_INT64 = (1 << 63) - 1
 
 class Limit(NamedTuple):
     value: Real  # the limiting value
-    kickoff: date  # the limit will start to be enforced at this date
+    kickoff: date  # the limit has been created at this date
     cutoff: date  # the limit will stop to be enforced at this date
 
 
