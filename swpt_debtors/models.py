@@ -30,6 +30,9 @@ def _limit_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrna
         kickoffs = []
         cutoffs = []
         for limit in limits:
+            assert isinstance(limit.value, Real)
+            assert isinstance(limit.kickoff, date)
+            assert isinstance(limit.cutoff, date)
             values.append(limit.value)
             kickoffs.append(limit.kickoff)
             cutoffs.append(limit.cutoff)
