@@ -1,4 +1,6 @@
-import datetime
+from numbers import Real
+from typing import NamedTuple, List, Tuple, Optional
+from datetime import datetime, date, timezone
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import func, null, or_
@@ -10,8 +12,48 @@ MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
 
 
+class Limit(NamedTuple):
+    value: Real  # the limiting value
+    kickoff: date  # the limit will start to be enforced at this date
+    cutoff: date  # the limit will stop to be enforced at this date
+
+
+def _unpack_limits(values: Optional[List], kickoffs: Optional[List], cutoffs: Optional[List]) -> List[Limit]:
+    values = values or []
+    kickoffs = kickoffs or []
+    cutoffs = cutoffs or []
+    return [Limit(*t) for t in zip(values, kickoffs, cutoffs) if all(x is not None for x in t)]
+
+
+def _pack_limits(limits: List[Limit]) -> Tuple[List, List, List]:
+    values = []
+    kickoffs = []
+    cutoffs = []
+    for limit in limits:
+        values.append(limit.value)
+        kickoffs.append(limit.kickoff)
+        cutoffs.append(limit.cutoff)
+    return values, kickoffs, cutoffs
+
+
+def _limit_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrname: str):
+    def getter(self):
+        values = getattr(self, values_attrname)
+        kickoffs = getattr(self, kickoffs_attrname)
+        cutoffs = getattr(self, cutoffs_attrname)
+        return _unpack_limits(values, kickoffs, cutoffs)
+
+    def setter(self, value):
+        values, kickoffs, cutoffs = _pack_limits(value)
+        setattr(self, values_attrname, values)
+        setattr(self, kickoffs_attrname, kickoffs)
+        setattr(self, cutoffs_attrname, cutoffs)
+
+    return property(getter, setter)
+
+
 def get_now_utc():
-    return datetime.datetime.now(tz=datetime.timezone.utc)
+    return datetime.now(tz=timezone.utc)
 
 
 class Signal(db.Model):
@@ -142,6 +184,10 @@ class Debtor(db.Model):
             'comment': "Represents debtor's principal information.",
         }
     )
+
+    balance_lower_limits = _limit_property('bll_values', 'bll_kickoffs', 'bll_cutoffs')
+    interest_rate_lower_limits = _limit_property('irll_values', 'irll_kickoffs', 'irll_cutoffs')
+    interest_rate_upper_limits = _limit_property('irul_values', 'irul_kickoffs', 'irul_cutoffs')
 
 
 class ChangedDebtorInfoSignal(Signal):
