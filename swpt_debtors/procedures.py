@@ -18,25 +18,29 @@ def _add_limit_to_list(limits: List[Limit], new_limit: Limit, *, lower_limit=Fal
     def get_restrictiveness(l: Limit) -> Real:
         return l.value if lower_limit else -l.value
 
-    def filter_by_champion(champion: Limit) -> List[Limit]:
-        r = get_restrictiveness(champion)
-        c = champion.cutoff
+    def apply_eliminator(limits: List[Limit], eliminator: Limit) -> List[Limit]:
+        """Remove the limits rendered ineffectual by the `eliminator`."""
+
+        r = get_restrictiveness(eliminator)
+        c = eliminator.cutoff
         return [l for l in limits if get_restrictiveness(l) > r or l.cutoff > c]
 
-    def find_champion_in_sorted_limits(sorted_limits: List[Limit]) -> Optional[Limit]:
+    def find_eliminator_in_sorted_limits(sorted_limits: List[Limit]) -> Optional[Limit]:
+        """Try to find a limit that makes some of the other limits ineffectual."""
+
         restrictiveness = math.inf
-        for champion in sorted_limits:
-            r = get_restrictiveness(champion)
+        for eliminator in sorted_limits:
+            r = get_restrictiveness(eliminator)
             if r >= restrictiveness:
-                return champion
+                return eliminator
             restrictiveness = r
         return None
 
     while True:
-        limits = filter_by_champion(new_limit)
+        limits = apply_eliminator(limits, new_limit)
         limits.append(new_limit)
         limits.sort(key=lambda l: l.cutoff)
-        new_limit = find_champion_in_sorted_limits(limits)
+        new_limit = find_eliminator_in_sorted_limits(limits)
         if not new_limit:
             break
     return limits
