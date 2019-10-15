@@ -1,5 +1,4 @@
 import math
-from datetime import date
 from numbers import Real
 from typing import TypeVar, List, Optional, Callable
 from .extensions import db
