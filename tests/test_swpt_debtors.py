@@ -21,3 +21,7 @@ def test_add_limit_to_list():
     assert [l.value for l in limits] == [10, 20, 25]
     p._add_limit_to_list(limits, Limit(30, A_DATE, date(2000, 1, 3)), upper_limit=True)
     assert [l.value for l in limits] == [10, 20, 25]
+
+    # Add an already existing limit.
+    p._add_limit_to_list(limits, Limit(30, A_DATE, date(2000, 1, 3)), upper_limit=True)
+    assert [l.value for l in limits] == [10, 20, 25]
