@@ -11,10 +11,9 @@ def test_version(db_session):
 
 
 def test_add_limit_to_list():
-    limits = [
-        Limit(10, A_DATE, date(2000, 1, 1)),
-        Limit(20, A_DATE, date(2000, 1, 2)),
-    ]
+    limits = []
+    p._add_limit_to_list(limits, Limit(10, A_DATE, date(2000, 1, 1)), upper_limit=True)
+    p._add_limit_to_list(limits, Limit(20, A_DATE, date(2000, 1, 2)), upper_limit=True)
     p._add_limit_to_list(limits, Limit(30, A_DATE, date(2000, 1, 3)), upper_limit=True)
     assert [l.value for l in limits] == [10, 20, 30]
     p._add_limit_to_list(limits, Limit(25, A_DATE, date(2000, 1, 4)), upper_limit=True)

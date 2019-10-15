@@ -18,6 +18,7 @@ def update_debtor_balance(
         debtor_id: int,
         balance: int,
         status: int,
+        update_seqnum: int,
         update_ts: str) -> None:
     """Updates the balance of the debtor's account."""
 

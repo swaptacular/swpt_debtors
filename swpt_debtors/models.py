@@ -111,6 +111,7 @@ class Debtor(db.Model):
     status = db.Column(
         db.SmallInteger,
         nullable=False,
+        default=0,
         comment='Debtor status flags.',
     )
     balance = db.Column(
@@ -120,7 +121,7 @@ class Debtor(db.Model):
                 "negative number or a zero. A positive value, although theoretically "
                 "possible, should be very rare. A `NULL` means that the balance is unknown.",
     )
-    balance_last_change_seqnum = db.Column(
+    balance_last_update_seqnum = db.Column(
         db.Integer,
         comment='Updated on each change of the `balance`.',
     )
