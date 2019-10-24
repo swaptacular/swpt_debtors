@@ -25,7 +25,9 @@ def _limit_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrna
         cutoffs = cutoffs or []
         return [Limit(*t) for t in zip(values, kickoffs, cutoffs) if all(x is not None for x in t)]
 
-    def pack_limits(limits: List[Limit]) -> Tuple[List, List, List]:
+    def pack_limits(limits: List[Limit]) -> Tuple[Optional[List], Optional[List], Optional[List]]:
+        if len(limits) == 0:
+            return None, None, None
         values = []
         kickoffs = []
         cutoffs = []

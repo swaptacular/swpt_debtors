@@ -21,3 +21,14 @@ def test_limit_properties(db_session):
     assert d.interest_rate_upper_limits == limits
     db_session.add(d)
     db_session.commit()
+
+    # Set to an empty list.
+    d = Debtor.get_instance(1)
+    assert d.balance_lower_limits == limits
+    assert d.bll_values is not None
+    assert d.bll_kickoffs is not None
+    assert d.bll_cutoffs is not None
+    d.balance_lower_limits = []
+    assert d.bll_values is None
+    assert d.bll_kickoffs is None
+    assert d.bll_cutoffs is None
