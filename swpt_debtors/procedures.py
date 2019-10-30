@@ -131,3 +131,7 @@ def process_account_change_signal(
 
     if not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         _insert_change_interest_rate_signal(account, _calc_interest_rate(account))
+
+    # TODO: If _calc_interest_rate(old_account_state) !=
+    # _calc_interest_rate(new_account_state), call
+    # _insert_change_interest_rate_signal()
