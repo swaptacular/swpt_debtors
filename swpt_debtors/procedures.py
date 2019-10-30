@@ -65,7 +65,7 @@ def _add_limit_to_list(l: List[Limit], new_limit: Limit, *, lower_limit=False, u
     l.extend(limits)
 
 
-def _calc_interest_rate(debtor_id: int, creditor_id: int) -> float:
+def _calc_interest_rate(account: Account) -> float:
     # TODO: Write a real implementation.
     return 0.0
 
@@ -130,4 +130,4 @@ def process_account_change_signal(
             db.session.add(account)
 
     if not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
-        _insert_change_interest_rate_signal(account, _calc_interest_rate(debtor_id, creditor_id))
+        _insert_change_interest_rate_signal(account, _calc_interest_rate(account))
