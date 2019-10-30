@@ -1,6 +1,7 @@
 from numbers import Real
 from typing import NamedTuple, List, Tuple, Optional
 from datetime import datetime, date, timezone
+from marshmallow import Schema, fields
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import func, null, or_
@@ -55,6 +56,10 @@ def _limit_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrna
         setattr(self, cutoffs_attrname, cutoffs)
 
     return property(getter, setter)
+
+
+def increment_seqnum(n):
+    return MIN_INT32 if n == MAX_INT32 else n + 1
 
 
 def get_now_utc():
@@ -243,10 +248,14 @@ class Account(db.Model):
     )
     interest_rate_last_change_seqnum = db.Column(
         db.Integer,
+        nullable=False,
+        default=1,
         comment='Incremented (with wrapping) on each invocation of the `change_interest_rate` actor.',
     )
     interest_rate_last_change_ts = db.Column(
         db.TIMESTAMP(timezone=True),
+        nullable=False,
+        default=get_now_utc,
         comment='Updated on every increment of `interest_rate_last_change_seqnum`. Must never decrease.',
     )
     __table_args__ = (
@@ -277,3 +286,22 @@ class ChangedDebtorInfoSignal(Signal):
     irul_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
     irul_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irul_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+
+
+class ChangeInterestRateSignal(Signal):
+    queue_name = 'swpt_accounts'
+    actor_name = 'change_interest_rate'
+
+    class __marshmallow__(Schema):
+        debtor_id = fields.Integer()
+        creditor_id = fields.Integer()
+        change_seqnum = fields.Integer()
+        change_ts = fields.DateTime()
+        interest_rate = fields.Float()
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    creditor_id = db.Column(db.BigInteger, nullable=False)
+    change_seqnum = db.Column(db.Integer, nullable=False)
+    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+    interest_rate = db.Column(db.REAL, nullable=False)

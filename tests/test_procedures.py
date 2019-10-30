@@ -1,6 +1,6 @@
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
-from swpt_debtors.models import Limit, Account
+from swpt_debtors.models import Limit, Account, ChangeInterestRateSignal
 from swpt_debtors import procedures as p
 
 A_DATE = date(1900, 1, 1)
@@ -70,6 +70,10 @@ def test_process_account_change_signal(db_session):
     assert a.interest_rate == -0.5
     assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
     assert a.status == 0
+    cirs = ChangeInterestRateSignal.query.all()
+    assert len(cirs) == 1
+    assert cirs[0].debtor_id == D_ID
+    assert cirs[0].creditor_id == C_ID
 
     # Older message
     p.process_account_change_signal(
@@ -86,6 +90,8 @@ def test_process_account_change_signal(db_session):
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
     assert a.principal == 1000
+    cirs = ChangeInterestRateSignal.query.all()
+    assert len(cirs) == 1
 
     # Newer message
     p.process_account_change_signal(
@@ -108,3 +114,5 @@ def test_process_account_change_signal(db_session):
     assert a.interest_rate == -0.6
     assert a.last_outgoing_transfer_date == last_outgoing_transfer_date + timedelta(days=1)
     assert a.status == Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
+    cirs = ChangeInterestRateSignal.query.all()
+    assert len(cirs) == 1
