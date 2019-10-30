@@ -104,8 +104,7 @@ def process_account_change_signal(
     this_event = (change_seqnum, change_ts)
     account = Account.lock_instance((debtor_id, creditor_id))
     if account:
-        prev_event = (account.change_seqnum, account.change_ts)
-        if not _is_later_event(this_event, prev_event):
+        if not _is_later_event(this_event, (account.change_seqnum, account.change_ts)):
             return
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
@@ -115,8 +114,7 @@ def process_account_change_signal(
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
         account.status = status
     else:
-        prev_event = (None, None)
-        assert _is_later_event(this_event, prev_event)
+        assert _is_later_event(this_event, (None, None))
         account = Account(
             debtor_id=debtor_id,
             creditor_id=creditor_id,
