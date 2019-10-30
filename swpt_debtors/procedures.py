@@ -1,11 +1,30 @@
 import math
+from datetime import datetime, date, timedelta
 from numbers import Real
-from typing import TypeVar, List, Optional, Callable
+from typing import TypeVar, List, Optional, Callable, Tuple
 from .extensions import db
-from .models import Limit
+from .models import Limit, Account, MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
+
+TD_ZERO = timedelta(seconds=0)
+TD_SECOND = timedelta(seconds=1)
+TD_MINUS_SECOND = -TD_SECOND
+
+
+def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:
+    seqnum, ts = event
+    other_seqnum, other_ts = other_event
+    if other_ts:
+        advance = ts - other_ts
+    else:
+        advance = TD_ZERO
+    return advance >= TD_MINUS_SECOND and (
+        advance > TD_SECOND
+        or other_seqnum is None
+        or 0 < (seqnum - other_seqnum) % 0x100000000 < 0x80000000
+    )
 
 
 def _add_limit_to_list(l: List[Limit], new_limit: Limit, *, lower_limit=False, upper_limit=False) -> None:
@@ -43,3 +62,55 @@ def _add_limit_to_list(l: List[Limit], new_limit: Limit, *, lower_limit=False, u
             break
     l.clear()
     l.extend(limits)
+
+
+@atomic
+def process_account_change_signal(
+        debtor_id: int,
+        creditor_id: int,
+        change_seqnum: int,
+        change_ts: datetime,
+        principal: int,
+        interest: float,
+        interest_rate: float,
+        last_outgoing_transfer_date: date,
+        status: int) -> None:
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    assert MIN_INT64 <= creditor_id <= MAX_INT64
+    assert MIN_INT32 <= change_seqnum <= MAX_INT32
+    assert -MAX_INT64 <= principal <= MAX_INT64
+    assert -100 < interest_rate <= 100.0
+    assert MIN_INT16 <= status <= MAX_INT16
+
+    this_event = (change_seqnum, change_ts)
+    account = Account.lock_instance((debtor_id, creditor_id))
+    if account:
+        prev_event = (account.change_seqnum, account.change_ts)
+        if _is_later_event(this_event, prev_event):
+            account.change_seqnum = change_seqnum
+            account.change_ts = change_ts
+            account.principal = principal
+            account.interest = interest
+            account.interest_rate = interest_rate
+            account.last_outgoing_transfer_date = last_outgoing_transfer_date
+            account.status = status
+    else:
+        prev_event = (None, None)
+        assert _is_later_event(this_event, prev_event)
+        account = Account(
+            debtor_id=debtor_id,
+            creditor_id=creditor_id,
+            change_seqnum=change_seqnum,
+            change_ts=change_ts,
+            principal=principal,
+            interest=interest,
+            interest_rate=interest_rate,
+            last_outgoing_transfer_date=last_outgoing_transfer_date,
+            status=status,
+        )
+        with db.retry_on_integrity_error():
+            db.session.add(account)
+
+    # TODO: if STATUS_ESTABLISHED_INTEREST_RATE_FLAG is not set,
+    # calculate the interest rate and send a
+    # `change_interest_rate` signal.

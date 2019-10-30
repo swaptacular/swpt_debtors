@@ -1,9 +1,11 @@
-from datetime import date
+from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
-from swpt_debtors.models import Limit
+from swpt_debtors.models import Limit, Account
 from swpt_debtors import procedures as p
 
 A_DATE = date(1900, 1, 1)
+D_ID = -1
+C_ID = 1
 
 
 def test_version(db_session):
@@ -42,3 +44,67 @@ def test_add_limit_to_list_lower():
     # Add an already existing limit.
     p._add_limit_to_list(limits, Limit(30, A_DATE, date(2000, 1, 3)), lower_limit=True)
     assert [l.value for l in limits] == [30, 25]
+
+
+def test_process_account_change_signal(db_session):
+    change_seqnum = 1
+    change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
+    last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
+    p.process_account_change_signal(
+        debtor_id=D_ID,
+        creditor_id=C_ID,
+        change_seqnum=change_seqnum,
+        change_ts=change_ts,
+        principal=1000,
+        interest=12.5,
+        interest_rate=-0.5,
+        last_outgoing_transfer_date=last_outgoing_transfer_date,
+        status=0,
+    )
+    assert len(Account.query.all()) == 1
+    a = Account.get_instance((D_ID, C_ID))
+    assert a.change_seqnum == change_seqnum
+    assert a.change_ts == change_ts
+    assert a.principal == 1000
+    assert a.interest == 12.5
+    assert a.interest_rate == -0.5
+    assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
+    assert a.status == 0
+
+    # Older message
+    p.process_account_change_signal(
+        debtor_id=D_ID,
+        creditor_id=C_ID,
+        change_seqnum=change_seqnum - 1,
+        change_ts=change_ts,
+        principal=1001,
+        interest=12.5,
+        interest_rate=-0.5,
+        last_outgoing_transfer_date=last_outgoing_transfer_date,
+        status=0,
+    )
+    assert len(Account.query.all()) == 1
+    a = Account.get_instance((D_ID, C_ID))
+    assert a.principal == 1000
+
+    # Newer message
+    p.process_account_change_signal(
+        debtor_id=D_ID,
+        creditor_id=C_ID,
+        change_seqnum=change_seqnum + 1,
+        change_ts=change_ts + timedelta(seconds=5),
+        principal=1001,
+        interest=12.6,
+        interest_rate=-0.6,
+        last_outgoing_transfer_date=last_outgoing_transfer_date + timedelta(days=1),
+        status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
+    )
+    assert len(Account.query.all()) == 1
+    a = Account.get_instance((D_ID, C_ID))
+    assert a.change_seqnum == change_seqnum + 1
+    assert a.change_ts == change_ts + timedelta(seconds=5)
+    assert a.principal == 1001
+    assert a.interest == 12.6
+    assert a.interest_rate == -0.6
+    assert a.last_outgoing_transfer_date == last_outgoing_transfer_date + timedelta(days=1)
+    assert a.status == Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG

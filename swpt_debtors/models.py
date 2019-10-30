@@ -6,6 +6,8 @@ from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import func, null, or_
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
 
+MIN_INT16 = -1 << 15
+MAX_INT16 = (1 << 15) - 1
 MIN_INT32 = -1 << 31
 MAX_INT32 = (1 << 31) - 1
 MIN_INT64 = -1 << 63
@@ -192,6 +194,69 @@ class Debtor(db.Model):
     balance_lower_limits = _limit_property('bll_values', 'bll_kickoffs', 'bll_cutoffs')
     interest_rate_lower_limits = _limit_property('irll_values', 'irll_kickoffs', 'irll_cutoffs')
     interest_rate_upper_limits = _limit_property('irul_values', 'irul_kickoffs', 'irul_cutoffs')
+
+
+class Account(db.Model):
+    STATUS_DELETED_FLAG = 1
+    STATUS_ESTABLISHED_INTEREST_RATE_FLAG = 2
+    STATUS_OVERFLOWN_FLAG = 4
+    STATUS_SCHEDULED_FOR_DELETION_FLAG = 8
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    creditor_id = db.Column(db.BigInteger, primary_key=True)
+    change_seqnum = db.Column(
+        db.Integer,
+        nullable=False,
+        comment='Updated when a received `AccountChangeSignal` is applied.',
+    )
+    change_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        nullable=False,
+        comment='Updated when a received `AccountChangeSignal` is applied.',
+    )
+    principal = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The total owed amount. Can be negative.',
+    )
+    interest = db.Column(
+        db.FLOAT,
+        nullable=False,
+        comment='The amount of interest accumulated on the account before `change_ts`, '
+                'but not added to the `principal` yet. Can be a negative number. `interest`'
+                'gets zeroed and added to the principal once in a while (like once per week).',
+    )
+    interest_rate = db.Column(
+        db.REAL,
+        nullable=False,
+        comment='Annual rate (in percents) at which interest accumulates on the account.',
+    )
+    last_outgoing_transfer_date = db.Column(
+        db.DATE,
+        comment='Updated on each transfer for which this account is the sender. This field is '
+                'not updated on demurrage payments.',
+    )
+    status = db.Column(
+        db.SmallInteger,
+        nullable=False,
+        comment='Additional account status flags.',
+    )
+    interest_rate_last_change_seqnum = db.Column(
+        db.Integer,
+        comment='Incremented (with wrapping) on each invocation of the `change_interest_rate` actor.',
+    )
+    interest_rate_last_change_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        comment='Updated on every increment of `interest_rate_last_change_seqnum`. Must never decrease.',
+    )
+    __table_args__ = (
+        db.CheckConstraint((interest_rate > -100.0) & (interest_rate <= 100.0)),
+        db.CheckConstraint(principal > MIN_INT64),
+        {
+            'comment': 'Tells who owes what to whom. This table is a replica the table with the '
+                       'same name in the `swpt_accounts` service.',
+        }
+    )
 
 
 class ChangedDebtorInfoSignal(Signal):

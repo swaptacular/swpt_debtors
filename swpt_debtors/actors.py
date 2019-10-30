@@ -23,3 +23,29 @@ def update_debtor_balance(
     """Updates the balance of the debtor's account."""
 
     update_ts = iso8601.parse_date(update_ts)
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_account_change_signal(
+        debtor_id: int,
+        creditor_id: int,
+        change_seqnum: int,
+        change_ts: str,
+        principal: int,
+        interest: float,
+        interest_rate: float,
+        last_outgoing_transfer_date: str,
+        status: int) -> None:
+    change_ts = iso8601.parse_date(change_ts)
+    last_outgoing_transfer_date = iso8601.parse_date(last_outgoing_transfer_date).date()
+    procedures.process_account_change_signal(
+        debtor_id,
+        creditor_id,
+        change_seqnum,
+        change_ts,
+        principal,
+        interest,
+        interest_rate,
+        last_outgoing_transfer_date,
+        status,
+    )
