@@ -103,8 +103,8 @@ def process_account_change_signal(
 
     this_event = (change_seqnum, change_ts)
     account_pk = (debtor_id, creditor_id)
-    account = Account.lock_instance(account_pk)
     interest_rate_concession = InterestRateConcession.get_instance(account_pk)
+    account = Account.lock_instance(account_pk)
     if account:
         if not _is_later_event(this_event, (account.change_seqnum, account.change_ts)):
             return
