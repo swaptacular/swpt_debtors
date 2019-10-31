@@ -3,7 +3,7 @@ from datetime import datetime, date, timedelta, timezone
 from numbers import Real
 from typing import TypeVar, List, Optional, Callable, Tuple
 from .extensions import db
-from .models import Limit, Account, ChangeInterestRateSignal, InterestRateConcession, \
+from .models import Limit, Debtor, Account, ChangeInterestRateSignal, InterestRateConcession, \
     increment_seqnum, MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
@@ -67,24 +67,26 @@ def _add_limit_to_list(l: List[Limit], new_limit: Limit, *, lower_limit=False, u
 
 def _calc_interest_rate(
         account_principal: int,
+        debtor: Optional[Debtor],
         interest_rate_concession: Optional[InterestRateConcession]) -> Optional[float]:
+    assert not debtor or not interest_rate_concession or debtor.debtor_id == interest_rate_concession.debtor_id
+
     # TODO: Write a real implementation.
     return 0.0
 
 
 def _insert_change_interest_rate_signal(account: Account, interest_rate: Optional[float]) -> None:
-    if interest_rate is None:  # pragma: nocover
-        return
-    current_ts = datetime.now(tz=timezone.utc)
-    account.interest_rate_last_change_seqnum = increment_seqnum(account.interest_rate_last_change_seqnum)
-    account.interest_rate_last_change_ts = max(account.interest_rate_last_change_ts, current_ts)
-    db.session.add(ChangeInterestRateSignal(
-        debtor_id=account.debtor_id,
-        creditor_id=account.creditor_id,
-        change_seqnum=account.interest_rate_last_change_seqnum,
-        change_ts=account.interest_rate_last_change_ts,
-        interest_rate=interest_rate,
-    ))
+    if interest_rate is not None:
+        current_ts = datetime.now(tz=timezone.utc)
+        account.interest_rate_last_change_seqnum = increment_seqnum(account.interest_rate_last_change_seqnum)
+        account.interest_rate_last_change_ts = max(account.interest_rate_last_change_ts, current_ts)
+        db.session.add(ChangeInterestRateSignal(
+            debtor_id=account.debtor_id,
+            creditor_id=account.creditor_id,
+            change_seqnum=account.interest_rate_last_change_seqnum,
+            change_ts=account.interest_rate_last_change_ts,
+            interest_rate=interest_rate,
+        ))
 
 
 @atomic
@@ -107,12 +109,16 @@ def process_account_change_signal(
 
     this_event = (change_seqnum, change_ts)
     account_pk = (debtor_id, creditor_id)
+
+    # TODO: Use caches for `Debtor`s and `InterestRateConcession`s.
+    debtor = Debtor.get_instance(debtor_id)
     interest_rate_concession = InterestRateConcession.get_instance(account_pk)
+
     account = Account.lock_instance(account_pk)
     if account:
         if not _is_later_event(this_event, (account.change_seqnum, account.change_ts)):
             return
-        old_interest_rate = _calc_interest_rate(account.principal, interest_rate_concession)
+        old_interest_rate = _calc_interest_rate(account.principal, debtor, interest_rate_concession)
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
         account.principal = principal
@@ -121,7 +127,7 @@ def process_account_change_signal(
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
         account.status = status
     else:
-        old_interest_rate = _calc_interest_rate(0, interest_rate_concession)
+        old_interest_rate = _calc_interest_rate(0, debtor, interest_rate_concession)
         account = Account(
             debtor_id=debtor_id,
             creditor_id=creditor_id,
@@ -141,6 +147,6 @@ def process_account_change_signal(
     # yet; 2) A change in the account balance caused the interest rate
     # on the account to change.
     has_interest_rate_set = account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
-    new_interest_rate = _calc_interest_rate(account.principal, interest_rate_concession)
+    new_interest_rate = _calc_interest_rate(account.principal, debtor, interest_rate_concession)
     if not has_interest_rate_set or new_interest_rate != old_interest_rate:
         _insert_change_interest_rate_signal(account, new_interest_rate)
