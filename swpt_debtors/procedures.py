@@ -65,13 +65,17 @@ def _add_limit_to_list(l: List[Limit], new_limit: Limit, *, lower_limit=False, u
     l.extend(limits)
 
 
-def _calc_interest_rate(account_principal: int, interest_rate_concession: Optional[InterestRateConcession]) -> float:
+def _calc_interest_rate(
+        account_principal: int,
+        interest_rate_concession: Optional[InterestRateConcession]) -> Optional[float]:
     # TODO: Write a real implementation.
     return 0.0
 
 
-def _insert_change_interest_rate_signal(account: Account, interest_rate: float, current_ts: datetime = None) -> None:
-    current_ts = current_ts or datetime.now(tz=timezone.utc)
+def _insert_change_interest_rate_signal(account: Account, interest_rate: Optional[float]) -> None:
+    if interest_rate is None:  # pragma: nocover
+        return
+    current_ts = datetime.now(tz=timezone.utc)
     account.interest_rate_last_change_seqnum = increment_seqnum(account.interest_rate_last_change_seqnum)
     account.interest_rate_last_change_ts = max(account.interest_rate_last_change_ts, current_ts)
     db.session.add(ChangeInterestRateSignal(
