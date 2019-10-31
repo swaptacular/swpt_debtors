@@ -73,7 +73,7 @@ class Signal(db.Model):
     #      `ModelClass.signalbus_autoflush = False` and
     #      `ModelClass.signalbus_burst_count = N` in models.
 
-    queue_name = None
+    queue_name: Optional[str] = None
 
     @property
     def event_name(self):  # pragma: no cover

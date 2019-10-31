@@ -45,7 +45,7 @@ def _add_limit_to_list(l: List[Limit], new_limit: Limit, *, lower_limit=False, u
     def find_eliminator_in_sorted_limits(sorted_limits: List[Limit]) -> Optional[Limit]:
         """Try to find a limit that makes some of the other limits ineffectual."""
 
-        restrictiveness = math.inf
+        restrictiveness: Real = math.inf
         for eliminator in sorted_limits:
             r = get_restrictiveness(eliminator)
             if r >= restrictiveness:
@@ -58,9 +58,10 @@ def _add_limit_to_list(l: List[Limit], new_limit: Limit, *, lower_limit=False, u
         limits = apply_eliminator(limits, new_limit)
         limits.append(new_limit)
         limits.sort(key=lambda limit: limit.cutoff)
-        new_limit = find_eliminator_in_sorted_limits(limits)
-        if not new_limit:
+        eliminator = find_eliminator_in_sorted_limits(limits)
+        if eliminator is None:
             break
+        new_limit = eliminator
     l.clear()
     l.extend(limits)
 
