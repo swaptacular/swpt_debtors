@@ -1,4 +1,5 @@
-from datetime import datetime, date, timedelta
+import pytest
+from datetime import datetime, date, timedelta, timezone
 from swpt_debtors import __version__
 from swpt_debtors.models import Limit, Account, ChangeInterestRateSignal
 from swpt_debtors import procedures as p
@@ -8,8 +9,17 @@ D_ID = -1
 C_ID = 1
 
 
+@pytest.fixture(scope='function')
+def current_ts():
+    return datetime.now(tz=timezone.utc)
+
+
 def test_version(db_session):
     assert __version__
+
+
+def test_is_later_event(current_ts):
+    assert p._is_later_event((1, current_ts), (None, None))
 
 
 def test_add_limit_to_list_upper():

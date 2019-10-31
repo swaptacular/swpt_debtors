@@ -3,8 +3,8 @@ from datetime import datetime, date, timedelta, timezone
 from numbers import Real
 from typing import TypeVar, List, Optional, Callable, Tuple
 from .extensions import db
-from .models import Limit, Account, ChangeInterestRateSignal, increment_seqnum, \
-    MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64
+from .models import Limit, Account, ChangeInterestRateSignal, InterestRateConcession, \
+    increment_seqnum, MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -65,7 +65,7 @@ def _add_limit_to_list(l: List[Limit], new_limit: Limit, *, lower_limit=False, u
     l.extend(limits)
 
 
-def _calc_interest_rate(account: Account) -> float:
+def _calc_interest_rate(account_principal: int, interest_rate_concession: Optional[InterestRateConcession]) -> float:
     # TODO: Write a real implementation.
     return 0.0
 
@@ -102,10 +102,13 @@ def process_account_change_signal(
     assert MIN_INT16 <= status <= MAX_INT16
 
     this_event = (change_seqnum, change_ts)
-    account = Account.lock_instance((debtor_id, creditor_id))
+    account_pk = (debtor_id, creditor_id)
+    account = Account.lock_instance(account_pk)
+    interest_rate_concession = InterestRateConcession.get_instance(account_pk)
     if account:
         if not _is_later_event(this_event, (account.change_seqnum, account.change_ts)):
             return
+        old_interest_rate = _calc_interest_rate(account.principal, interest_rate_concession)
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
         account.principal = principal
@@ -114,7 +117,7 @@ def process_account_change_signal(
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
         account.status = status
     else:
-        assert _is_later_event(this_event, (None, None))
+        old_interest_rate = _calc_interest_rate(0, interest_rate_concession)
         account = Account(
             debtor_id=debtor_id,
             creditor_id=creditor_id,
@@ -129,9 +132,11 @@ def process_account_change_signal(
         with db.retry_on_integrity_error():
             db.session.add(account)
 
-    if not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
-        _insert_change_interest_rate_signal(account, _calc_interest_rate(account))
-
-    # TODO: If _calc_interest_rate(old_account_state) !=
-    # _calc_interest_rate(new_account_state), call
-    # _insert_change_interest_rate_signal()
+    # There are two cases when we must send `ChangeInterestRateSignal`
+    # immediately: 1) The account does not have an interest rate set
+    # yet; 2) A change in the account balance caused the interest rate
+    # on the account to change.
+    has_interest_rate_set = account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
+    new_interest_rate = _calc_interest_rate(account.principal, interest_rate_concession)
+    if not has_interest_rate_set or new_interest_rate != old_interest_rate:
+        _insert_change_interest_rate_signal(account, new_interest_rate)
