@@ -262,7 +262,7 @@ class Account(db.Model):
         db.CheckConstraint((interest_rate > -100.0) & (interest_rate <= 100.0)),
         db.CheckConstraint(principal > MIN_INT64),
         {
-            'comment': 'Tells who owes what to whom. This table is a replica the table with the '
+            'comment': 'Tells who owes what to whom. This table is a replica of the table with the '
                        'same name in the `swpt_accounts` service.',
         }
     )
