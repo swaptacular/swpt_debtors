@@ -268,6 +268,62 @@ class Account(db.Model):
     )
 
 
+class InterestRateConcession(db.Model):
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    creditor_id = db.Column(db.BigInteger, primary_key=True)
+    last_change_seqnum = db.Column(
+        db.Integer,
+        nullable=False,
+        default=1,
+        comment='Incremented (with wrapping) on every change.',
+    )
+    last_change_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        nullable=False,
+        default=get_now_utc,
+        comment='Updated on every increment of `last_change_seqnum`. Must never decrease.',
+    )
+
+    # Interest Rate Lower Limits
+    irll_values = db.Column(
+        pg.ARRAY(db.BigInteger, dimensions=1),
+        comment='Enforced concession interest rate lower limits. Each element in this '
+                'array should have a corresponding element in the `irll_kickoffs` and '
+                '`irll_cutoffs` arrays (the kickoff and cutoff dates for the limits). '
+                'A `NULL` is the same as an empty array.',
+    )
+    irll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+
+    # Ballance Upper Limits
+    bul_values = db.Column(
+        pg.ARRAY(db.BigInteger, dimensions=1),
+        comment="Upper limits for creditor's `account.principal` column. The concession interest "
+                "rate lower limits will apply only when the `account.principal` is within the limits "
+                "specified here. Each element in this array should have a corresponding "
+                "element in the `bul_kickoffs` and `bul_cutoffs` arrays (the kickoff and "
+                "cutoff dates for the limits). A `NULL` is the same as an empty array.",
+    )
+    bul_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    bul_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+
+    __table_args__ = (
+        db.CheckConstraint(or_(bul_values == null(), func.array_ndims(bul_values) == 1)),
+        db.CheckConstraint(or_(bul_kickoffs == null(), func.array_ndims(bul_kickoffs) == 1)),
+        db.CheckConstraint(or_(bul_cutoffs == null(), func.array_ndims(bul_cutoffs) == 1)),
+        db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
+        db.CheckConstraint(or_(irll_kickoffs == null(), func.array_ndims(irll_kickoffs) == 1)),
+        db.CheckConstraint(or_(irll_cutoffs == null(), func.array_ndims(irll_cutoffs) == 1)),
+        {
+            'comment': 'Represents an enforced concession interest rate, valid only for a specific '
+                       'creditor, under specific conditions.',
+        }
+    )
+
+    interest_rate_lower_limits = _limit_property('irll_values', 'irll_kickoffs', 'irll_cutoffs')
+    balance_upper_limits = _limit_property('bul_values', 'bul_kickoffs', 'bul_cutoffs')
+
+
 class ChangedDebtorInfoSignal(Signal):
     """Sent when debtor's principal information has changed."""
 
