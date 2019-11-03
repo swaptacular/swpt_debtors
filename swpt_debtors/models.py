@@ -1,6 +1,9 @@
+from __future__ import annotations
+import math
 from numbers import Real
-from typing import NamedTuple, List, Tuple, Optional
+from typing import NamedTuple, List, Tuple, Optional, Iterable
 from datetime import datetime, date, timezone
+from collections import abc
 from marshmallow import Schema, fields
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
@@ -21,16 +24,78 @@ class Limit(NamedTuple):
     cutoff: date  # the limit will stop to be enforced at this date
 
 
-def _limit_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrname: str):
-    def unpack_limits(values: Optional[List], kickoffs: Optional[List], cutoffs: Optional[List]) -> List[Limit]:
+class LimitSequence(abc.Sequence):
+    _limits: List[Limit]
+    lower_limits: bool
+    upper_limits: bool
+
+    def __init__(self, limits: Iterable[Limit] = [], *, lower_limits=False, upper_limits=False):
+        assert lower_limits or upper_limits, 'the limits type must be specified when calling LimitSequence()'
+        assert not (lower_limits and upper_limits)
+        self.lower_limits = bool(lower_limits)
+        self.upper_limits = bool(upper_limits)
+        self._limits = list(limits)
+
+    def __getitem__(self, index):
+        return self._limits[index]
+
+    def __len__(self):
+        return len(self._limits)
+
+    def __eq__(self, other):
+        return (self._limits == other._limits
+                and self.lower_limits == other.lower_limits
+                and self.upper_limits == other.upper_limits)
+
+    def sort(self):
+        self._limits.sort(key=lambda l: l.cutoff)
+
+    def purge_expired(self, expired_before: date):
+        self._limits = [l for l in self._limits if l.cutoff >= expired_before]
+
+    def add_limit(self, new_limit: Limit) -> None:
+        def find_eliminator_in_sorted_limits_list(sorted_limits: LimitSequence) -> Optional[Limit]:
+            """Try to find a limit that makes some of the other limits ineffectual."""
+
+            restrictiveness: Real = math.inf
+            for eliminator in sorted_limits:
+                r = self._get_restrictiveness(eliminator)
+                if r >= restrictiveness:
+                    return eliminator
+                restrictiveness = r
+            return None
+
+        eliminator: Optional[Limit] = new_limit
+        while eliminator:
+            self._apply_eliminator(eliminator)
+            self.sort()
+            eliminator = find_eliminator_in_sorted_limits_list(self)
+
+    def _get_restrictiveness(self, limit: Limit) -> Real:
+        return limit.value if self.lower_limits else -limit.value
+
+    def _apply_eliminator(self, eliminator: Limit) -> None:
+        r = self._get_restrictiveness(eliminator)
+        cutoff = eliminator.cutoff
+        self._limits = [l for l in self._limits if self._get_restrictiveness(l) > r or l.cutoff > cutoff]
+        self._limits.append(eliminator)
+
+
+def _limits_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrname: str,
+                     *, lower_limits: bool = False, upper_limits: bool = False):
+    def unpack_limits(values: Optional[List], kickoffs: Optional[List], cutoffs: Optional[List]) -> LimitSequence:
         values = values or []
         kickoffs = kickoffs or []
         cutoffs = cutoffs or []
-        return [Limit(*t) for t in zip(values, kickoffs, cutoffs) if all(x is not None for x in t)]
+        return LimitSequence(
+            (Limit(*t) for t in zip(values, kickoffs, cutoffs) if all(x is not None for x in t)),
+            lower_limits=lower_limits,
+            upper_limits=upper_limits,
+        )
 
-    def pack_limits(limits: List[Limit]) -> Tuple[Optional[List], Optional[List], Optional[List]]:
-        if len(limits) == 0:
-            return None, None, None
+    def pack_limits(limits: LimitSequence) -> Tuple[Optional[List], Optional[List], Optional[List]]:
+        assert limits.lower_limits == lower_limits
+        assert limits.upper_limits == upper_limits
         values = []
         kickoffs = []
         cutoffs = []
@@ -41,15 +106,15 @@ def _limit_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrna
             values.append(limit.value)
             kickoffs.append(limit.kickoff)
             cutoffs.append(limit.cutoff)
-        return values, kickoffs, cutoffs
+        return values or None, kickoffs or None, cutoffs or None
 
-    def getter(self):
+    def getter(self) -> LimitSequence:
         values = getattr(self, values_attrname)
         kickoffs = getattr(self, kickoffs_attrname)
         cutoffs = getattr(self, cutoffs_attrname)
         return unpack_limits(values, kickoffs, cutoffs)
 
-    def setter(self, value):
+    def setter(self, value: LimitSequence) -> None:
         values, kickoffs, cutoffs = pack_limits(value)
         setattr(self, values_attrname, values)
         setattr(self, kickoffs_attrname, kickoffs)
@@ -196,9 +261,9 @@ class Debtor(db.Model):
         }
     )
 
-    balance_lower_limits = _limit_property('bll_values', 'bll_kickoffs', 'bll_cutoffs')
-    interest_rate_lower_limits = _limit_property('irll_values', 'irll_kickoffs', 'irll_cutoffs')
-    interest_rate_upper_limits = _limit_property('irul_values', 'irul_kickoffs', 'irul_cutoffs')
+    balance_lower_limits = _limits_property('bll_values', 'bll_kickoffs', 'bll_cutoffs', lower_limits=True)
+    interest_rate_lower_limits = _limits_property('irll_values', 'irll_kickoffs', 'irll_cutoffs', lower_limits=True)
+    interest_rate_upper_limits = _limits_property('irul_values', 'irul_kickoffs', 'irul_cutoffs', upper_limits=True)
 
 
 class Account(db.Model):
@@ -320,8 +385,8 @@ class InterestRateConcession(db.Model):
         }
     )
 
-    interest_rate_lower_limits = _limit_property('irll_values', 'irll_kickoffs', 'irll_cutoffs')
-    balance_upper_limits = _limit_property('bul_values', 'bul_kickoffs', 'bul_cutoffs')
+    interest_rate_lower_limits = _limits_property('irll_values', 'irll_kickoffs', 'irll_cutoffs', lower_limits=True)
+    balance_upper_limits = _limits_property('bul_values', 'bul_kickoffs', 'bul_cutoffs', upper_limits=True)
 
 
 class ChangedDebtorInfoSignal(Signal):
