@@ -27,12 +27,12 @@ def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int
 
 
 def _calc_interest_rate(
+        today: date,
         account_principal: int,
         debtor: Optional[Debtor],
         concession: Optional[InterestRateConcession]) -> Optional[float]:
-    if not debtor:
+    if debtor is None:
         return None
-    today = datetime.now(tz=timezone.utc).date()
 
     # Apply debtor's standard interest rate limits.
     interest_rate = debtor.interest_rate_target
@@ -115,6 +115,7 @@ def process_account_change_signal(
 
     this_event = (change_seqnum, change_ts)
     account_pk = (debtor_id, creditor_id)
+    today = datetime.now(tz=timezone.utc).date()
 
     # TODO: Use caches for `Debtor`s and `InterestRateConcession`s.
     debtor = Debtor.get_instance(debtor_id)
@@ -124,7 +125,7 @@ def process_account_change_signal(
     if account:
         if not _is_later_event(this_event, (account.change_seqnum, account.change_ts)):
             return
-        old_interest_rate = _calc_interest_rate(account.principal, debtor, interest_rate_concession)
+        old_interest_rate = _calc_interest_rate(today, account.principal, debtor, interest_rate_concession)
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
         account.principal = principal
@@ -133,7 +134,7 @@ def process_account_change_signal(
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
         account.status = status
     else:
-        old_interest_rate = _calc_interest_rate(0, debtor, interest_rate_concession)
+        old_interest_rate = _calc_interest_rate(today, 0, debtor, interest_rate_concession)
         account = Account(
             debtor_id=debtor_id,
             creditor_id=creditor_id,
@@ -153,6 +154,6 @@ def process_account_change_signal(
     # yet; 2) A change in the account balance caused the interest rate
     # on the account to change.
     has_interest_rate_set = account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
-    new_interest_rate = _calc_interest_rate(account.principal, debtor, interest_rate_concession)
+    new_interest_rate = _calc_interest_rate(today, account.principal, debtor, interest_rate_concession)
     if not has_interest_rate_set or new_interest_rate != old_interest_rate:
         _insert_change_interest_rate_signal(account, new_interest_rate)
