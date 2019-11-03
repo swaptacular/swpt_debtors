@@ -63,8 +63,8 @@ def _insert_change_interest_rate_signal(account: Account, interest_rate: Optiona
         ))
 
 
-def _insert_changed_debtor_info_signal(debtor: Debtor, current_ts: datetime = None) -> None:
-    current_ts = current_ts or datetime.now(tz=timezone.utc)
+def _insert_changed_debtor_info_signal(debtor: Debtor) -> None:
+    current_ts = datetime.now(tz=timezone.utc)
     debtor.last_change_seqnum = increment_seqnum(debtor.last_change_seqnum)
     debtor.last_change_ts = max(debtor.last_change_ts, current_ts)
     db.session.add(ChangedDebtorInfoSignal(
