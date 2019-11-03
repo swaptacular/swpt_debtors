@@ -52,7 +52,7 @@ class LimitSequence(abc.Sequence):
     def purge_expired(self, expired_before: date):
         self._limits = [l for l in self._limits if l.cutoff >= expired_before]
 
-    def add_limit(self, new_limit: Limit) -> None:
+    def insert_limit(self, new_limit: Limit) -> None:
         def find_eliminator_in_sorted_limits_list(sorted_limits: LimitSequence) -> Optional[Limit]:
             """Try to find a limit that makes some of the other limits ineffectual."""
 
