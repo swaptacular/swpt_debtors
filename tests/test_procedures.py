@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, date, timedelta, timezone
 from swpt_debtors import __version__
-from swpt_debtors.models import Limit, LimitSequence, Account, ChangeInterestRateSignal
+from swpt_debtors.models import Limit, LimitSequence, Account, ChangeInterestRateSignal, ChangedDebtorInfoSignal
 from swpt_debtors import procedures as p
 
 D_ID = -1
@@ -11,6 +11,11 @@ C_ID = 1
 @pytest.fixture(scope='function')
 def current_ts():
     return datetime.now(tz=timezone.utc)
+
+
+@pytest.fixture
+def debtor():
+    return p.get_or_create_debtor(D_ID)
 
 
 def test_version(db_session):
@@ -55,7 +60,17 @@ def test_insert_limit_to_list_lower():
     assert [l.value for l in limits] == [30, 25]
 
 
-def test_process_account_change_signal(db_session):
+def test_get_or_create_debtor(db_session):
+    debtor = p.get_or_create_debtor(D_ID)
+    assert debtor.debtor_id == D_ID
+    cdis = ChangedDebtorInfoSignal.query.all()
+    assert len(cdis) == 1
+    assert cdis[0].debtor_id == D_ID
+    debtor = p.get_or_create_debtor(D_ID)
+    assert len(ChangedDebtorInfoSignal.query.all()) == 1
+
+
+def test_process_account_change_signal(db_session, debtor):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
     last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
