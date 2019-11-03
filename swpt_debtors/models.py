@@ -59,7 +59,7 @@ class LimitSequence(abc.Sequence):
             # in the sequence redundant.
             restrictiveness: Real = math.inf
             for eliminator in sorted_limits:
-                r = self._get_restrictiveness(eliminator)
+                r = self._calc_limit_restrictiveness(eliminator)
                 if r >= restrictiveness:
                     return eliminator
                 restrictiveness = r
@@ -87,13 +87,13 @@ class LimitSequence(abc.Sequence):
                 value = limit_value
         return value
 
-    def _get_restrictiveness(self, limit: Limit) -> Real:
+    def _calc_limit_restrictiveness(self, limit: Limit) -> Real:
         return limit.value if self.lower_limits else -limit.value
 
     def _apply_eliminator(self, eliminator: Limit) -> None:
-        r = self._get_restrictiveness(eliminator)
+        r = self._calc_limit_restrictiveness(eliminator)
         cutoff = eliminator.cutoff
-        self._limits = [l for l in self._limits if self._get_restrictiveness(l) > r or l.cutoff > cutoff]
+        self._limits = [l for l in self._limits if self._calc_limit_restrictiveness(l) > r or l.cutoff > cutoff]
         self._limits.append(eliminator)
 
 
