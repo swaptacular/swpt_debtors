@@ -20,13 +20,13 @@ MAX_INT64 = (1 << 63) - 1
 
 class Limit(NamedTuple):
     value: Real  # the limiting value
-    cutoff: date  # the limit will stop to be enforced at this date
+    cutoff: date  # the limit will stop to be enforced *after* this date
 
 
 class LimitSequence(abc.Sequence):
-    _limits: List[Limit]
     lower_limits: bool
     upper_limits: bool
+    _limits: List[Limit]
 
     def __init__(self, limits: Iterable[Limit] = [], *, lower_limits=False, upper_limits=False):
         assert lower_limits or upper_limits, 'the limits type must be specified when calling LimitSequence()'
@@ -42,7 +42,8 @@ class LimitSequence(abc.Sequence):
         return len(self._limits)
 
     def __eq__(self, other):
-        return (self._limits == other._limits
+        return (isinstance(other, LimitSequence)
+                and self._limits == other._limits
                 and self.lower_limits == other.lower_limits
                 and self.upper_limits == other.upper_limits)
 
@@ -53,9 +54,9 @@ class LimitSequence(abc.Sequence):
         self._limits = [l for l in self._limits if l.cutoff >= expired_before]
 
     def insert_limit(self, new_limit: Limit) -> None:
-        def find_eliminator_in_sorted_limits_list(sorted_limits: LimitSequence) -> Optional[Limit]:
-            """Try to find a limit that makes some of the other limits ineffectual."""
-
+        def find_eliminator_in_sorted_limit_sequence(sorted_limits: LimitSequence) -> Optional[Limit]:
+            # Try to find a limit that makes some of the other limits
+            # in the sequence redundant.
             restrictiveness: Real = math.inf
             for eliminator in sorted_limits:
                 r = self._get_restrictiveness(eliminator)
@@ -68,7 +69,23 @@ class LimitSequence(abc.Sequence):
         while eliminator:
             self._apply_eliminator(eliminator)
             self.sort()
-            eliminator = find_eliminator_in_sorted_limits_list(self)
+            eliminator = find_eliminator_in_sorted_limit_sequence(self)
+
+    def current_limits(self, current_date: date) -> Iterable[Limit]:
+        return LimitSequence(
+            (l for l in self if l.cutoff >= current_date),
+            lower_limits=self.lower_limits,
+            upper_limits=self.upper_limits,
+        )
+
+    def apply_to_value(self, value: Real) -> Real:
+        lower_limits = self.lower_limits
+        upper_limits = self.upper_limits
+        for limit in self:
+            limit_value = limit.value
+            if lower_limits and value < limit_value or upper_limits and value > limit_value:
+                value = limit_value
+        return value
 
     def _get_restrictiveness(self, limit: Limit) -> Real:
         return limit.value if self.lower_limits else -limit.value
@@ -91,7 +108,7 @@ def _limits_property(values_attrname: str, cutoffs_attrname: str,
             upper_limits=upper_limits,
         )
 
-    def pack_limits(limits: LimitSequence) -> Tuple[Optional[List], Optional[List], Optional[List]]:
+    def pack_limits(limits: LimitSequence) -> Tuple[Optional[List], Optional[List]]:
         assert limits.lower_limits == lower_limits
         assert limits.upper_limits == upper_limits
         values = []
