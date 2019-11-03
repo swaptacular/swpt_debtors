@@ -45,12 +45,3 @@ def test_limit_properties(db_session):
     d.balance_lower_limits = LimitSequence(lower_limits=True)
     assert d.bll_values is None
     assert d.bll_cutoffs is None
-
-    # Purge expired.
-    lower_limits.purge_expired(date(1999, 1, 2))
-    assert len(lower_limits) == 2
-    lower_limits.purge_expired(date(2000, 1, 2))
-    assert len(lower_limits) == 1
-    assert len(upper_limits) == 2
-    upper_limits.purge_expired(date(2010, 1, 2))
-    assert len(upper_limits) == 0

@@ -50,9 +50,6 @@ class LimitSequence(abc.Sequence):
     def sort(self):
         self._limits.sort(key=lambda l: l.cutoff)
 
-    def purge_expired(self, expired_before: date):
-        self._limits = [l for l in self._limits if l.cutoff >= expired_before]
-
     def insert_limit(self, new_limit: Limit) -> None:
         def find_eliminator_in_sorted_limit_sequence(sorted_limits: LimitSequence) -> Optional[Limit]:
             # Try to find a limit that makes some of the other limits
