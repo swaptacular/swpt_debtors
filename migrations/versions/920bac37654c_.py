@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 908ffa43eba7
+Revision ID: 920bac37654c
 Revises: 
-Create Date: 2019-10-31 13:08:03.492198
+Create Date: 2019-11-03 03:47:36.907437
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '908ffa43eba7'
+revision = '920bac37654c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -101,12 +101,12 @@ def upgrade():
     sa.Column('irll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced concession interest rate lower limits. Each element in this array should have a corresponding element in the `irll_kickoffs` and `irll_cutoffs` arrays (the kickoff and cutoff dates for the limits). A `NULL` is the same as an empty array.'),
     sa.Column('irll_kickoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.Column('bul_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment="Upper limits for creditor's `account.principal` column. The concession interest rate lower limits will apply only when the `account.principal` is within the limits specified here. Each element in this array should have a corresponding element in the `bul_kickoffs` and `bul_cutoffs` arrays (the kickoff and cutoff dates for the limits). A `NULL` is the same as an empty array."),
-    sa.Column('bul_kickoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.Column('bul_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.CheckConstraint('bul_cutoffs IS NULL OR array_ndims(bul_cutoffs) = 1'),
-    sa.CheckConstraint('bul_kickoffs IS NULL OR array_ndims(bul_kickoffs) = 1'),
-    sa.CheckConstraint('bul_values IS NULL OR array_ndims(bul_values) = 1'),
+    sa.Column('apl_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment="The concession interest rate will not be applied when the creditor's `account.principal` exceeds the values specified here. Each element in this array should have a corresponding element in the `apl_kickoffs` and `apl_cutoffs` arrays (the kickoff and cutoff dates for the limits). A `NULL` is the same as an empty array."),
+    sa.Column('apl_kickoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
+    sa.Column('apl_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
+    sa.CheckConstraint('apl_cutoffs IS NULL OR array_ndims(apl_cutoffs) = 1'),
+    sa.CheckConstraint('apl_kickoffs IS NULL OR array_ndims(apl_kickoffs) = 1'),
+    sa.CheckConstraint('apl_values IS NULL OR array_ndims(apl_values) = 1'),
     sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
     sa.CheckConstraint('irll_kickoffs IS NULL OR array_ndims(irll_kickoffs) = 1'),
     sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1'),

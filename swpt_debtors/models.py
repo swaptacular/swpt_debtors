@@ -360,22 +360,22 @@ class InterestRateConcession(db.Model):
     irll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
-    # Ballance Upper Limits
-    bul_values = db.Column(
+    # Account Principal Limits
+    apl_values = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
-        comment="Upper limits for creditor's `account.principal` column. The concession interest "
-                "rate lower limits will apply only when the `account.principal` is within the limits "
-                "specified here. Each element in this array should have a corresponding "
-                "element in the `bul_kickoffs` and `bul_cutoffs` arrays (the kickoff and "
-                "cutoff dates for the limits). A `NULL` is the same as an empty array.",
+        comment="The concession interest rate will not be applied when the creditor's "
+                "`account.principal` exceeds the values specified here. Each element "
+                "in this array should have a corresponding element in the `apl_kickoffs` "
+                "and `apl_cutoffs` arrays (the kickoff and cutoff dates for the limits). "
+                "A `NULL` is the same as an empty array.",
     )
-    bul_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
-    bul_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    apl_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    apl_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     __table_args__ = (
-        db.CheckConstraint(or_(bul_values == null(), func.array_ndims(bul_values) == 1)),
-        db.CheckConstraint(or_(bul_kickoffs == null(), func.array_ndims(bul_kickoffs) == 1)),
-        db.CheckConstraint(or_(bul_cutoffs == null(), func.array_ndims(bul_cutoffs) == 1)),
+        db.CheckConstraint(or_(apl_values == null(), func.array_ndims(apl_values) == 1)),
+        db.CheckConstraint(or_(apl_kickoffs == null(), func.array_ndims(apl_kickoffs) == 1)),
+        db.CheckConstraint(or_(apl_cutoffs == null(), func.array_ndims(apl_cutoffs) == 1)),
         db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
         db.CheckConstraint(or_(irll_kickoffs == null(), func.array_ndims(irll_kickoffs) == 1)),
         db.CheckConstraint(or_(irll_cutoffs == null(), func.array_ndims(irll_cutoffs) == 1)),
@@ -386,7 +386,7 @@ class InterestRateConcession(db.Model):
     )
 
     interest_rate_lower_limits = _limits_property('irll_values', 'irll_kickoffs', 'irll_cutoffs', lower_limits=True)
-    balance_upper_limits = _limits_property('bul_values', 'bul_kickoffs', 'bul_cutoffs', upper_limits=True)
+    account_principal_limits = _limits_property('apl_values', 'apl_kickoffs', 'apl_cutoffs', lower_limits=True)
 
 
 class ChangedDebtorInfoSignal(Signal):
