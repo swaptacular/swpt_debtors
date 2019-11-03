@@ -20,7 +20,6 @@ MAX_INT64 = (1 << 63) - 1
 
 class Limit(NamedTuple):
     value: Real  # the limiting value
-    kickoff: date  # the limit has been created at this date
     cutoff: date  # the limit will stop to be enforced at this date
 
 
@@ -81,14 +80,13 @@ class LimitSequence(abc.Sequence):
         self._limits.append(eliminator)
 
 
-def _limits_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrname: str,
+def _limits_property(values_attrname: str, cutoffs_attrname: str,
                      *, lower_limits: bool = False, upper_limits: bool = False):
-    def unpack_limits(values: Optional[List], kickoffs: Optional[List], cutoffs: Optional[List]) -> LimitSequence:
+    def unpack_limits(values: Optional[List], cutoffs: Optional[List]) -> LimitSequence:
         values = values or []
-        kickoffs = kickoffs or []
         cutoffs = cutoffs or []
         return LimitSequence(
-            (Limit(*t) for t in zip(values, kickoffs, cutoffs) if all(x is not None for x in t)),
+            (Limit(*t) for t in zip(values, cutoffs) if all(x is not None for x in t)),
             lower_limits=lower_limits,
             upper_limits=upper_limits,
         )
@@ -97,27 +95,22 @@ def _limits_property(values_attrname: str, kickoffs_attrname: str, cutoffs_attrn
         assert limits.lower_limits == lower_limits
         assert limits.upper_limits == upper_limits
         values = []
-        kickoffs = []
         cutoffs = []
         for limit in limits:
             assert isinstance(limit.value, Real)
-            assert isinstance(limit.kickoff, date)
             assert isinstance(limit.cutoff, date)
             values.append(limit.value)
-            kickoffs.append(limit.kickoff)
             cutoffs.append(limit.cutoff)
-        return values or None, kickoffs or None, cutoffs or None
+        return values or None, cutoffs or None
 
     def getter(self) -> LimitSequence:
         values = getattr(self, values_attrname)
-        kickoffs = getattr(self, kickoffs_attrname)
         cutoffs = getattr(self, cutoffs_attrname)
-        return unpack_limits(values, kickoffs, cutoffs)
+        return unpack_limits(values, cutoffs)
 
     def setter(self, value: LimitSequence) -> None:
-        values, kickoffs, cutoffs = pack_limits(value)
+        values, cutoffs = pack_limits(value)
         setattr(self, values_attrname, values)
-        setattr(self, kickoffs_attrname, kickoffs)
         setattr(self, cutoffs_attrname, cutoffs)
 
     return property(getter, setter)
@@ -216,54 +209,48 @@ class Debtor(db.Model):
     bll_values = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
         comment='Enforced lower limits for the `balance` column. Each element in  '
-                'this array should have a corresponding element in the `bll_kickoffs` '
-                'and `bll_cutoffs` arrays (the kickoff and cutoff dates for the limits). '
-                'A `NULL` is the same as an empty array.',
+                'this array should have a corresponding element in the `bll_cutoffs` '
+                'arrays (the cutoff dates for the limits). A `NULL` is the same as '
+                'an empty array.',
     )
-    bll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     bll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     # Interest Rate Lower Limits
     irll_values = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
         comment='Enforced interest rate lower limits. Each element in this array '
-                'should have a corresponding element in the `irll_kickoffs` and '
-                '`irll_cutoffs` arrays (the kickoff and cutoff dates for the limits). '
-                'A `NULL` is the same as an empty array.',
+                'should have a corresponding element in the `irll_cutoffs` array '
+                '(the cutoff dates for the limits). A `NULL` is the same as an '
+                'empty array.',
     )
-    irll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     # Interest Rate Upper Limits
     irul_values = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
         comment='Enforced interest rate upper limits. Each element in this array '
-                'should have a corresponding element in the `irul_kickoffs` and '
-                '`irul_cutoffs` arrays (the kickoff and cutoff dates for the limits). '
-                'A `NULL` is the same as an empty array.',
+                'should have a corresponding element in the `irul_cutoffs` array '
+                '(the cutoff dates for the limits). A `NULL` is the same as an '
+                'empty array.',
     )
-    irul_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irul_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     __table_args__ = (
         db.CheckConstraint((interest_rate_target > -100.0) & (interest_rate_target <= 100.0)),
         db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
-        db.CheckConstraint(or_(bll_kickoffs == null(), func.array_ndims(bll_kickoffs) == 1)),
         db.CheckConstraint(or_(bll_cutoffs == null(), func.array_ndims(bll_cutoffs) == 1)),
         db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
-        db.CheckConstraint(or_(irll_kickoffs == null(), func.array_ndims(irll_kickoffs) == 1)),
         db.CheckConstraint(or_(irll_cutoffs == null(), func.array_ndims(irll_cutoffs) == 1)),
         db.CheckConstraint(or_(irul_values == null(), func.array_ndims(irul_values) == 1)),
-        db.CheckConstraint(or_(irul_kickoffs == null(), func.array_ndims(irul_kickoffs) == 1)),
         db.CheckConstraint(or_(irul_cutoffs == null(), func.array_ndims(irul_cutoffs) == 1)),
         {
             'comment': "Represents debtor's principal information.",
         }
     )
 
-    balance_lower_limits = _limits_property('bll_values', 'bll_kickoffs', 'bll_cutoffs', lower_limits=True)
-    interest_rate_lower_limits = _limits_property('irll_values', 'irll_kickoffs', 'irll_cutoffs', lower_limits=True)
-    interest_rate_upper_limits = _limits_property('irul_values', 'irul_kickoffs', 'irul_cutoffs', upper_limits=True)
+    balance_lower_limits = _limits_property('bll_values', 'bll_cutoffs', lower_limits=True)
+    interest_rate_lower_limits = _limits_property('irll_values', 'irll_cutoffs', lower_limits=True)
+    interest_rate_upper_limits = _limits_property('irul_values', 'irul_cutoffs', upper_limits=True)
 
 
 class Account(db.Model):
@@ -353,11 +340,9 @@ class InterestRateConcession(db.Model):
     irll_values = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
         comment='Enforced concession interest rate lower limits. Each element in this '
-                'array should have a corresponding element in the `irll_kickoffs` and '
-                '`irll_cutoffs` arrays (the kickoff and cutoff dates for the limits). '
-                'A `NULL` is the same as an empty array.',
+                'array should have a corresponding element in the `irll_cutoffs` array '
+                '(the cutoff dates for the limits). A `NULL` is the same as an empty array.',
     )
-    irll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     # Account Principal Limits
@@ -365,19 +350,16 @@ class InterestRateConcession(db.Model):
         pg.ARRAY(db.BigInteger, dimensions=1),
         comment="The concession interest rate will not be applied when the creditor's "
                 "`account.principal` exceeds the values specified here. Each element "
-                "in this array should have a corresponding element in the `apl_kickoffs` "
-                "and `apl_cutoffs` arrays (the kickoff and cutoff dates for the limits). "
-                "A `NULL` is the same as an empty array.",
+                "in this array should have a corresponding element in the `apl_cutoffs` "
+                "array (the cutoff dates for the limits). A `NULL` is the same as an "
+                "empty array.",
     )
-    apl_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     apl_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     __table_args__ = (
         db.CheckConstraint(or_(apl_values == null(), func.array_ndims(apl_values) == 1)),
-        db.CheckConstraint(or_(apl_kickoffs == null(), func.array_ndims(apl_kickoffs) == 1)),
         db.CheckConstraint(or_(apl_cutoffs == null(), func.array_ndims(apl_cutoffs) == 1)),
         db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
-        db.CheckConstraint(or_(irll_kickoffs == null(), func.array_ndims(irll_kickoffs) == 1)),
         db.CheckConstraint(or_(irll_cutoffs == null(), func.array_ndims(irll_cutoffs) == 1)),
         {
             'comment': 'Represents an enforced concession interest rate, valid only for a specific '
@@ -385,8 +367,8 @@ class InterestRateConcession(db.Model):
         }
     )
 
-    interest_rate_lower_limits = _limits_property('irll_values', 'irll_kickoffs', 'irll_cutoffs', lower_limits=True)
-    account_principal_limits = _limits_property('apl_values', 'apl_kickoffs', 'apl_cutoffs', lower_limits=True)
+    interest_rate_lower_limits = _limits_property('irll_values', 'irll_cutoffs', lower_limits=True)
+    account_principal_limits = _limits_property('apl_values', 'apl_cutoffs', lower_limits=True)
 
 
 class ChangedDebtorInfoSignal(Signal):
@@ -399,13 +381,10 @@ class ChangedDebtorInfoSignal(Signal):
     balance = db.Column(db.BigInteger)
     interest_rate_target = db.Column(db.REAL, nullable=False)
     bll_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
-    bll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     bll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irll_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
-    irll_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irul_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
-    irul_kickoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irul_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
 

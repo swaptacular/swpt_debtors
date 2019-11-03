@@ -1,17 +1,15 @@
 from datetime import date
 from swpt_debtors.models import Limit, LimitSequence, Debtor
 
-A_DATE = date(1900, 1, 1)
-
 
 def test_limit_properties(db_session):
     lower_limits = LimitSequence([
-        Limit(10, A_DATE, date(2000, 1, 1)),
-        Limit(20, A_DATE, date(2000, 1, 2)),
+        Limit(10, date(2000, 1, 1)),
+        Limit(20, date(2000, 1, 2)),
     ], lower_limits=True)
     upper_limits = LimitSequence([
-        Limit(10, A_DATE, date(2000, 1, 1)),
-        Limit(20, A_DATE, date(2000, 1, 2)),
+        Limit(10, date(2000, 1, 1)),
+        Limit(20, date(2000, 1, 2)),
     ], upper_limits=True)
     d = Debtor(debtor_id=1)
     assert len(d.balance_lower_limits) == 0
@@ -30,11 +28,9 @@ def test_limit_properties(db_session):
     d = Debtor.get_instance(1)
     assert d.balance_lower_limits == lower_limits
     assert d.bll_values is not None
-    assert d.bll_kickoffs is not None
     assert d.bll_cutoffs is not None
     d.balance_lower_limits = LimitSequence(lower_limits=True)
     assert d.bll_values is None
-    assert d.bll_kickoffs is None
     assert d.bll_cutoffs is None
 
     # Purge expired.
