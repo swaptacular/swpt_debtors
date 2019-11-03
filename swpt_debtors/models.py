@@ -28,7 +28,7 @@ class LimitSequence(abc.Sequence):
     upper_limits: bool
     _limits: List[Limit]
 
-    def __init__(self, limits: Iterable[Limit] = [], *, lower_limits=False, upper_limits=False):
+    def __init__(self, limits: Iterable[Limit] = [], *, lower_limits: bool = False, upper_limits: bool = False):
         assert lower_limits or upper_limits, 'the limits type must be specified when calling LimitSequence()'
         assert not (lower_limits and upper_limits)
         self.lower_limits = bool(lower_limits)
