@@ -73,7 +73,7 @@ class LimitSequence(abc.Sequence):
 
     def current_limits(self, current_date: date) -> Iterable[Limit]:
         return LimitSequence(
-            (l for l in self if l.cutoff >= current_date),
+            (l for l in self._limits if l.cutoff >= current_date),
             lower_limits=self.lower_limits,
             upper_limits=self.upper_limits,
         )
@@ -81,7 +81,7 @@ class LimitSequence(abc.Sequence):
     def apply_to_value(self, value: Real) -> Real:
         lower_limits = self.lower_limits
         upper_limits = self.upper_limits
-        for limit in self:
+        for limit in self._limits:
             limit_value = limit.value
             if lower_limits and value < limit_value or upper_limits and value > limit_value:
                 value = limit_value
