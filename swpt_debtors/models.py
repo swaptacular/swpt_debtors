@@ -71,7 +71,7 @@ class LimitSequence(abc.Sequence):
             self.sort()
             eliminator = find_eliminator_in_sorted_limit_sequence(self)
 
-    def current_limits(self, current_date: date) -> Iterable[Limit]:
+    def current_limits(self, current_date: date) -> LimitSequence:
         return LimitSequence(
             (l for l in self._limits if l.cutoff >= current_date),
             lower_limits=self.lower_limits,
