@@ -13,8 +13,8 @@ class DebtorInfo(MethodView):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/balance-upper-limits')
-class BalanceUpperLimits(MethodView):
+@web_api.route('/debtors/<int:debtor_id>/balance-limits')
+class BalanceLimits(MethodView):
     def get(self, debtor_id):
         pass
 
@@ -37,8 +37,8 @@ class InterestRateTarget(MethodView):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/interest-rate/upper-limits')
-class InterestRateUpperLimits(MethodView):
+@web_api.route('/debtors/<int:debtor_id>/interest-rate/limits')
+class InterestRateLimits(MethodView):
     def get(self, debtor_id):
         pass
 
@@ -46,17 +46,8 @@ class InterestRateUpperLimits(MethodView):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/interest-rate/lower-limits')
-class InterestRateLowerLimits(MethodView):
-    def get(self, debtor_id):
-        pass
-
-    def patch(self, debtor_id):
-        pass
-
-
-@web_api.route('/debtors/<int:debtor_id>/interest-rate/concessions')
-class InterestRateConcessionList(MethodView):
+@web_api.route('/debtors/<int:debtor_id>/concessions')
+class ConcessionList(MethodView):
     def get(self, debtor_id):
         pass
 
@@ -64,14 +55,14 @@ class InterestRateConcessionList(MethodView):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/interest-rate/concessions/<int:creditor_id>')
-class InterestRateConcession(MethodView):
+@web_api.route('/debtors/<int:debtor_id>/concessions/<int:creditor_id>')
+class Concession(MethodView):
     def get(self, debtor_id, creditor_id):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/interest-rate/concessions/<int:creditor_id>/lower-limits')
-class ConcessionLowerLimits(MethodView):
+@web_api.route('/debtors/<int:debtor_id>/concessions/<int:creditor_id>/limits')
+class ConcessionLimits(MethodView):
     def get(self, debtor_id, creditor_id):
         pass
 
@@ -93,20 +84,12 @@ class ConcessionBalanceLimits(MethodView):
 #     view_func=DebtorInfo.as_view('debtor_info'),
 # )
 # web_api.add_url_rule(
-#     '/debtors/<int:debtor_id>/balance-upper-limits',
-#     view_func=BalanceUpperLimits.as_view('balance_upper_limits'),
-# )
-# web_api.add_url_rule(
 #     '/debtors/<int:debtor_id>/interest-rate',
 #     view_func=InterestRateTarget.as_view('interest_rate'),
 # )
 # web_api.add_url_rule(
 #     '/debtors/<int:debtor_id>/interest-rate/target',
 #     view_func=InterestRateTarget.as_view('interest_rate_target'),
-# )
-# web_api.add_url_rule(
-#     '/debtors/<int:debtor_id>/interest-rate/upper-limits',
-#     view_func=InterestRateUpperLimits.as_view('interest_rate_upper_limits'),
 # )
 # web_api.add_url_rule(
 #     '/debtors/<int:debtor_id>/interest-rate/lower-limits',

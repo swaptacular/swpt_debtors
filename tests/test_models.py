@@ -27,13 +27,10 @@ def test_limit_properties(db_session):
     d = Debtor(debtor_id=1)
     assert len(d.balance_lower_limits) == 0
     assert len(d.interest_rate_lower_limits) == 0
-    assert len(d.interest_rate_upper_limits) == 0
     d.balance_lower_limits = lower_limits
     d.interest_rate_lower_limits = lower_limits
-    d.interest_rate_upper_limits = upper_limits
     assert d.balance_lower_limits == lower_limits
     assert d.interest_rate_lower_limits == lower_limits
-    assert d.interest_rate_upper_limits == upper_limits
     db_session.add(d)
     db_session.commit()
 

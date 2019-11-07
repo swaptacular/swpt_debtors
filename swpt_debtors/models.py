@@ -239,24 +239,12 @@ class Debtor(db.Model):
     )
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
-    # Interest Rate Upper Limits
-    irul_values = db.Column(
-        pg.ARRAY(db.BigInteger, dimensions=1),
-        comment='Enforced interest rate upper limits. Each element in this array '
-                'should have a corresponding element in the `irul_cutoffs` array '
-                '(the cutoff dates for the limits). A `NULL` is the same as an '
-                'empty array.',
-    )
-    irul_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
-
     __table_args__ = (
         db.CheckConstraint((interest_rate_target > -100.0) & (interest_rate_target <= 100.0)),
         db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
         db.CheckConstraint(or_(bll_cutoffs == null(), func.array_ndims(bll_cutoffs) == 1)),
         db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
         db.CheckConstraint(or_(irll_cutoffs == null(), func.array_ndims(irll_cutoffs) == 1)),
-        db.CheckConstraint(or_(irul_values == null(), func.array_ndims(irul_values) == 1)),
-        db.CheckConstraint(or_(irul_cutoffs == null(), func.array_ndims(irul_cutoffs) == 1)),
         {
             'comment': "Represents debtor's principal information.",
         }
@@ -264,7 +252,6 @@ class Debtor(db.Model):
 
     balance_lower_limits = _limits_property('bll_values', 'bll_cutoffs', lower_limits=True)
     interest_rate_lower_limits = _limits_property('irll_values', 'irll_cutoffs', lower_limits=True)
-    interest_rate_upper_limits = _limits_property('irul_values', 'irul_cutoffs', upper_limits=True)
 
 
 class Account(db.Model):
@@ -398,8 +385,6 @@ class ChangedDebtorInfoSignal(Signal):
     bll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
     irll_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
-    irul_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
-    irul_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
 
 class ChangeInterestRateSignal(Signal):

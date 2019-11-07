@@ -36,7 +36,6 @@ def _calc_interest_rate(
 
     # Apply debtor's standard interest rate limits.
     interest_rate = debtor.interest_rate_target
-    interest_rate = debtor.interest_rate_upper_limits.current_limits(today).apply_to_value(interest_rate)
     interest_rate = debtor.interest_rate_lower_limits.current_limits(today).apply_to_value(interest_rate)
 
     # Apply concession interest rate limits.
@@ -78,8 +77,6 @@ def _insert_changed_debtor_info_signal(debtor: Debtor) -> None:
         bll_cutoffs=debtor.bll_cutoffs,
         irll_values=debtor.irll_values,
         irll_cutoffs=debtor.irll_cutoffs,
-        irul_values=debtor.irul_values,
-        irul_cutoffs=debtor.irul_cutoffs,
     ))
 
 
