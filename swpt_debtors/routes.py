@@ -28,7 +28,7 @@ class InterestRate(MethodView):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/interest-rate/target')
+@web_api.route('/debtors/<int:debtor_id>/interest-rate-target')
 class InterestRateTarget(MethodView):
     def get(self, debtor_id):
         pass
@@ -37,7 +37,7 @@ class InterestRateTarget(MethodView):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/interest-rate/limits')
+@web_api.route('/debtors/<int:debtor_id>/interest-rate-limits')
 class InterestRateLimits(MethodView):
     def get(self, debtor_id):
         pass
@@ -61,7 +61,7 @@ class Concession(MethodView):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/concessions/<int:creditor_id>/limits')
+@web_api.route('/debtors/<int:debtor_id>/concessions/<int:creditor_id>/interest-rate-limits')
 class ConcessionLimits(MethodView):
     def get(self, debtor_id, creditor_id):
         pass
