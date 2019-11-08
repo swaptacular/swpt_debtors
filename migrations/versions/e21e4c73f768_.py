@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 54d3ea586e79
+Revision ID: e21e4c73f768
 Revises: 
-Create Date: 2019-11-08 15:14:42.014356
+Create Date: 2019-11-08 19:28:06.615612
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '54d3ea586e79'
+revision = 'e21e4c73f768'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -62,7 +62,7 @@ def upgrade():
     sa.Column('last_change_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on every increment of `last_change_seqnum`. Must never decrease.'),
     sa.Column('irll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced concession interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `NULL` is the same as an empty array.'),
     sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.Column('apl_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment="The concession interest rate will not be applied when the creditor's `account.principal` exceeds the values specified here. Each element in this array should have a corresponding element in the `apl_cutoffs` array (the cutoff dates for the limits). A `NULL` is the same as an empty array."),
+    sa.Column('apl_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment="The concession interest rate will not be applied when the creditor's `account.principal` exceeds all values specified here. Each element in this array should have a corresponding element in the `apl_cutoffs` array (the cutoff dates for the limits). A `NULL` is the same as an empty array."),
     sa.Column('apl_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.CheckConstraint('apl_cutoffs IS NULL OR array_ndims(apl_cutoffs) = 1'),
     sa.CheckConstraint('apl_values IS NULL OR array_ndims(apl_values) = 1'),
@@ -73,12 +73,9 @@ def upgrade():
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
-    sa.Column('last_change_seqnum', sa.Integer(), nullable=False, comment='Incremented (with wrapping) on every change.'),
-    sa.Column('last_change_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on every increment of `last_change_seqnum`. Must never decrease.'),
     sa.Column('status', sa.SmallInteger(), nullable=False, comment='Debtor status flags.'),
     sa.Column('balance', sa.BigInteger(), nullable=True, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare. A `NULL` means that the balance is unknown.'),
-    sa.Column('balance_last_update_seqnum', sa.Integer(), nullable=True, comment='Updated on each change of the `balance`.'),
-    sa.Column('balance_last_update_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='Updated on each change of the `balance`.'),
+    sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance`.'),
     sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The desired annual rate (in percents) at which the interest should accumulate on creditors' accounts. The actual interest rate could be different if interest rate limits are enforced."),
     sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` column. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `NULL` is the same as an empty array.'),
     sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),

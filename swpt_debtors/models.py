@@ -177,18 +177,6 @@ class Debtor(db.Model):
     STATUS_TERMINATED_FLAG = 1
 
     debtor_id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
-    last_change_seqnum = db.Column(
-        db.Integer,
-        nullable=False,
-        default=1,
-        comment='Incremented (with wrapping) on every change.',
-    )
-    last_change_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=get_now_utc,
-        comment='Updated on every increment of `last_change_seqnum`. Must never decrease.',
-    )
     status = db.Column(
         db.SmallInteger,
         nullable=False,
@@ -202,12 +190,10 @@ class Debtor(db.Model):
                 "negative number or a zero. A positive value, although theoretically "
                 "possible, should be very rare. A `NULL` means that the balance is unknown.",
     )
-    balance_last_update_seqnum = db.Column(
-        db.Integer,
-        comment='Updated on each change of the `balance`.',
-    )
-    balance_last_update_ts = db.Column(
+    balance_ts = db.Column(
         db.TIMESTAMP(timezone=True),
+        nullable=False,
+        default=get_now_utc,
         comment='Updated on each change of the `balance`.',
     )
     interest_rate_target = db.Column(
@@ -350,7 +336,7 @@ class Concession(db.Model):
     apl_values = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
         comment="The concession interest rate will not be applied when the creditor's "
-                "`account.principal` exceeds the values specified here. Each element "
+                "`account.principal` exceeds all values specified here. Each element "
                 "in this array should have a corresponding element in the `apl_cutoffs` "
                 "array (the cutoff dates for the limits). A `NULL` is the same as an "
                 "empty array.",
