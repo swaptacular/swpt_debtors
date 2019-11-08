@@ -375,8 +375,8 @@ class Concession(db.Model):
     account_principal_limits = _limits_property('apl_values', 'apl_cutoffs', lower_limits=True)
 
 
-class ChangedConcessionSignal(Signal):
-    """Sent when a concession is created or changed."""
+class ChangedInterestRateConcessionSignal(Signal):
+    """Sent when an interest rate concession is created or changed."""
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     creditor_id = db.Column(db.BigInteger, primary_key=True)
