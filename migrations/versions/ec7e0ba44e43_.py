@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 7495803183c9
+Revision ID: ec7e0ba44e43
 Revises: 
-Create Date: 2019-11-08 14:51:04.553309
+Create Date: 2019-11-08 15:11:38.200618
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '7495803183c9'
+revision = 'ec7e0ba44e43'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -69,7 +69,7 @@ def upgrade():
     sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
     sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1'),
     sa.PrimaryKeyConstraint('debtor_id', 'creditor_id'),
-    comment='Represents an enforced concession interest rate, valid only for a specific creditor, under specific conditions.'
+    comment='Represents an enforced concession interest rate, valid only for a specific creditor, under specific conditions. Note that ineffectual concession records must not be deleted right away. Instead, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),

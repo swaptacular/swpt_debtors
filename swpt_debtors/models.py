@@ -364,7 +364,10 @@ class Concession(db.Model):
         db.CheckConstraint(or_(irll_cutoffs == null(), func.array_ndims(irll_cutoffs) == 1)),
         {
             'comment': 'Represents an enforced concession interest rate, valid only for a specific '
-                       'creditor, under specific conditions.',
+                       'creditor, under specific conditions. Note that ineffectual concession '
+                       'records must not be deleted right away. Instead, they should stay in the '
+                       'database for at least few days. This is necessary in order to prevent '
+                       'problems caused by message re-delivery.',
         }
     )
 
