@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, date, timedelta, timezone
 from swpt_debtors import __version__
-from swpt_debtors.models import Limit, LimitSequence, Account, ChangeInterestRateSignal, ChangedDebtorInfoSignal
+from swpt_debtors.models import Limit, LimitSequence, Account, ChangeInterestRateSignal
 from swpt_debtors import procedures as p
 
 D_ID = -1
@@ -63,11 +63,8 @@ def test_insert_limit_to_list_lower():
 def test_get_or_create_debtor(db_session):
     debtor = p.get_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
-    cdis = ChangedDebtorInfoSignal.query.all()
-    assert len(cdis) == 1
-    assert cdis[0].debtor_id == D_ID
     debtor = p.get_or_create_debtor(D_ID)
-    assert len(ChangedDebtorInfoSignal.query.all()) == 1
+    assert debtor.debtor_id == D_ID
 
 
 def test_process_account_change_signal(db_session, debtor):

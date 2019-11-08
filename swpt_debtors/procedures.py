@@ -1,7 +1,7 @@
 from datetime import datetime, date, timedelta, timezone
 from typing import TypeVar, Optional, Callable, Tuple
 from .extensions import db
-from .models import Debtor, Account, ChangeInterestRateSignal, InterestRateConcession, ChangedDebtorInfoSignal, \
+from .models import Debtor, Account, ChangeInterestRateSignal, Concession, \
     increment_seqnum, MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
@@ -30,7 +30,7 @@ def _calc_interest_rate(
         today: date,
         account_principal: int,
         debtor: Optional[Debtor],
-        concession: Optional[InterestRateConcession]) -> Optional[float]:
+        concession: Optional[Concession]) -> Optional[float]:
     if debtor is None:
         return None
 
@@ -62,24 +62,6 @@ def _insert_change_interest_rate_signal(account: Account, interest_rate: Optiona
         ))
 
 
-def _insert_changed_debtor_info_signal(debtor: Debtor) -> None:
-    current_ts = datetime.now(tz=timezone.utc)
-    debtor.last_change_seqnum = increment_seqnum(debtor.last_change_seqnum)
-    debtor.last_change_ts = max(debtor.last_change_ts, current_ts)
-    db.session.add(ChangedDebtorInfoSignal(
-        debtor_id=debtor.debtor_id,
-        change_seqnum=debtor.last_change_seqnum,
-        change_ts=debtor.last_change_ts,
-        status=debtor.status,
-        balance=debtor.balance,
-        interest_rate_target=debtor.interest_rate_target,
-        bll_values=debtor.bll_values,
-        bll_cutoffs=debtor.bll_cutoffs,
-        irll_values=debtor.irll_values,
-        irll_cutoffs=debtor.irll_cutoffs,
-    ))
-
-
 @atomic
 def get_or_create_debtor(debtor_id: int) -> Debtor:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
@@ -88,7 +70,6 @@ def get_or_create_debtor(debtor_id: int) -> Debtor:
         debtor = Debtor(debtor_id=debtor_id)
         with db.retry_on_integrity_error():
             db.session.add(debtor)
-        _insert_changed_debtor_info_signal(debtor)
     return debtor
 
 
@@ -114,9 +95,9 @@ def process_account_change_signal(
     account_pk = (debtor_id, creditor_id)
     today = datetime.now(tz=timezone.utc).date()
 
-    # TODO: Use caches for `Debtor`s and `InterestRateConcession`s.
+    # TODO: Use caches for `Debtor`s and `Concession`s.
     debtor = Debtor.get_instance(debtor_id)
-    interest_rate_concession = InterestRateConcession.get_instance(account_pk)
+    interest_rate_concession = Concession.get_instance(account_pk)
 
     account = Account.lock_instance(account_pk)
     if account:

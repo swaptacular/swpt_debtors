@@ -97,11 +97,11 @@ class ConcessionBalanceLimits(MethodView):
 # )
 # web_api.add_url_rule(
 #     '/debtors/<int:debtor_id>/interest-rate/concessions',
-#     view_func=InterestRateConcessionList.as_view('interest_rate_concession_list'),
+#     view_func=ConcessionList.as_view('interest_rate_concession_list'),
 # )
 # web_api.add_url_rule(
 #     '/debtors/<int:debtor_id>/interest-rate/concessions/<int:creditor_id>',
-#     view_func=InterestRateConcession.as_view('interest_rate_concession'),
+#     view_func=Concession.as_view('interest_rate_concession'),
 # )
 # web_api.add_url_rule(
 #     '/debtors/<int:debtor_id>/interest-rate/concessions/<int:creditor_id>/lower-limits',

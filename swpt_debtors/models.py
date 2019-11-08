@@ -321,7 +321,7 @@ class Account(db.Model):
     )
 
 
-class InterestRateConcession(db.Model):
+class Concession(db.Model):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     creditor_id = db.Column(db.BigInteger, primary_key=True)
     last_change_seqnum = db.Column(
@@ -372,19 +372,17 @@ class InterestRateConcession(db.Model):
     account_principal_limits = _limits_property('apl_values', 'apl_cutoffs', lower_limits=True)
 
 
-class ChangedDebtorInfoSignal(Signal):
-    """Sent when debtor's principal information has changed."""
+class ChangedConcessionSignal(Signal):
+    """Sent when a concession is created or changed."""
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
+    creditor_id = db.Column(db.BigInteger, primary_key=True)
     change_seqnum = db.Column(db.Integer, primary_key=True)
-    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-    status = db.Column(db.SmallInteger, nullable=False)
-    balance = db.Column(db.BigInteger)
-    interest_rate_target = db.Column(db.REAL, nullable=False)
-    bll_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
-    bll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    change_ts = db.Column(db.TIMESTAMP(timezone=True), primary_key=True)
     irll_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    apl_values = db.Column(pg.ARRAY(db.BigInteger, dimensions=1))
+    apl_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
 
 class ChangeInterestRateSignal(Signal):

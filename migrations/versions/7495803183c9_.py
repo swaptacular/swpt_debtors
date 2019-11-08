@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 51d2404887dd
+Revision ID: 7495803183c9
 Revises: 
-Create Date: 2019-11-07 16:56:52.508379
+Create Date: 2019-11-08 14:51:04.553309
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '51d2404887dd'
+revision = '7495803183c9'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -44,18 +44,32 @@ def upgrade():
     sa.Column('interest_rate', sa.REAL(), nullable=False),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
-    op.create_table('changed_debtor_info_signal',
+    op.create_table('changed_concession_signal',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('change_seqnum', sa.Integer(), nullable=False),
     sa.Column('change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.Column('status', sa.SmallInteger(), nullable=False),
-    sa.Column('balance', sa.BigInteger(), nullable=True),
-    sa.Column('interest_rate_target', sa.REAL(), nullable=False),
-    sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True),
-    sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.Column('irll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True),
     sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.PrimaryKeyConstraint('debtor_id', 'change_seqnum')
+    sa.Column('apl_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True),
+    sa.Column('apl_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
+    sa.PrimaryKeyConstraint('debtor_id', 'creditor_id', 'change_seqnum', 'change_ts')
+    )
+    op.create_table('concession',
+    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('creditor_id', sa.BigInteger(), nullable=False),
+    sa.Column('last_change_seqnum', sa.Integer(), nullable=False, comment='Incremented (with wrapping) on every change.'),
+    sa.Column('last_change_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on every increment of `last_change_seqnum`. Must never decrease.'),
+    sa.Column('irll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced concession interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `NULL` is the same as an empty array.'),
+    sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
+    sa.Column('apl_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment="The concession interest rate will not be applied when the creditor's `account.principal` exceeds the values specified here. Each element in this array should have a corresponding element in the `apl_cutoffs` array (the cutoff dates for the limits). A `NULL` is the same as an empty array."),
+    sa.Column('apl_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
+    sa.CheckConstraint('apl_cutoffs IS NULL OR array_ndims(apl_cutoffs) = 1'),
+    sa.CheckConstraint('apl_values IS NULL OR array_ndims(apl_values) = 1'),
+    sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
+    sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1'),
+    sa.PrimaryKeyConstraint('debtor_id', 'creditor_id'),
+    comment='Represents an enforced concession interest rate, valid only for a specific creditor, under specific conditions.'
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
@@ -78,30 +92,14 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id'),
     comment="Represents debtor's principal information."
     )
-    op.create_table('interest_rate_concession',
-    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
-    sa.Column('creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('last_change_seqnum', sa.Integer(), nullable=False, comment='Incremented (with wrapping) on every change.'),
-    sa.Column('last_change_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on every increment of `last_change_seqnum`. Must never decrease.'),
-    sa.Column('irll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced concession interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `NULL` is the same as an empty array.'),
-    sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.Column('apl_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment="The concession interest rate will not be applied when the creditor's `account.principal` exceeds the values specified here. Each element in this array should have a corresponding element in the `apl_cutoffs` array (the cutoff dates for the limits). A `NULL` is the same as an empty array."),
-    sa.Column('apl_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.CheckConstraint('apl_cutoffs IS NULL OR array_ndims(apl_cutoffs) = 1'),
-    sa.CheckConstraint('apl_values IS NULL OR array_ndims(apl_values) = 1'),
-    sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
-    sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1'),
-    sa.PrimaryKeyConstraint('debtor_id', 'creditor_id'),
-    comment='Represents an enforced concession interest rate, valid only for a specific creditor, under specific conditions.'
-    )
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table('interest_rate_concession')
     op.drop_table('debtor')
-    op.drop_table('changed_debtor_info_signal')
+    op.drop_table('concession')
+    op.drop_table('changed_concession_signal')
     op.drop_table('change_interest_rate_signal')
     op.drop_table('account')
     # ### end Alembic commands ###
