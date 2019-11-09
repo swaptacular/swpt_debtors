@@ -16,6 +16,8 @@ MIN_INT32 = -1 << 31
 MAX_INT32 = (1 << 31) - 1
 MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
+INTEREST_RATE_FLOOR = -50.0
+INTEREST_RATE_CEIL = 100.0
 
 
 class Limit(NamedTuple):
@@ -218,15 +220,17 @@ class Debtor(db.Model):
     # Interest Rate Lower Limits
     irll_values = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
-        comment='Enforced interest rate lower limits. Each element in this array '
-                'should have a corresponding element in the `irll_cutoffs` array '
-                '(the cutoff dates for the limits). A `NULL` is the same as an '
-                'empty array.',
+        comment=(
+            'Enforced interest rate lower limits. Each element in this array '
+            'should have a corresponding element in the `irll_cutoffs` array '
+            '(the cutoff dates for the limits). A `NULL` is the same as an '
+            'empty array. If the array contains values bigger that {ceil}, '
+            'they are treated as equal to {ceil}.'
+        ).format(ceil=INTEREST_RATE_CEIL),
     )
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     __table_args__ = (
-        db.CheckConstraint((interest_rate_target > -100.0) & (interest_rate_target <= 100.0)),
         db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
         db.CheckConstraint(or_(bll_cutoffs == null(), func.array_ndims(bll_cutoffs) == 1)),
         db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),

@@ -1,8 +1,8 @@
 from datetime import datetime, date, timedelta, timezone
 from typing import TypeVar, Optional, Callable, Tuple
 from .extensions import db
-from .models import Debtor, Account, ChangeInterestRateSignal, Concession, \
-    increment_seqnum, MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64
+from .models import Debtor, Account, ChangeInterestRateSignal, Concession, increment_seqnum, \
+    MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -34,9 +34,15 @@ def _calc_interest_rate(
     if debtor is None:
         return None
 
-    # Apply debtor's standard interest rate limits.
+    # Apply debtor's enforced interest rate limits.
     interest_rate = debtor.interest_rate_target
     interest_rate = debtor.interest_rate_lower_limits.current_limits(today).apply_to_value(interest_rate)
+
+    # Apply absolute interest rate limits.
+    if interest_rate < INTEREST_RATE_FLOOR:
+        interest_rate = INTEREST_RATE_FLOOR
+    if interest_rate > INTEREST_RATE_CEIL:
+        interest_rate = INTEREST_RATE_CEIL
 
     # Apply concession interest rate limits.
     if concession:

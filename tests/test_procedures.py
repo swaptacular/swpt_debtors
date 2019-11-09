@@ -1,7 +1,8 @@
 import pytest
 from datetime import datetime, date, timedelta, timezone
 from swpt_debtors import __version__
-from swpt_debtors.models import Limit, LimitSequence, Account, ChangeInterestRateSignal
+from swpt_debtors.models import Limit, LimitSequence, Account, ChangeInterestRateSignal, \
+    INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 from swpt_debtors import procedures as p
 
 D_ID = -1
@@ -137,3 +138,10 @@ def test_process_account_change_signal(db_session, debtor):
     assert a.status == Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
     cirs = ChangeInterestRateSignal.query.all()
     assert len(cirs) == 1
+
+
+def test_interest_rate_absolute_limits(db_session, debtor, current_ts):
+    debtor.interest_rate_target = -100.0
+    assert p._calc_interest_rate(current_ts.date(), 0, debtor, None) == INTEREST_RATE_FLOOR
+    debtor.interest_rate_target = 1e100
+    assert p._calc_interest_rate(current_ts.date(), 0, debtor, None) == INTEREST_RATE_CEIL

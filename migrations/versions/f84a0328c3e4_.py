@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: e21e4c73f768
+Revision ID: f84a0328c3e4
 Revises: 
-Create Date: 2019-11-08 19:28:06.615612
+Create Date: 2019-11-09 22:11:54.011541
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'e21e4c73f768'
+revision = 'f84a0328c3e4'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -79,11 +79,10 @@ def upgrade():
     sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The desired annual rate (in percents) at which the interest should accumulate on creditors' accounts. The actual interest rate could be different if interest rate limits are enforced."),
     sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` column. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `NULL` is the same as an empty array.'),
     sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.Column('irll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `NULL` is the same as an empty array.'),
+    sa.Column('irll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `NULL` is the same as an empty array. If the array contains values bigger that 100.0, they are treated as equal to 100.0.'),
     sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.CheckConstraint('bll_cutoffs IS NULL OR array_ndims(bll_cutoffs) = 1'),
     sa.CheckConstraint('bll_values IS NULL OR array_ndims(bll_values) = 1'),
-    sa.CheckConstraint('interest_rate_target > -100.0 AND interest_rate_target <= 100.0'),
     sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
     sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1'),
     sa.PrimaryKeyConstraint('debtor_id'),
