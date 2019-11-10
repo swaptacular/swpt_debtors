@@ -7,7 +7,7 @@ from collections import abc
 from marshmallow import Schema, fields
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import func, null, or_
+from sqlalchemy.sql.expression import func, null, or_, and_
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
 
 MIN_INT16 = -1 << 15
@@ -231,6 +231,10 @@ class Debtor(db.Model):
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     __table_args__ = (
+        db.CheckConstraint(and_(
+            interest_rate_target >= INTEREST_RATE_FLOOR,
+            interest_rate_target <= INTEREST_RATE_CEIL,
+        )),
         db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
         db.CheckConstraint(or_(bll_cutoffs == null(), func.array_ndims(bll_cutoffs) == 1)),
         db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
