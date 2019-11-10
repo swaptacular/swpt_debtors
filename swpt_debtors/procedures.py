@@ -1,7 +1,7 @@
 from datetime import datetime, date, timedelta, timezone
 from typing import TypeVar, Optional, Callable, Tuple
 from .extensions import db
-from .models import Debtor, Account, ChangeInterestRateSignal, Concession, increment_seqnum, \
+from .models import Debtor, Account, ChangeInterestRateSignal, increment_seqnum, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 
 T = TypeVar('T')
@@ -26,11 +26,7 @@ def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int
     )
 
 
-def _calc_interest_rate(
-        today: date,
-        account_principal: int,
-        debtor: Optional[Debtor],
-        concession: Optional[Concession]) -> Optional[float]:
+def _calc_interest_rate(today: date, debtor: Optional[Debtor]) -> Optional[float]:
     if debtor is None:
         return None
 
@@ -38,19 +34,13 @@ def _calc_interest_rate(
     interest_rate = debtor.interest_rate_target
     interest_rate = debtor.interest_rate_lower_limits.current_limits(today).apply_to_value(interest_rate)
 
-    # Apply absolute interest rate limits.
+    # Apply the absolute interest rate limits.
     if interest_rate < INTEREST_RATE_FLOOR:
         interest_rate = INTEREST_RATE_FLOOR
     if interest_rate > INTEREST_RATE_CEIL:
         interest_rate = INTEREST_RATE_CEIL
 
-    # Apply concession interest rate limits.
-    if concession:
-        assert concession.debtor_id == debtor.debtor_id
-        max_account_principal = concession.account_principal_limits.current_limits(today).apply_to_value(MIN_INT64)
-        if account_principal <= max_account_principal:
-            interest_rate = concession.interest_rate_lower_limits.current_limits(today).apply_to_value(interest_rate)
-
+    assert INTEREST_RATE_FLOOR <= interest_rate <= INTEREST_RATE_CEIL
     return interest_rate
 
 
@@ -97,19 +87,12 @@ def process_account_change_signal(
     assert -100 < interest_rate <= 100.0
     assert MIN_INT16 <= status <= MAX_INT16
 
-    this_event = (change_seqnum, change_ts)
-    account_pk = (debtor_id, creditor_id)
-    today = datetime.now(tz=timezone.utc).date()
-
-    # TODO: Use caches for `Debtor`s and `Concession`s.
-    debtor = Debtor.get_instance(debtor_id)
-    interest_rate_concession = Concession.get_instance(account_pk)
-
-    account = Account.lock_instance(account_pk)
+    account = Account.lock_instance((debtor_id, creditor_id))
     if account:
-        if not _is_later_event(this_event, (account.change_seqnum, account.change_ts)):
+        this_event = (change_seqnum, change_ts)
+        prev_event = (account.change_seqnum, account.change_ts)
+        if not _is_later_event(this_event, prev_event):
             return
-        old_interest_rate = _calc_interest_rate(today, account.principal, debtor, interest_rate_concession)
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
         account.principal = principal
@@ -118,7 +101,6 @@ def process_account_change_signal(
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
         account.status = status
     else:
-        old_interest_rate = _calc_interest_rate(today, 0, debtor, interest_rate_concession)
         account = Account(
             debtor_id=debtor_id,
             creditor_id=creditor_id,
@@ -133,11 +115,10 @@ def process_account_change_signal(
         with db.retry_on_integrity_error():
             db.session.add(account)
 
-    # There are two cases when we must send `ChangeInterestRateSignal`
-    # immediately: 1) The account does not have an interest rate set
-    # yet; 2) A change in the account balance caused the interest rate
-    # on the account to change.
-    has_interest_rate_set = account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
-    new_interest_rate = _calc_interest_rate(today, account.principal, debtor, interest_rate_concession)
-    if not has_interest_rate_set or new_interest_rate != old_interest_rate:
-        _insert_change_interest_rate_signal(account, new_interest_rate)
+    # When the account does not have an interest rate set yet, we must
+    # immediately calculate the interest rate currently applied by the
+    # debtor, and send a `ChangeInterestRateSignal`.
+    if not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
+        today = datetime.now(tz=timezone.utc).date()
+        debtor = Debtor.get_instance(debtor_id)
+        _insert_change_interest_rate_signal(account, _calc_interest_rate(today, debtor))
