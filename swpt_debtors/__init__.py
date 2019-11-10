@@ -30,11 +30,17 @@ class Configuration(metaclass=MetaFlaskEnv):
     SQLALCHEMY_ECHO = False
     DRAMATIQ_BROKER_CLASS = 'RabbitmqBroker'
     DRAMATIQ_BROKER_URL = 'amqp://guest:guest@localhost:5672'
+    OPENAPI_VERSION = '3.0.2'
+    OPENAPI_URL_PREFIX = '/docs'
+    OPENAPI_REDOC_PATH = 'redoc'
+    OPENAPI_REDOC_VERSION = 'next'
+    OPENAPI_SWAGGER_UI_PATH = 'swagger-ui'
+    OPENAPI_SWAGGER_UI_VERSION = '3.18.3'
 
 
 def create_app(config_dict={}):
     from flask import Flask
-    from .extensions import db, migrate, broker
+    from .extensions import db, migrate, broker, api
     from .routes import web_api
     from .cli import swpt_debtors
     from . import models  # noqa
@@ -45,6 +51,7 @@ def create_app(config_dict={}):
     db.init_app(app)
     migrate.init_app(app, db)
     broker.init_app(app)
+    api.init_app(app)
     app.register_blueprint(web_api, url_prefix='/')
     app.cli.add_command(swpt_debtors)
     return app

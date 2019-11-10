@@ -6,6 +6,7 @@ from flask_migrate import Migrate
 from flask_signalbus import SignalBusMixin, AtomicProceduresMixin
 from flask_melodramatiq import RabbitmqBroker
 from dramatiq import Middleware
+from flask_smorest import Api
 
 MAIN_EXCHANGE_NAME = 'dramatiq'
 APP_QUEUE_NAME = os.environ.get('APP_QUEUE_NAME', 'swpt_debtors')
@@ -31,3 +32,4 @@ db = CustomAlchemy()
 migrate = Migrate()
 broker = RabbitmqBroker(confirm_delivery=True)
 broker.add_middleware(EventSubscriptionMiddleware())
+api = Api()

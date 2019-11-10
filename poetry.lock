@@ -14,8 +14,15 @@ python-editor = ">=0.3"
 
 [[package]]
 category = "main"
+description = "A pluggable API specification generator. Currently supports the OpenAPI Specification (f.k.a. the Swagger specification)."
+name = "apispec"
+optional = false
+python-versions = ">=3.5"
+version = "3.1.0"
+
+[[package]]
+category = "main"
 description = "An unobtrusive argparse wrapper with natural syntax"
-marker = "extra == \"watch\""
 name = "argh"
 optional = false
 python-versions = "*"
@@ -56,7 +63,7 @@ version = "0.12.17"
 [[package]]
 category = "main"
 description = "Foreign Function Interface for Python calling C code."
-marker = "sys_platform == \"win32\" and platform_python_implementation == \"CPython\" and extra == \"watch\""
+marker = "sys_platform == \"win32\" and platform_python_implementation == \"CPython\""
 name = "cffi"
 optional = false
 python-versions = "*"
@@ -108,6 +115,7 @@ watchdog_gevent = "0.1"
 reference = "d45e9f7daee5d95c5789ae4ce95c4a486f040bb9"
 type = "git"
 url = "https://github.com/epandurski/dramatiq.git"
+
 [[package]]
 category = "dev"
 description = "Discover and load entry points from installed packages."
@@ -191,6 +199,21 @@ marshmallow-sqlalchemy = ">=0.16.1"
 
 [[package]]
 category = "main"
+description = "Flask/Marshmallow-based REST API framework"
+name = "flask-smorest"
+optional = false
+python-versions = ">=3.5"
+version = "0.18.2"
+
+[package.dependencies]
+apispec = ">=3.0.0"
+flask = ">=1.1.0"
+marshmallow = ">=2.15.2"
+webargs = ">=1.5.2"
+werkzeug = ">=0.15"
+
+[[package]]
+category = "main"
 description = "Adds SQLAlchemy support to your Flask application."
 name = "flask-sqlalchemy"
 optional = false
@@ -204,7 +227,6 @@ SQLAlchemy = ">=0.8.0"
 [[package]]
 category = "main"
 description = "Coroutine-based network library"
-marker = "extra == \"watch\""
 name = "gevent"
 optional = false
 python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*"
@@ -217,7 +239,7 @@ greenlet = ">=0.4.14"
 [[package]]
 category = "main"
 description = "Lightweight in-process concurrent programming"
-marker = "extra == \"watch\" and platform_python_implementation == \"CPython\""
+marker = "platform_python_implementation == \"CPython\""
 name = "greenlet"
 optional = false
 python-versions = "*"
@@ -372,7 +394,6 @@ six = "*"
 [[package]]
 category = "main"
 description = "File system general utilities"
-marker = "extra == \"watch\""
 name = "pathtools"
 optional = false
 python-versions = "*"
@@ -381,7 +402,6 @@ version = "0.1.2"
 [[package]]
 category = "main"
 description = "Pika Python AMQP Client Library"
-marker = "extra == \"rabbitmq\""
 name = "pika"
 optional = false
 python-versions = "*"
@@ -447,7 +467,7 @@ version = "2.5.0"
 [[package]]
 category = "main"
 description = "C parser in Python"
-marker = "sys_platform == \"win32\" and platform_python_implementation == \"CPython\" and extra == \"watch\""
+marker = "sys_platform == \"win32\" and platform_python_implementation == \"CPython\""
 name = "pycparser"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -589,7 +609,6 @@ version = "0.1.11"
 [[package]]
 category = "main"
 description = "YAML parser and emitter for Python"
-marker = "extra == \"watch\""
 name = "pyyaml"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -649,7 +668,6 @@ version = "2.0.1"
 [[package]]
 category = "main"
 description = "Filesystem events monitoring"
-marker = "extra == \"watch\""
 name = "watchdog"
 optional = false
 python-versions = "*"
@@ -663,7 +681,6 @@ pathtools = ">=0.1.1"
 [[package]]
 category = "main"
 description = "A gevent-based observer for watchdog."
-marker = "extra == \"watch\""
 name = "watchdog-gevent"
 optional = false
 python-versions = "*"
@@ -695,6 +712,17 @@ bottle = "*"
 
 [[package]]
 category = "main"
+description = "Declarative parsing and validation of HTTP request objects, with built-in support for popular web frameworks, including Flask, Django, Bottle, Tornado, Pyramid, webapp2, Falcon, and aiohttp."
+name = "webargs"
+optional = false
+python-versions = "*"
+version = "5.5.2"
+
+[package.dependencies]
+marshmallow = ">=2.15.2"
+
+[[package]]
+category = "main"
 description = "The comprehensive WSGI web application library."
 name = "werkzeug"
 optional = false
@@ -713,11 +741,12 @@ version = "0.6.0"
 more-itertools = "*"
 
 [metadata]
-content-hash = "fc78fe96d8699c285f1f89815f9059b673211007a8ad5db191713bab70345852"
+content-hash = "60642e536fba3a81e91c6a5b825a9924f291758e3876d9d502a5c6a6cf640edc"
 python-versions = "^3.5"
 
 [metadata.hashes]
 alembic = ["9f907d7e8b286a1cfb22db9084f9ce4fde7ad7956bb496dc7c952e10ac90e36a"]
+apispec = ["cf8e1f3b56949710f8cf23797b7f40215e9dae8bac583789a3f2c13dc56349fa", "fe5cf5fc89b1c4a73acd5af3a10ede02b31ec116f215ed02271cb905d3172367"]
 argh = ["a9b3aaa1904eeb78e32394cd46c6f37ac0fb4af6dc488daa58971bdc7d7fcaf3", "e9535b8c84dc9571a48999094fda7f33e63c3f1b74f3e5f3ac0105a58405bb65"]
 asyncore-wsgi = ["27ddeecdc4d79c98a687e899c5b7d2df38bb9538b65c92abddd2009f961835a8", "de043ee1544ae1a2602ef6f8cde41b7bd9f9b29d459e1c1514fa1c655aa7c841"]
 atomicwrites = ["03472c30eb2c5d1ba9227e4c2ca66ab8287fbfbbda3888aa93dc2e28fc6811b4", "75a9445bac02d8d058d5e1fe689654ba5a6556a1dfd8ce6ec55a0ed79866cfa6"]
@@ -735,6 +764,7 @@ flask-env = ["6515b2cb2f62dc2743ba2600f4583147128f28a36cb73040a2ab12c54e329f67",
 flask-melodramatiq = ["17ff0e48a02c0652a4776abd67cbd6ba8e2de29e36540ded25ab2247ece94dbb"]
 flask-migrate = ["6fb038be63d4c60727d5dfa5f581a6189af5b4e2925bc378697b4f0a40cfb4e1", "a96ff1875a49a40bd3e8ac04fce73fdb0870b9211e6168608cbafa4eb839d502"]
 flask-signalbus = ["0758ba9d00847982f45deece9a2b34e2988b7f69787f098dd4e0315245e8b4ee"]
+flask-smorest = ["0e51c4f82f816e237a0741f4764223af0f060116336b336d0b69025cd262559d", "c16bab8cd1de750f79e7bcba6f7ffea9a1299f0e69053e41273af920b5a0e748"]
 flask-sqlalchemy = ["0078d8663330dc05a74bc72b3b6ddc441b9a744e2f56fe60af1a5bfc81334327", "6974785d913666587949f7c2946f7001e4fa2cb2d19f4e69ead02e4b8f50b33d"]
 gevent = ["0774babec518a24d9a7231d4e689931f31b332c4517a771e532002614e270a64", "0e1e5b73a445fe82d40907322e1e0eec6a6745ca3cea19291c6f9f50117bb7ea", "0ff2b70e8e338cf13bedf146b8c29d475e2a544b5d1fe14045aee827c073842c", "107f4232db2172f7e8429ed7779c10f2ed16616d75ffbe77e0e0c3fcdeb51a51", "14b4d06d19d39a440e72253f77067d27209c67e7611e352f79fe69e0f618f76e", "1b7d3a285978b27b469c0ff5fb5a72bcd69f4306dbbf22d7997d83209a8ba917", "1eb7fa3b9bd9174dfe9c3b59b7a09b768ecd496debfc4976a9530a3e15c990d1", "2711e69788ddb34c059a30186e05c55a6b611cb9e34ac343e69cf3264d42fe1c", "28a0c5417b464562ab9842dd1fb0cc1524e60494641d973206ec24d6ec5f6909", "3249011d13d0c63bea72d91cec23a9cf18c25f91d1f115121e5c9113d753fa12", "44089ed06a962a3a70e96353c981d628b2d4a2f2a75ea5d90f916a62d22af2e8", "4bfa291e3c931ff3c99a349d8857605dca029de61d74c6bb82bd46373959c942", "50024a1ee2cf04645535c5ebaeaa0a60c5ef32e262da981f4be0546b26791950", "53b72385857e04e7faca13c613c07cab411480822ac658d97fd8a4ddbaf715c8", "74b7528f901f39c39cdbb50cdf08f1a2351725d9aebaef212a29abfbb06895ee", "7d0809e2991c9784eceeadef01c27ee6a33ca09ebba6154317a257353e3af922", "896b2b80931d6b13b5d9feba3d4eebc67d5e6ec54f0cf3339d08487d55d93b0e", "8d9ec51cc06580f8c21b41fd3f2b3465197ba5b23c00eb7d422b7ae0380510b0", "9f7a1e96fec45f70ad364e46de32ccacab4d80de238bd3c2edd036867ccd48ad", "ab4dc33ef0e26dc627559786a4fba0c2227f125db85d970abbf85b77506b3f51", "d1e6d1f156e999edab069d79d890859806b555ce4e4da5b6418616322f0a3df1", "d752bcf1b98174780e2317ada12013d612f05116456133a6acf3e17d43b71f05", "e5bcc4270671936349249d26140c267397b7b4b1381f5ec8b13c53c5b53ab6e1"]
 greenlet = ["000546ad01e6389e98626c1367be58efa613fa82a1be98b0c6fc24b563acc6d0", "0d48200bc50cbf498716712129eef819b1729339e34c3ae71656964dac907c28", "23d12eacffa9d0f290c0fe0c4e81ba6d5f3a5b7ac3c30a5eaf0126bf4deda5c8", "37c9ba82bd82eb6a23c2e5acc03055c0e45697253b2393c9a50cef76a3985304", "51503524dd6f152ab4ad1fbd168fc6c30b5795e8c70be4410a64940b3abb55c0", "8041e2de00e745c0e05a502d6e6db310db7faa7c979b3a5877123548a4c0b214", "81fcd96a275209ef117e9ec91f75c731fa18dcfd9ffaa1c0adbdaa3616a86043", "853da4f9563d982e4121fed8c92eea1a4594a2299037b3034c3c898cb8e933d6", "8b4572c334593d449113f9dc8d19b93b7b271bdbe90ba7509eb178923327b625", "9416443e219356e3c31f1f918a91badf2e37acf297e2fa13d24d1cc2380f8fbc", "9854f612e1b59ec66804931df5add3b2d5ef0067748ea29dc60f0efdcda9a638", "99a26afdb82ea83a265137a398f570402aa1f2b5dfb4ac3300c026931817b163", "a19bf883b3384957e4a4a13e6bd1ae3d85ae87f4beb5957e35b0be287f12f4e4", "a9f145660588187ff835c55a7d2ddf6abfc570c2651c276d3d4be8a2766db490", "ac57fcdcfb0b73bb3203b58a14501abb7e5ff9ea5e2edfa06bb03035f0cff248", "bcb530089ff24f6458a81ac3fa699e8c00194208a724b644ecc68422e1111939", "beeabe25c3b704f7d56b573f7d2ff88fc99f0138e43480cecdfcaa3b87fe4f87", "d634a7ea1fc3380ff96f9e44d8d22f38418c1c381d5fac680b272d7d90883720", "d97b0661e1aead761f0ded3b769044bb00ed5d33e1ec865e891a8b128bf7c656"]
@@ -785,5 +815,6 @@ watchdog = ["7e65882adb7746039b6f3876ee174952f8eaaa34491ba34333ddf1fe35de4162"]
 watchdog-gevent = ["a9ef201bbbbaa1f87a6e4c164d55cd077cc9b4406b2f7444854d2bbde7a599de", "d19f1276a728dfb3ae3f1c8ada6e791f1726fd4336dff18b4ea35ed3ade35c6a"]
 wcwidth = ["3df37372226d6e63e1b1e1eda15c594bca98a22d33a23832a90998faa96bc65e", "f4ebe71925af7b40a864553f761ed559b43544f8f71746c2d756c7fe788ade7c"]
 web-pdb = ["03bc8a94913644fd2d5d83799416fa3379f6916e0c3c4f139eb4aff6aab5eb52", "5f9603a9065c8cbd71431dbd6ed8daa6bcee2e4f506842b8910fc12e80310701"]
+webargs = ["3beca296598067cec24a0b6f91c0afcc19b6e3c4d84ab026b931669628bb47b4", "3f9dc15de183d356c9a0acc159c100ea0506c0c240c1e6f1d8b308c5fed4dbbd", "fa4ad3ad9b38bedd26c619264fdc50d7ae014b49186736bca851e5b5228f2a1b"]
 werkzeug = ["7280924747b5733b246fe23972186c6b348f9ae29724135a6dfc1e53cea433e7", "e5f4a1f98b52b18a93da705a7458e55afb26f32bff83ff5d19189f92462d65c4"]
 zipp = ["3718b1cbcd963c7d4c5511a8240812904164b7f381b647143a89d3b98f9bcd8e", "f06903e9f1f43b12d371004b4ac7b06ab39a44adc747266928ae6debfa7b3335"]

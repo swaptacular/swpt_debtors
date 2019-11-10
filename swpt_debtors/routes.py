@@ -1,7 +1,5 @@
-import binascii
-from base64 import urlsafe_b64decode, urlsafe_b64encode
-from flask import Blueprint, abort
 from flask.views import MethodView
+from flask_smorest import Blueprint, abort
 from . import procedures
 
 web_api = Blueprint('web_api', __name__)
