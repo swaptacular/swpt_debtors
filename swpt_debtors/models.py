@@ -310,7 +310,8 @@ class Account(db.Model):
         db.CheckConstraint(principal > MIN_INT64),
         {
             'comment': 'Tells who owes what to whom. This table is a replica of the table with the '
-                       'same name in the `swpt_accounts` service.',
+                       'same name in the `swpt_accounts` service. It is used to perform maintenance '
+                       'routines like changing interest rates.',
         }
     )
 
