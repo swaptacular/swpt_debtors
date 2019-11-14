@@ -1,14 +1,31 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
+from marshmallow import Schema, fields
+from .models import Debtor
 from . import procedures
 
-web_api = Blueprint('web_api', __name__)
+web_api = Blueprint('web_api', __name__, url_prefix='/debtors', description="Operations on debtors")
 
 
-@web_api.route('/debtors/<int:debtor_id>')
+class DebtorPathArgsSchema(Schema):
+    debtor_id = fields.Int(required=True, description="The debtor's ID", format="int64")
+
+
+class DebtorSchema(Schema):
+    debtor_id = fields.Int(data_key='debtorId', format="int64")
+
+
+@web_api.route('/<int:debtor_id>', parameters=[DebtorPathArgsSchema])
 class DebtorInfo(MethodView):
+    # @web_api.arguments(DebtorPathArgsSchema, location='path', as_kwargs=True)
+    @web_api.response(DebtorSchema)
     def get(self, debtor_id):
-        pass
+        """Return debtor's principal information.
+
+        The content could be cached.
+        """
+
+        return Debtor(debtor_id=debtor_id)
 
 
 @web_api.route('/debtors/<int:debtor_id>/balance-limits')

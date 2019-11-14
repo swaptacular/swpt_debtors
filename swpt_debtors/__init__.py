@@ -30,6 +30,12 @@ class Configuration(metaclass=MetaFlaskEnv):
     SQLALCHEMY_ECHO = False
     DRAMATIQ_BROKER_CLASS = 'RabbitmqBroker'
     DRAMATIQ_BROKER_URL = 'amqp://guest:guest@localhost:5672'
+    API_SPEC_OPTIONS = {
+        'info': {
+            'title': 'Debtors API',
+            'description': 'This API manages debtors.',
+        }
+    }
     OPENAPI_VERSION = '3.0.2'
     OPENAPI_URL_PREFIX = '/docs'
     OPENAPI_REDOC_PATH = 'redoc'
@@ -52,6 +58,6 @@ def create_app(config_dict={}):
     migrate.init_app(app, db)
     broker.init_app(app)
     api.init_app(app)
-    app.register_blueprint(web_api, url_prefix='/')
+    api.register_blueprint(web_api)
     app.cli.add_command(swpt_debtors)
     return app
