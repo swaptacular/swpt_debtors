@@ -15,7 +15,19 @@ class DebtorSchema(Schema):
     debtor_id = fields.Int(data_key='debtorId', format="int64")
 
 
-@web_api.route('/<int:debtor_id>', parameters=[DebtorPathArgsSchema])
+SPEC_DEBTOR_ID = {
+    'in': 'path',
+    'name': 'debtor_id',
+    'required': True,
+    'description': "The debtor's ID",
+    'schema': {
+        'type': 'integer',
+        'format': 'int64',
+    },
+}
+
+
+@web_api.route('/<int:debtor_id>', parameters=[SPEC_DEBTOR_ID])
 class DebtorInfo(MethodView):
     # @web_api.arguments(DebtorPathArgsSchema, location='path', as_kwargs=True)
     @web_api.response(DebtorSchema)
@@ -23,6 +35,9 @@ class DebtorInfo(MethodView):
         """Return debtor's principal information.
 
         The content could be cached.
+
+        ---
+        Ignored
         """
 
         return Debtor(debtor_id=debtor_id)
