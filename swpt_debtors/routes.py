@@ -4,20 +4,12 @@ from marshmallow import Schema, fields
 from .models import Debtor
 from . import procedures
 
-web_api = Blueprint('web_api', __name__, url_prefix='/debtors', description="Operations on debtors")
-
-
-class DebtorPathArgsSchema(Schema):
-    debtor_id = fields.Int(required=True, description="The debtor's ID", format="int64")
-
-
-class DebtorSchema(Schema):
-    debtor_id = fields.Int(data_key='debtorId', format="int64")
+debtors_api = Blueprint('debtors_api', __name__, url_prefix='/debtors', description="Operations on debtors")
 
 
 SPEC_DEBTOR_ID = {
     'in': 'path',
-    'name': 'debtor_id',
+    'name': 'debtorId',
     'required': True,
     'description': "The debtor's ID",
     'schema': {
@@ -27,11 +19,41 @@ SPEC_DEBTOR_ID = {
 }
 
 
-@web_api.route('/<int:debtor_id>', parameters=[SPEC_DEBTOR_ID])
+class InterestRateLowerLimitSchema(Schema):
+    value = fields.Float(description='The interest rate should be no less than this value.')
+    cutoff = fields.DateTime(data_key='enforcedUntil', description='The limit will not be enforced after this moment.')
+
+
+class BalanceLowerLimitSchema(Schema):
+    value = fields.Int(format='int64', description='The balance should be no less than this value.')
+    cutoff = fields.DateTime(data_key='enforcedUntil', description='The limit will not be enforced after this moment.')
+
+
+class DebtorSchema(Schema):
+    debtor_id = fields.Int(data_key='debtorId', format="int64", description=SPEC_DEBTOR_ID['description'])
+    balance = fields.Int(format="int64", description=Debtor.balance.comment)
+    balance_ts = fields.DateTime(data_key='balanceTimestamp', description=Debtor.balance_ts.comment)
+    interest_rate_target = fields.Float(data_key='interestRateTarget', description=Debtor.interest_rate_target.comment)
+    balance_lower_limits = fields.Nested(
+        BalanceLowerLimitSchema,
+        many=True,
+        missing=[],
+        data_key='balanceLowerLimits',
+        description='Enforced lower limits for the `balance` field.',
+    )
+    interest_rate_lower_limits = fields.Nested(
+        InterestRateLowerLimitSchema,
+        many=True,
+        missing=[],
+        data_key='interestRateLowerLimits',
+        description='Enforced interest rate lower limits.',
+    )
+
+
+@debtors_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
 class DebtorInfo(MethodView):
-    # @web_api.arguments(DebtorPathArgsSchema, location='path', as_kwargs=True)
-    @web_api.response(DebtorSchema)
-    def get(self, debtor_id):
+    @debtors_api.response(DebtorSchema)
+    def get(self, debtorId):
         """Return debtor's principal information.
 
         The content could be cached.
@@ -40,55 +62,39 @@ class DebtorInfo(MethodView):
         Ignored
         """
 
-        return Debtor(debtor_id=debtor_id)
+        debtor = procedures.get_or_create_debtor(debtorId)
+        return debtor
 
 
-@web_api.route('/debtors/<int:debtor_id>/balance-limits')
+@debtors_api.route('/debtors/<int:debtorId>/balance-limits', parameters=[SPEC_DEBTOR_ID])
 class BalanceLimits(MethodView):
-    def get(self, debtor_id):
+    def get(self, debtorId):
         pass
 
-    def patch(self, debtor_id):
+    # @debtors_api.arguments(DebtorPathArgsSchema, location='path', as_kwargs=True)
+    def patch(self, debtorId):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/interest-rate')
+@debtors_api.route('/debtors/<int:debtorId>/interest-rate', parameters=[SPEC_DEBTOR_ID])
 class InterestRate(MethodView):
-    def get(self, debtor_id):
+    def get(self, debtorId):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/interest-rate-target')
+@debtors_api.route('/debtors/<int:debtorId>/interest-rate-target', parameters=[SPEC_DEBTOR_ID])
 class InterestRateTarget(MethodView):
-    def get(self, debtor_id):
+    def get(self, debtorId):
         pass
 
-    def put(self, debtor_id):
+    def put(self, debtorId):
         pass
 
 
-@web_api.route('/debtors/<int:debtor_id>/interest-rate-limits')
+@debtors_api.route('/debtors/<int:debtorId>/interest-rate-limits', parameters=[SPEC_DEBTOR_ID])
 class InterestRateLimits(MethodView):
-    def get(self, debtor_id):
+    def get(self, debtorId):
         pass
 
-    def patch(self, debtor_id):
+    def patch(self, debtorId):
         pass
-
-
-# web_api.add_url_rule(
-#     '/debtors/<int:debtor_id>',
-#     view_func=DebtorInfo.as_view('debtor_info'),
-# )
-# web_api.add_url_rule(
-#     '/debtors/<int:debtor_id>/interest-rate',
-#     view_func=InterestRateTarget.as_view('interest_rate'),
-# )
-# web_api.add_url_rule(
-#     '/debtors/<int:debtor_id>/interest-rate/target',
-#     view_func=InterestRateTarget.as_view('interest_rate_target'),
-# )
-# web_api.add_url_rule(
-#     '/debtors/<int:debtor_id>/interest-rate/lower-limits',
-#     view_func=InterestRateLowerLimits.as_view('interest_rate_lower_limits'),
-# )

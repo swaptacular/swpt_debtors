@@ -190,13 +190,13 @@ class Debtor(db.Model):
         default=0,
         comment="The total issued amount with a negative sign. Normally, it will be a "
                 "negative number or a zero. A positive value, although theoretically "
-                "possible, should be very rare. A `NULL` means that the balance is unknown.",
+                "possible, should be very rare. A `null` means that the balance is unknown.",
     )
     balance_ts = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,
         default=get_now_utc,
-        comment='Updated on each change of the `balance`.',
+        comment='Updated on each change of the `balance` field.',
     )
     interest_rate_target = db.Column(
         db.REAL,
@@ -210,9 +210,9 @@ class Debtor(db.Model):
     # Ballance Lower Limits
     bll_values = db.Column(
         pg.ARRAY(db.BigInteger, dimensions=1),
-        comment='Enforced lower limits for the `balance` column. Each element in  '
+        comment='Enforced lower limits for the `balance` field. Each element in  '
                 'this array should have a corresponding element in the `bll_cutoffs` '
-                'arrays (the cutoff dates for the limits). A `NULL` is the same as '
+                'arrays (the cutoff dates for the limits). A `null` is the same as '
                 'an empty array.',
     )
     bll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
@@ -223,7 +223,7 @@ class Debtor(db.Model):
         comment=(
             'Enforced interest rate lower limits. Each element in this array '
             'should have a corresponding element in the `irll_cutoffs` array '
-            '(the cutoff dates for the limits). A `NULL` is the same as an '
+            '(the cutoff dates for the limits). A `null` is the same as an '
             'empty array. If the array contains values bigger that {ceil}, '
             'they are treated as equal to {ceil}.'
         ).format(ceil=INTEREST_RATE_CEIL),

@@ -47,7 +47,7 @@ class Configuration(metaclass=MetaFlaskEnv):
 def create_app(config_dict={}):
     from flask import Flask
     from .extensions import db, migrate, broker, api
-    from .routes import web_api
+    from .routes import debtors_api
     from .cli import swpt_debtors
     from . import models  # noqa
 
@@ -58,6 +58,6 @@ def create_app(config_dict={}):
     migrate.init_app(app, db)
     broker.init_app(app)
     api.init_app(app)
-    api.register_blueprint(web_api)
+    api.register_blueprint(debtors_api)
     app.cli.add_command(swpt_debtors)
     return app
