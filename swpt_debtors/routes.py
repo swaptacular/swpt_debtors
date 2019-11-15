@@ -35,15 +35,13 @@ class DebtorSchema(Schema):
     balance_ts = fields.DateTime(data_key='balanceTimestamp', description=Debtor.balance_ts.comment)
     interest_rate_target = fields.Float(data_key='interestRateTarget', description=Debtor.interest_rate_target.comment)
     balance_lower_limits = fields.Nested(
-        BalanceLowerLimitSchema,
-        many=True,
+        BalanceLowerLimitSchema(many=True),
         missing=[],
         data_key='balanceLowerLimits',
         description='Enforced lower limits for the `balance` field.',
     )
     interest_rate_lower_limits = fields.Nested(
-        InterestRateLowerLimitSchema,
-        many=True,
+        InterestRateLowerLimitSchema(many=True),
         missing=[],
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.',
