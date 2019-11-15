@@ -20,7 +20,7 @@ SPEC_DEBTOR_ID = {
 
 
 class InterestRateLowerLimitSchema(Schema):
-    value = fields.Float(description='The interest rate should be no less than this value.')
+    value = fields.Float(description='The annual interest rate (in percents) should be no less than this value.')
     cutoff = fields.DateTime(data_key='enforcedUntil', description='The limit will not be enforced after this moment.')
 
 
@@ -52,6 +52,12 @@ class DebtorSchema(Schema):
         format='url',
         example='https://foo.bar.com/debtors/0',
         description="The debtor's canonical URL. Can be relative.",
+    )
+    type = fields.Function(
+        lambda obj: 'Debtor',
+        type='string',
+        example='Debtor',
+        description='The type of the object ("Debtor").',
     )
 
     def get_url(self, obj):
