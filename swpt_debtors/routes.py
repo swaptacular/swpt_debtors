@@ -46,6 +46,17 @@ class DebtorSchema(Schema):
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.',
     )
+    self = fields.Method(
+        'get_url',
+        type='string',
+        format='url',
+        example='https://foo.bar.com/debtors/0',
+        description="The debtor's canonical URL. Can be relative.",
+    )
+
+    def get_url(self, obj):
+        # TODO: Implement it.
+        return ''
 
 
 @debtors_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
