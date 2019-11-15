@@ -52,7 +52,7 @@ class DebtorSchema(Schema):
 
 @debtors_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
 class DebtorInfo(MethodView):
-    @debtors_api.response(DebtorSchema)
+    @debtors_api.response(DebtorSchema())
     def get(self, debtorId):
         """Return debtor's principal information.
 
