@@ -35,14 +35,14 @@ class DebtorSchema(Schema):
     balance_ts = fields.DateTime(data_key='balanceTimestamp', description=Debtor.balance_ts.comment)
     interest_rate_target = fields.Float(data_key='interestRateTarget', description=Debtor.interest_rate_target.comment)
     balance_lower_limits = fields.Nested(
-        BalanceLowerLimitSchema,
+        BalanceLowerLimitSchema(),
         many=True,
         missing=[],
         data_key='balanceLowerLimits',
         description='Enforced lower limits for the `balance` field.',
     )
     interest_rate_lower_limits = fields.Nested(
-        InterestRateLowerLimitSchema,
+        InterestRateLowerLimitSchema(),
         many=True,
         missing=[],
         data_key='interestRateLowerLimits',
@@ -52,7 +52,7 @@ class DebtorSchema(Schema):
 
 @debtors_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
 class DebtorInfo(MethodView):
-    @debtors_api.response(DebtorSchema)
+    @debtors_api.response(DebtorSchema())
     def get(self, debtorId):
         """Return debtor's principal information.
 
