@@ -1,7 +1,7 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from marshmallow import Schema, fields, validate, missing
-from .models import Debtor, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
+from .models import Debtor, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
 from . import procedures
 
 debtors_api = Blueprint('debtors_api', __name__, url_prefix='/debtors', description="Operations on debtors")
@@ -42,13 +42,30 @@ class ResourceMixin:
 
 
 class InterestRateLowerLimitSchema(Schema):
-    value = fields.Float(description='The annual interest rate (in percents) should be no less than this value.')
-    cutoff = fields.DateTime(data_key='enforcedUntil', description='The limit will not be enforced after this moment.')
+    value = fields.Float(
+        required=True,
+        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
+        description='The annual interest rate (in percents) should be no less than this value.',
+    )
+    cutoff = fields.DateTime(
+        required=True,
+        data_key='enforcedUntil',
+        description='The limit will not be enforced after this moment.',
+    )
 
 
 class BalanceLowerLimitSchema(Schema):
-    value = fields.Int(format='int64', description='The balance should be no less than this value.')
-    cutoff = fields.DateTime(data_key='enforcedUntil', description='The limit will not be enforced after this moment.')
+    value = fields.Int(
+        format='int64',
+        required=True,
+        validate=validate.Range(min=MIN_INT64, max=MAX_INT64),
+        description='The balance should be no less than this value.',
+    )
+    cutoff = fields.DateTime(
+        required=True,
+        data_key='enforcedUntil',
+        description='The limit will not be enforced after this moment.',
+    )
 
 
 class DebtorSchema(ResourceMixin, Schema):
