@@ -69,9 +69,22 @@ class BalanceLowerLimitSchema(Schema):
 
 
 class DebtorSchema(ResourceMixin, Schema):
-    debtor_id = fields.Int(data_key='debtorId', format="int64", description=SPEC_DEBTOR_ID['description'])
-    balance = fields.Int(format="int64", description=Debtor.balance.comment)
-    balance_ts = fields.DateTime(data_key='balanceTimestamp', description=Debtor.balance_ts.comment)
+    debtor_id = fields.Int(
+        dump_only=True,
+        data_key='debtorId',
+        format="int64",
+        description=SPEC_DEBTOR_ID['description'],
+    )
+    balance = fields.Int(
+        dump_only=True,
+        format="int64",
+        description=Debtor.balance.comment,
+    )
+    balance_ts = fields.DateTime(
+        dump_only=True,
+        data_key='balanceTimestamp',
+        description=Debtor.balance_ts.comment,
+    )
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
         missing=[],
