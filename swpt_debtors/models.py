@@ -187,10 +187,11 @@ class Debtor(db.Model):
     )
     balance = db.Column(
         db.BigInteger,
+        nullable=False,
         default=0,
         comment="The total issued amount with a negative sign. Normally, it will be a "
                 "negative number or a zero. A positive value, although theoretically "
-                "possible, should be very rare. A `null` means that the balance is unknown.",
+                "possible, should be very rare.",
     )
     balance_ts = db.Column(
         db.TIMESTAMP(timezone=True),

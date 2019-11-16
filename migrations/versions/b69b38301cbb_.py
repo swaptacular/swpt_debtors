@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 4a5879b1f3f5
+Revision ID: b69b38301cbb
 Revises: 
-Create Date: 2019-11-15 17:39:06.615212
+Create Date: 2019-11-16 16:43:52.860820
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '4a5879b1f3f5'
+revision = 'b69b38301cbb'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -47,7 +47,7 @@ def upgrade():
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
     sa.Column('status', sa.SmallInteger(), nullable=False, comment='Debtor status flags.'),
-    sa.Column('balance', sa.BigInteger(), nullable=True, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare. A `null` means that the balance is unknown.'),
+    sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
     sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
     sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The desired annual rate (in percents) at which the interest should accumulate on creditors' accounts. The actual interest rate could be different if interest rate limits are enforced."),
     sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` field. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `null` is the same as an empty array.'),

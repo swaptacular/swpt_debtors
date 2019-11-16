@@ -1,6 +1,6 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, missing
 from .models import Debtor
 from . import procedures
 
@@ -19,6 +19,28 @@ SPEC_DEBTOR_ID = {
 }
 
 
+class ResourceMixin:
+    self = fields.Method(
+        'get_self',
+        type='string',
+        format='uri-reference',
+        example='https://foo.bar.com/resources/0',
+        description="The canonical URL of the object. Can be relative.",
+    )
+    type = fields.Method(
+        'get_type',
+        type='string',
+        example='Resource',
+        description='The type of the object.',
+    )
+
+    def get_self(self, obj):
+        return missing
+
+    def get_type(self, obj):
+        return missing
+
+
 class InterestRateLowerLimitSchema(Schema):
     value = fields.Float(description='The annual interest rate (in percents) should be no less than this value.')
     cutoff = fields.DateTime(data_key='enforcedUntil', description='The limit will not be enforced after this moment.')
@@ -29,40 +51,23 @@ class BalanceLowerLimitSchema(Schema):
     cutoff = fields.DateTime(data_key='enforcedUntil', description='The limit will not be enforced after this moment.')
 
 
-class DebtorSchema(Schema):
+class DebtorSchema(ResourceMixin, Schema):
     debtor_id = fields.Int(data_key='debtorId', format="int64", description=SPEC_DEBTOR_ID['description'])
     balance = fields.Int(format="int64", description=Debtor.balance.comment)
     balance_ts = fields.DateTime(data_key='balanceTimestamp', description=Debtor.balance_ts.comment)
-    interest_rate_target = fields.Float(data_key='interestRateTarget', description=Debtor.interest_rate_target.comment)
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
         missing=[],
         data_key='balanceLowerLimits',
         description='Enforced lower limits for the `balance` field.',
     )
+    interest_rate_target = fields.Float(data_key='interestRateTarget', description=Debtor.interest_rate_target.comment)
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
         missing=[],
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.',
     )
-    self = fields.Method(
-        'get_url',
-        type='string',
-        format='url',
-        example='https://foo.bar.com/debtors/0',
-        description="The debtor's canonical URL. Can be relative.",
-    )
-    type = fields.Function(
-        lambda obj: 'Debtor',
-        type='string',
-        example='Debtor',
-        description='The type of the object ("Debtor").',
-    )
-
-    def get_url(self, obj):
-        # TODO: Implement it.
-        return ''
 
 
 @debtors_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
