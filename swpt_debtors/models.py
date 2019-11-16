@@ -307,7 +307,7 @@ class Account(db.Model):
         comment='Updated on every increment of `interest_rate_last_change_seqnum`. Must never decrease.',
     )
     __table_args__ = (
-        db.CheckConstraint((interest_rate > -100.0) & (interest_rate <= 100.0)),
+        db.CheckConstraint((interest_rate >= INTEREST_RATE_FLOOR) & (interest_rate <= INTEREST_RATE_CEIL)),
         db.CheckConstraint(principal > MIN_INT64),
         {
             'comment': 'Tells who owes what to whom. This table is a replica of the table with the '

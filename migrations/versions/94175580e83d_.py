@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: b69b38301cbb
+Revision ID: 94175580e83d
 Revises: 
-Create Date: 2019-11-16 16:43:52.860820
+Create Date: 2019-11-16 19:08:07.022780
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'b69b38301cbb'
+revision = '94175580e83d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -30,7 +30,7 @@ def upgrade():
     sa.Column('status', sa.SmallInteger(), nullable=False, comment='Additional account status flags.'),
     sa.Column('interest_rate_last_change_seqnum', sa.Integer(), nullable=False, comment='Incremented (with wrapping) on each invocation of the `change_interest_rate` actor.'),
     sa.Column('interest_rate_last_change_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on every increment of `interest_rate_last_change_seqnum`. Must never decrease.'),
-    sa.CheckConstraint('interest_rate > -100.0 AND interest_rate <= 100.0'),
+    sa.CheckConstraint('interest_rate >= -50.0 AND interest_rate <= 100.0'),
     sa.CheckConstraint('principal > -9223372036854775808'),
     sa.PrimaryKeyConstraint('debtor_id', 'creditor_id'),
     comment='Tells who owes what to whom. This table is a replica of the table with the same name in the `swpt_accounts` service. It is used to perform maintenance routines like changing interest rates.'

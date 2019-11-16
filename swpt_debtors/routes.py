@@ -1,7 +1,7 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from marshmallow import Schema, fields, missing
-from .models import Debtor
+from marshmallow import Schema, fields, validate, missing
+from .models import Debtor, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 from . import procedures
 
 debtors_api = Blueprint('debtors_api', __name__, url_prefix='/debtors', description="Operations on debtors")
@@ -61,7 +61,11 @@ class DebtorSchema(ResourceMixin, Schema):
         data_key='balanceLowerLimits',
         description='Enforced lower limits for the `balance` field.',
     )
-    interest_rate_target = fields.Float(data_key='interestRateTarget', description=Debtor.interest_rate_target.comment)
+    interest_rate_target = fields.Float(
+        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
+        data_key='interestRateTarget',
+        description=Debtor.interest_rate_target.comment,
+    )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
         missing=[],
