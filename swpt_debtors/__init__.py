@@ -33,7 +33,8 @@ class Configuration(metaclass=MetaFlaskEnv):
     API_SPEC_OPTIONS = {
         'info': {
             'title': 'Debtors API',
-            'description': 'This API manages debtors.',
+            'description': "This API can be used to obtain information about debtors, "
+                           "as well as to change individual debtor's policies.",
         }
     }
     OPENAPI_VERSION = '3.0.2'
