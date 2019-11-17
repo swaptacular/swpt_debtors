@@ -75,7 +75,7 @@ class DebtorSchema(Schema):
     balance_ts = fields.DateTime(
         dump_only=True,
         data_key='balanceTimestamp',
-        description=Debtor.balance_ts.comment,
+        description='The moment at which the last change in the `balance` field happened.',
     )
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
@@ -116,9 +116,7 @@ class DebtorSchema(Schema):
 class DebtorInfo(MethodView):
     @debtors_api.response(DebtorSchema)
     def get(self, debtorId):
-        """Return debtor's principal information.
-
-        The content could be cached.
+        """Return info about the debtor.
 
         ---
         Ignored
@@ -132,15 +130,15 @@ class DebtorInfo(MethodView):
 class DebtorPolicy(MethodView):
     @debtors_api.response(DebtorSchema)
     def get(self, debtorId):
-        """Return debtor's policy information."""
+        """Return info about debtor's policy."""
 
         return procedures.get_debtor(debtorId) or abort(404)
 
     @debtors_api.arguments(DebtorSchema)
-    @debtors_api.response(DebtorSchema)
+    @debtors_api.response(code=204)
     def patch(self, debtor_info, debtorId):
         """Update debtor's policy."""
 
         # abort(409, message='fdfd', headers={'xxxyyy': 'zzz'})
-        debtor = procedures.get_debtor(debtorId)
-        return debtor
+        # debtor = procedures.get_debtor(debtorId)
+        # return debtor
