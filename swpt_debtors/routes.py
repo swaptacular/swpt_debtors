@@ -125,8 +125,6 @@ class DebtorSchema(DebtorInfoSchema):
         return 'Debtor'
 
     def get_uri(self, obj):
-        assert isinstance(obj, Debtor)
-
         # TODO: Add schema and domain?
         return f'/debtors/{obj.debtor_id}'
 
@@ -136,8 +134,6 @@ class DebtorPolicySchema(DebtorInfoSchema):
         return 'DebtorPolicy'
 
     def get_uri(self, obj):
-        assert isinstance(obj, Debtor)
-
         # TODO: Add schema and domain?
         return f'/debtors/{obj.debtor_id}/policy'
 
