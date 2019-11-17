@@ -13,6 +13,11 @@ TD_MINUS_SECOND = -TD_SECOND
 
 
 @atomic
+def get_debtor(debtor_id: int) -> Optional[Debtor]:
+    return Debtor.get_instance(debtor_id)
+
+
+@atomic
 def get_current_interest_rate(debtor: Debtor) -> float:
     current_ts = datetime.now(tz=timezone.utc)
     interest_rate = _calc_interest_rate(current_ts.date(), debtor)

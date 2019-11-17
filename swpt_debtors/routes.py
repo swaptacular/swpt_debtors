@@ -51,21 +51,21 @@ class DebtorSchema(Schema):
         'get_uri',
         type='string',
         format='uri-reference',
-        example='https://example.com/debtors/1',
         description="The URI of the object. Can be relative.",
+        example='https://example.com/debtors/1',
     )
     type = fields.Function(
         lambda obj: 'Debtor',
         type='string',
+        description='The type of the object ("Debtor").',
         example='Debtor',
-        description='The type of the object.',
     )
     debtor_id = fields.Int(
         dump_only=True,
         data_key='debtorId',
         format="int64",
-        example=1,
         description=SPEC_DEBTOR_ID['description'],
+        example=1,
     )
     balance = fields.Int(
         dump_only=True,
@@ -86,6 +86,7 @@ class DebtorSchema(Schema):
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
         data_key='interestRateTarget',
         description=Debtor.interest_rate_target.comment,
+        example=0,
     )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
@@ -133,15 +134,16 @@ class DebtorPolicy(MethodView):
     def get(self, debtorId):
         """Return debtor's policy information."""
 
-        debtor = procedures.get_or_create_debtor(debtorId)
-        return debtor
+        return procedures.get_debtor(debtorId) or abort(404)
 
-    @debtors_api.arguments(DebtorSchema)
+    @debtors_api.arguments(DebtorSchema())
+    @debtors_api.response(code=409)
     @debtors_api.response(DebtorSchema())
-    def patch(self, debtorId, debtor_info):
+    def patch(self, debtor_info, debtorId):
         """Update debtor's policy."""
 
-        debtor = procedures.get_or_create_debtor(debtorId)
+        # abort(409, message='fdfd', headers={'xxxyyy': 'zzz'})
+        debtor = procedures.get_debtor(debtorId)
         return debtor
 
 
