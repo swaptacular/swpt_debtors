@@ -4,13 +4,13 @@ from marshmallow import Schema, fields, validate
 from .models import Debtor, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
 from . import procedures
 
-debtors_public_api = Blueprint(
+public_api = Blueprint(
     'public',
     __name__,
     url_prefix='/debtors',
     description="Operations that everybody can perform",
 )
-debtors_private_api = Blueprint(
+private_api = Blueprint(
     'private',
     __name__,
     url_prefix='/debtors',
@@ -123,9 +123,9 @@ class DebtorSchema(Schema):
         return f'/debtors/{obj.debtor_id}'
 
 
-@debtors_public_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
+@public_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
 class DebtorInfo(MethodView):
-    @debtors_public_api.response(DebtorSchema)
+    @public_api.response(DebtorSchema)
     def get(self, debtorId):
         """Return info about a debtor.
 
@@ -137,16 +137,16 @@ class DebtorInfo(MethodView):
         return debtor
 
 
-@debtors_private_api.route('/<int:debtorId>/policy', parameters=[SPEC_DEBTOR_ID])
+@private_api.route('/<int:debtorId>/policy', parameters=[SPEC_DEBTOR_ID])
 class DebtorPolicy(MethodView):
-    @debtors_private_api.response(DebtorSchema)
+    @private_api.response(DebtorSchema)
     def get(self, debtorId):
         """Return info about debtor's policy."""
 
         return procedures.get_debtor(debtorId) or abort(404)
 
-    @debtors_private_api.arguments(DebtorSchema)
-    @debtors_private_api.response(code=204)
+    @private_api.arguments(DebtorSchema)
+    @private_api.response(code=204)
     def patch(self, debtor_info, debtorId):
         """Update debtor's policy."""
 
