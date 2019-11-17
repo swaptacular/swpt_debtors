@@ -1,6 +1,6 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from marshmallow import Schema, fields, validate, missing
+from marshmallow import Schema, fields, validate
 from .models import Debtor, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
 from . import procedures
 
@@ -20,6 +20,12 @@ SPEC_DEBTOR_ID = {
 
 
 class InterestRateLowerLimitSchema(Schema):
+    type = fields.Function(
+        lambda obj: 'InterestRateLowerLimit',
+        type='string',
+        example='InterestRateLowerLimit',
+        description='The type of the object.',
+    )
     value = fields.Float(
         required=True,
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
@@ -33,6 +39,12 @@ class InterestRateLowerLimitSchema(Schema):
 
 
 class BalanceLowerLimitSchema(Schema):
+    type = fields.Function(
+        lambda obj: 'BalanceLowerLimit',
+        type='string',
+        example='BalanceLowerLimit',
+        description='The type of the object.',
+    )
     value = fields.Int(
         format='int64',
         required=True,
@@ -55,7 +67,7 @@ class DebtorSchema(Schema):
         description="The URI of the object. Can be relative.",
     )
     type = fields.Function(
-        lambda obj: type(obj).__name__,
+        lambda obj: 'Debtor',
         type='string',
         example='Debtor',
         description='The type of the object.',
