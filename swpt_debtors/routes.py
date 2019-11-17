@@ -163,8 +163,9 @@ class DebtorPolicy(MethodView):
     @private_api.arguments(DebtorPolicySchema)
     @private_api.response(code=204)
     def patch(self, debtor_info, debtorId):
-        """Update debtor's policy."""
+        """Update debtor's policy.
 
-        # abort(409, message='fdfd', headers={'xxxyyy': 'zzz'})
-        # debtor = procedures.get_debtor(debtorId)
-        # return debtor
+        This operation is **idempotent**!
+        """
+
+        # TODO: abort(409, message='fdfd', headers={'xxxyyy': 'zzz'})
