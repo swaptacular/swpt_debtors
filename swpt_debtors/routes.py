@@ -20,12 +20,12 @@ SPEC_DEBTOR_ID = {
 
 
 class ResourceMixin:
-    self = fields.Method(
-        'get_self',
+    uri = fields.Method(
+        'get_uri',
         type='string',
         format='uri-reference',
         example='https://foo.bar.com/resources/0',
-        description="The canonical URL of the object. Can be relative.",
+        description="The URI of the object. Can be relative.",
     )
     type = fields.Method(
         'get_type',
@@ -34,7 +34,7 @@ class ResourceMixin:
         description='The type of the object.',
     )
 
-    def get_self(self, obj):
+    def get_uri(self, obj):
         return missing
 
     def get_type(self, obj):
