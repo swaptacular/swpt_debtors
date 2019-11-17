@@ -114,7 +114,7 @@ class DebtorSchema(Schema):
 
 @debtors_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
 class DebtorInfo(MethodView):
-    @debtors_api.response(DebtorSchema())
+    @debtors_api.response(DebtorSchema)
     def get(self, debtorId):
         """Return debtor's principal information.
 
@@ -130,55 +130,17 @@ class DebtorInfo(MethodView):
 
 @debtors_api.route('/<int:debtorId>/policy', parameters=[SPEC_DEBTOR_ID])
 class DebtorPolicy(MethodView):
-    @debtors_api.response(DebtorSchema())
+    @debtors_api.response(DebtorSchema)
     def get(self, debtorId):
         """Return debtor's policy information."""
 
         return procedures.get_debtor(debtorId) or abort(404)
 
-    @debtors_api.arguments(DebtorSchema())
-    @debtors_api.response(code=409)
-    @debtors_api.response(DebtorSchema())
+    @debtors_api.arguments(DebtorSchema)
+    @debtors_api.response(DebtorSchema)
     def patch(self, debtor_info, debtorId):
         """Update debtor's policy."""
 
         # abort(409, message='fdfd', headers={'xxxyyy': 'zzz'})
         debtor = procedures.get_debtor(debtorId)
         return debtor
-
-
-
-
-
-@debtors_api.route('/debtors/<int:debtorId>/balance-limits', parameters=[SPEC_DEBTOR_ID])
-class BalanceLimits(MethodView):
-    def get(self, debtorId):
-        pass
-
-    # @debtors_api.arguments(DebtorPathArgsSchema, location='path', as_kwargs=True)
-    def patch(self, debtorId):
-        pass
-
-
-@debtors_api.route('/debtors/<int:debtorId>/interest-rate', parameters=[SPEC_DEBTOR_ID])
-class InterestRate(MethodView):
-    def get(self, debtorId):
-        pass
-
-
-@debtors_api.route('/debtors/<int:debtorId>/interest-rate-target', parameters=[SPEC_DEBTOR_ID])
-class InterestRateTarget(MethodView):
-    def get(self, debtorId):
-        pass
-
-    def put(self, debtorId):
-        pass
-
-
-@debtors_api.route('/debtors/<int:debtorId>/interest-rate-limits', parameters=[SPEC_DEBTOR_ID])
-class InterestRateLimits(MethodView):
-    def get(self, debtorId):
-        pass
-
-    def patch(self, debtorId):
-        pass
