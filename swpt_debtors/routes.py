@@ -20,12 +20,6 @@ SPEC_DEBTOR_ID = {
 
 
 class InterestRateLowerLimitSchema(Schema):
-    type = fields.Function(
-        lambda obj: 'InterestRateLowerLimit',
-        type='string',
-        example='InterestRateLowerLimit',
-        description='The type of the object.',
-    )
     value = fields.Float(
         required=True,
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
@@ -39,12 +33,6 @@ class InterestRateLowerLimitSchema(Schema):
 
 
 class BalanceLowerLimitSchema(Schema):
-    type = fields.Function(
-        lambda obj: 'BalanceLowerLimit',
-        type='string',
-        example='BalanceLowerLimit',
-        description='The type of the object.',
-    )
     value = fields.Int(
         format='int64',
         required=True,
