@@ -57,20 +57,23 @@ class BalanceLowerLimitSchema(Schema):
     )
 
 
-class DebtorSchema(Schema):
+class ResourceSchema(Schema):
     uri = fields.Method(
         'get_uri',
         type='string',
         format='uri-reference',
-        description="The URI of the object. Can be relative.",
-        example='https://example.com/debtors/1',
+        description="The URI of the resource. Can be relative.",
+        example='https://example.com/resources/1',
     )
-    type = fields.Function(
-        lambda obj: 'Debtor',
+    type = fields.Method(
+        'get_type',
         type='string',
-        description='The type of the object ("Debtor").',
-        example='Debtor',
+        description='The type of the resource.',
+        example='Resource',
     )
+
+
+class DebtorInfoSchema(ResourceSchema):
     debtor_id = fields.Int(
         dump_only=True,
         data_key='debtorId',
@@ -116,11 +119,27 @@ class DebtorSchema(Schema):
         assert isinstance(obj, Debtor)
         return procedures.get_current_interest_rate(obj)
 
+
+class DebtorSchema(DebtorInfoSchema):
+    def get_type(self, obj):
+        return 'Debtor'
+
     def get_uri(self, obj):
         assert isinstance(obj, Debtor)
 
         # TODO: Add schema and domain?
         return f'/debtors/{obj.debtor_id}'
+
+
+class DebtorPolicySchema(DebtorInfoSchema):
+    def get_type(self, obj):
+        return 'DebtorPolicy'
+
+    def get_uri(self, obj):
+        assert isinstance(obj, Debtor)
+
+        # TODO: Add schema and domain?
+        return f'/debtors/{obj.debtor_id}/policy'
 
 
 @public_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
@@ -139,13 +158,13 @@ class DebtorInfo(MethodView):
 
 @private_api.route('/<int:debtorId>/policy', parameters=[SPEC_DEBTOR_ID])
 class DebtorPolicy(MethodView):
-    @private_api.response(DebtorSchema)
+    @private_api.response(DebtorPolicySchema)
     def get(self, debtorId):
         """Return info about debtor's policy."""
 
         return procedures.get_debtor(debtorId) or abort(404)
 
-    @private_api.arguments(DebtorSchema)
+    @private_api.arguments(DebtorPolicySchema)
     @private_api.response(code=204)
     def patch(self, debtor_info, debtorId):
         """Update debtor's policy."""
