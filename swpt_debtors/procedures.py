@@ -12,6 +12,14 @@ TD_SECOND = timedelta(seconds=1)
 TD_MINUS_SECOND = -TD_SECOND
 
 
+@atomic
+def get_current_interest_rate(debtor: Debtor) -> float:
+    current_ts = datetime.now(tz=timezone.utc)
+    interest_rate = _calc_interest_rate(current_ts.date(), debtor)
+    assert interest_rate is not None
+    return interest_rate
+
+
 def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:
     seqnum, ts = event
     other_seqnum, other_ts = other_event
