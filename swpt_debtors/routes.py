@@ -19,28 +19,6 @@ SPEC_DEBTOR_ID = {
 }
 
 
-class ResourceMixin:
-    uri = fields.Method(
-        'get_uri',
-        type='string',
-        format='uri-reference',
-        example='https://example.com/object',
-        description="The URI of the object. Can be relative.",
-    )
-    type = fields.Method(
-        'get_type',
-        type='string',
-        example='Object',
-        description='The type of the object.',
-    )
-
-    def get_uri(self, obj):
-        return missing
-
-    def get_type(self, obj):
-        return missing
-
-
 class InterestRateLowerLimitSchema(Schema):
     value = fields.Float(
         required=True,
@@ -68,11 +46,25 @@ class BalanceLowerLimitSchema(Schema):
     )
 
 
-class DebtorSchema(ResourceMixin, Schema):
+class DebtorSchema(Schema):
+    uri = fields.Method(
+        'get_uri',
+        type='string',
+        format='uri-reference',
+        example='https://example.com/debtors/1',
+        description="The URI of the object. Can be relative.",
+    )
+    type = fields.Function(
+        lambda obj: type(obj).__name__,
+        type='string',
+        example='Debtor',
+        description='The type of the object.',
+    )
     debtor_id = fields.Int(
         dump_only=True,
         data_key='debtorId',
         format="int64",
+        example=1,
         description=SPEC_DEBTOR_ID['description'],
     )
     balance = fields.Int(
@@ -90,13 +82,6 @@ class DebtorSchema(ResourceMixin, Schema):
         data_key='balanceLowerLimits',
         description='Enforced lower limits for the `balance` field.',
     )
-    interestRate = fields.Method(
-        'get_interest_rate',
-        type='number',
-        format='float',
-        description="The current annual interest rate (in percents) at which "
-                    "interest accumulates on creditors' accounts.",
-    )
     interest_rate_target = fields.Float(
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
         data_key='interestRateTarget',
@@ -107,10 +92,23 @@ class DebtorSchema(ResourceMixin, Schema):
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.',
     )
+    interestRate = fields.Method(
+        'get_interest_rate',
+        type='number',
+        format='float',
+        description="The current annual interest rate (in percents) at which "
+                    "interest accumulates on creditors' accounts.",
+    )
 
     def get_interest_rate(self, obj):
         assert isinstance(obj, Debtor)
         return procedures.get_current_interest_rate(obj)
+
+    def get_uri(self, obj):
+        assert isinstance(obj, Debtor)
+
+        # TODO: Add schema and domain?
+        return f'/debtors/{obj.debtor_id}'
 
 
 @debtors_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
@@ -133,7 +131,7 @@ class DebtorInfo(MethodView):
 class DebtorPolicy(MethodView):
     @debtors_api.response(DebtorSchema())
     def get(self, debtorId):
-        """Update debtor's policy."""
+        """Return debtor's policy information."""
 
         debtor = procedures.get_or_create_debtor(debtorId)
         return debtor
@@ -141,6 +139,8 @@ class DebtorPolicy(MethodView):
     @debtors_api.arguments(DebtorSchema)
     @debtors_api.response(DebtorSchema())
     def patch(self, debtorId, debtor_info):
+        """Update debtor's policy."""
+
         debtor = procedures.get_or_create_debtor(debtorId)
         return debtor
 
