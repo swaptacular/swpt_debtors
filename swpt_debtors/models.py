@@ -185,6 +185,13 @@ class Debtor(db.Model):
         default=0,
         comment='Debtor status flags.',
     )
+    # last_issuing_coordinator_request_id = db.Column(
+    #     db.BigInteger,
+    #     nullable=False,
+    #     default=0,
+    #     comment='Incremented when a `prepare_transfer` message is constructed for an '
+    #             'issuing transfer. Must never decrease.',
+    # )
     balance = db.Column(
         db.BigInteger,
         nullable=False,
@@ -247,6 +254,52 @@ class Debtor(db.Model):
 
     balance_lower_limits = _limits_property('bll_values', 'bll_cutoffs', lower_limits=True)
     interest_rate_lower_limits = _limits_property('irll_values', 'irll_cutoffs', lower_limits=True)
+
+
+# TODO: Add `UnpurgedTransfer` model.
+
+
+# class Transfer(db.Model):
+#     debtor_id = db.Column(db.BigInteger, primary_key=True)
+#     transfer_uuid = db.Column(db.UUID(as_uuid=True), primary_key=True)
+#     amount = db.Column(
+#         db.BigInteger,
+#         nullable=False,
+#         comment='The amount to be transferred. Must be positive.',
+#     )
+#     transfer_info = db.Column(
+#         pg.JSON,
+#         default={},
+#         comment='A note from the debtor. Can be anything that the debtor wants the recipient to see.',
+#     )
+#     issuing_coordinator_request_id = db.Column(
+#         db.BigInteger,
+#         nullable=False,
+#         comment='This is the value of the `coordinator_request_id` parameter, which has been '
+#                 'sent with the `prepare_transfer` message for the payment. The value of '
+#                 '`debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` '
+#                 'is "issuing".',
+#     )
+#     issuing_transfer_id = db.Column(
+#         db.BigInteger,
+#         comment="This value, along with `debtor_id` uniquely identifies the prepared transfer "
+#                 "for the payment. (The sender is always the debtor's account.)",
+#     )
+#     finalized_at_ts = db.Column(
+#         db.TIMESTAMP(timezone=True),
+#         comment='The moment at which the payment order was finalized. NULL means that the '
+#                 'payment order has not been finalized yet.',
+#     )
+#     __table_args__ = (
+#         db.CheckConstraint(amount > 0),
+#         {
+#             'comment': 'Represents a recently initiated issuing transfer from a debtor. '
+#                        'Note that finalized issuing transfers (failed or successful) must not be '
+#                        'deleted right away. Instead, after they have been finalized, they should '
+#                        'stay in the database for at least few days. This is necessary in order '
+#                        'to prevent problems caused by message re-delivery.',
+#         }
+#     )
 
 
 class Account(db.Model):

@@ -35,11 +35,11 @@ SPEC_DEBTOR_ID = {
         'format': 'int64',
     },
 }
-SPEC_TRANSFER_ID = {
+SPEC_TRANSFER_UUID = {
     'in': 'path',
-    'name': 'transferId',
+    'name': 'transferUuid',
     'required': True,
-    'description': "The transfer's ID",
+    'description': "The transfer's UUID",
     'schema': {
         'type': 'string',
     },
@@ -189,9 +189,16 @@ class DebtorPolicySchema(DebtorInfoSchema):
 
 
 class TransferSchema(ResourceSchema):
-    transfer_id = fields.UUID(
+    debtor_id = fields.Int(
+        dump_only=True,
+        data_key='debtorId',
+        format="int64",
+        description=SPEC_DEBTOR_ID['description'],
+        example=1,
+    )
+    transfer_uuid = fields.UUID(
         required=True,
-        data_key='transferId',
+        data_key='transferUuid',
         description="A client-generated UUID for the transfer.",
         example='123e4567-e89b-12d3-a456-426655440000',
     )
@@ -201,7 +208,7 @@ class TransferSchema(ResourceSchema):
 
     def get_uri(self, obj):
         # TODO: Add schema and domain?
-        return f'/transfers/{obj.transfer_id}'
+        return f'/debtors/{obj.debtor_id}/transfers/{obj.transfer_uuid}'
 
 
 class TransfersCollectionSchema(CollectionSchema):
@@ -262,18 +269,19 @@ class TransfersCollection(MethodView):
         return ''
 
 
-@transfers_api.route('/<int:debtorId>/transfers/<transferId>', parameters=[SPEC_DEBTOR_ID, SPEC_TRANSFER_ID])
+@transfers_api.route('/<int:debtorId>/transfers/<transferUuid>', parameters=[SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID])
 class Transfer(MethodView):
     @transfers_api.response(TransferSchema)
-    def get(self, debtorId, transferId):
+    def get(self, debtorId, transferUuid):
         """Return details about a credit-issuing transfer."""
 
         class Transfer:
             pass
         transfer = Transfer()
-        transfer.transfer_id = '666'
+        transfer.debtor_id = debtorId
+        transfer.transfer_uuid = '666'
         return transfer
 
     @transfers_api.response(code=204)
-    def delete(self, debtorId, transferId):
+    def delete(self, debtorId, transferUuid):
         """Purge a finalized credit-issuing transfer."""
