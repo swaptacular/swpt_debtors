@@ -200,7 +200,7 @@ class TransferSchema(ResourceSchema):
 
     def get_uri(self, obj):
         # TODO: Add schema and domain?
-        return '1'
+        return f'/transfers/{obj.transfer_id}'
 
 
 class TransfersCollectionSchema(CollectionSchema):
@@ -267,7 +267,11 @@ class Transfer(MethodView):
     def get(self, debtorId, transferId):
         """Return details about a credit-issuing transfer."""
 
-        return {}
+        class Transfer:
+            pass
+        transfer = Transfer()
+        transfer.transfer_id = '666'
+        return transfer
 
     @transfers_api.response(code=204)
     def delete(self, debtorId, transferId):
