@@ -188,9 +188,9 @@ class DebtorPolicySchema(DebtorInfoSchema):
         return f'/debtors/{obj.debtor_id}/policy'
 
 
-class PendingTransferSchema(ResourceSchema):
+class TransferSchema(ResourceSchema):
     def get_type(self, obj):
-        return 'PendingTransfer'
+        return 'Transfer'
 
     def get_uri(self, obj):
         # TODO: Add schema and domain?
@@ -243,19 +243,19 @@ class DebtorPolicy(MethodView):
 class TransfersCollection(MethodView):
     @transfers_api.response(TransfersCollectionSchema)
     def get(self, debtorId):
-        """Return the list of pending transfers for a given debtor."""
+        """Return all credit-issuing transfers for a given debtor."""
 
         return range(10)
 
 
 @transfers_api.route('/<int:debtorId>/transfers/<transferId>', parameters=[SPEC_DEBTOR_ID, SPEC_TRANSFER_ID])
 class Transfer(MethodView):
-    @transfers_api.response(PendingTransferSchema)
+    @transfers_api.response(TransferSchema)
     def get(self, debtorId, transferId):
-        """Return details about a pending transfer."""
+        """Return details about a credit-issuing transfer."""
 
         return {}
 
     @transfers_api.response(code=204)
     def delete(self, debtorId, transferId):
-        """Delete a pending transfer."""
+        """Purge a finalized credit-issuing transfer."""
