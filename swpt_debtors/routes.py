@@ -1,6 +1,7 @@
+from collections import abc
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, pre_dump, missing
 from .models import Debtor, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
 from . import procedures
 
@@ -8,13 +9,19 @@ public_api = Blueprint(
     'public',
     __name__,
     url_prefix='/debtors',
-    description="Operations that everybody can perform",
+    description="Obtain public information about debtors.",
 )
-private_api = Blueprint(
-    'private',
+policy_api = Blueprint(
+    'policy',
     __name__,
     url_prefix='/debtors',
-    description="Operations that only the respective debtor can perform",
+    description="Change individual debtor's policies.",
+)
+transfers_api = Blueprint(
+    'transfers',
+    __name__,
+    url_prefix='/debtors',
+    description="Make credit-issuing transfers.",
 )
 
 
@@ -28,6 +35,65 @@ SPEC_DEBTOR_ID = {
         'format': 'int64',
     },
 }
+SPEC_TRANSFER_ID = {
+    'in': 'path',
+    'name': 'transferId',
+    'required': True,
+    'description': "The transfer's ID",
+    'schema': {
+        'type': 'string',
+    },
+}
+
+
+class ResourceSchema(Schema):
+    uri = fields.Method(
+        'get_uri',
+        type='string',
+        format='uri',
+        description="The URI of this object.",
+        example='https://example.com/resources/123',
+    )
+    type = fields.Method(
+        'get_type',
+        type='string',
+        description='The type of this object.',
+        example='Resource',
+    )
+
+    def get_type(self, obj):
+        raise NotImplementedError
+
+    def get_uri(self, obj):
+        raise NotImplementedError
+
+
+class CollectionSchema(ResourceSchema):
+    members = fields.List(
+        fields.Str(format='uri-reference'),
+        dump_only=True,
+        description='A list of relative URIs for the contained items.',
+        example=['111111', '222222', '333333'],
+    )
+    totalItems = fields.Function(
+        lambda obj: len(obj['members']),
+        type='number',
+        format='int32',
+        description='The total number of items in the collection.',
+        example=3,
+    )
+
+    @pre_dump
+    def _to_dict(self, obj, many):
+        assert not many
+        assert isinstance(obj, abc.Iterable)
+        return {'members': obj}
+
+    def get_type(self, obj):
+        return 'Collection'
+
+    def get_uri(self, obj):
+        return missing
 
 
 class InterestRateLowerLimitSchema(Schema):
@@ -54,22 +120,6 @@ class BalanceLowerLimitSchema(Schema):
         required=True,
         data_key='enforcedUntil',
         description='The limit will not be enforced after this moment.',
-    )
-
-
-class ResourceSchema(Schema):
-    uri = fields.Method(
-        'get_uri',
-        type='string',
-        format='uri-reference',
-        description="The URI of the resource. Can be relative.",
-        example='https://example.com/resources/1',
-    )
-    type = fields.Method(
-        'get_type',
-        type='string',
-        description='The type of the resource.',
-        example='Resource',
     )
 
 
@@ -138,11 +188,29 @@ class DebtorPolicySchema(DebtorInfoSchema):
         return f'/debtors/{obj.debtor_id}/policy'
 
 
+class PendingTransferSchema(ResourceSchema):
+    def get_type(self, obj):
+        return 'PendingTransfer'
+
+    def get_uri(self, obj):
+        # TODO: Add schema and domain?
+        return '1'
+
+
+class TransfersCollectionSchema(CollectionSchema):
+    def get_type(self, obj):
+        return 'TransfersCollection'
+
+    def get_uri(self, obj):
+        # TODO: Add schema and domain?
+        return 'transfers'
+
+
 @public_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])
 class DebtorInfo(MethodView):
     @public_api.response(DebtorSchema)
     def get(self, debtorId):
-        """Return info about a debtor.
+        """Return information about a debtor.
 
         ---
         Ignored
@@ -152,16 +220,16 @@ class DebtorInfo(MethodView):
         return debtor
 
 
-@private_api.route('/<int:debtorId>/policy', parameters=[SPEC_DEBTOR_ID])
+@policy_api.route('/<int:debtorId>/policy', parameters=[SPEC_DEBTOR_ID])
 class DebtorPolicy(MethodView):
-    @private_api.response(DebtorPolicySchema)
+    @policy_api.response(DebtorPolicySchema)
     def get(self, debtorId):
-        """Return info about debtor's policy."""
+        """Return information about debtor's policy."""
 
         return procedures.get_debtor(debtorId) or abort(404)
 
-    @private_api.arguments(DebtorPolicySchema)
-    @private_api.response(code=204)
+    @policy_api.arguments(DebtorPolicySchema)
+    @policy_api.response(code=204)
     def patch(self, debtor_info, debtorId):
         """Update debtor's policy.
 
@@ -169,3 +237,25 @@ class DebtorPolicy(MethodView):
         """
 
         # TODO: abort(409, message='fdfd', headers={'xxxyyy': 'zzz'})
+
+
+@transfers_api.route('/<int:debtorId>/transfers', parameters=[SPEC_DEBTOR_ID])
+class TransfersCollection(MethodView):
+    @transfers_api.response(TransfersCollectionSchema)
+    def get(self, debtorId):
+        """Return the list of pending transfers for a given debtor."""
+
+        return range(10)
+
+
+@transfers_api.route('/<int:debtorId>/transfers/<transferId>', parameters=[SPEC_DEBTOR_ID, SPEC_TRANSFER_ID])
+class Transfer(MethodView):
+    @transfers_api.response(PendingTransferSchema)
+    def get(self, debtorId, transferId):
+        """Return details about a pending transfer."""
+
+        return {}
+
+    @transfers_api.response(code=204)
+    def delete(self, debtorId, transferId):
+        """Delete a pending transfer."""
