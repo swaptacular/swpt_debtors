@@ -189,6 +189,12 @@ class DebtorPolicySchema(DebtorInfoSchema):
 
 
 class TransferSchema(ResourceSchema):
+    transfer_id = fields.UUID(
+        data_key='transferId',
+        description="A client-generated UUID for the transfer.",
+        example='123e4567-e89b-12d3-a456-426655440000',
+    )
+
     def get_type(self, obj):
         return 'Transfer'
 
@@ -246,6 +252,13 @@ class TransfersCollection(MethodView):
         """Return all credit-issuing transfers for a given debtor."""
 
         return range(10)
+
+    @policy_api.arguments(TransferSchema)
+    @transfers_api.response(code=201)
+    def post(self, debtorId):
+        """Create a new credit-issuing transfer."""
+
+        return ''
 
 
 @transfers_api.route('/<int:debtorId>/transfers/<transferId>', parameters=[SPEC_DEBTOR_ID, SPEC_TRANSFER_ID])
