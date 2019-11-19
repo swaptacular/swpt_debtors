@@ -284,6 +284,7 @@ class PendingTransfer(db.Model):
         comment='Whether the transfer has been successful or not.',
     )
     __table_args__ = (
+        db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
         db.CheckConstraint(amount > 0),
         db.CheckConstraint(or_(finalized_at_ts != null(), is_successful == false())),
         {
@@ -291,6 +292,11 @@ class PendingTransfer(db.Model):
                        'a debtor creates a new issuing transfer. The row is deleted when '
                        'the debtor acknowledges (purges) the transfer.',
         }
+    )
+
+    debtor = db.relationship(
+        'Debtor',
+        backref=db.backref('pending_transfers', cascade="all, delete-orphan", passive_deletes=True),
     )
 
 
