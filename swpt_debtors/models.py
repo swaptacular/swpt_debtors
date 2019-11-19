@@ -7,7 +7,7 @@ from collections import abc
 from marshmallow import Schema, fields
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import func, null, or_, and_
+from sqlalchemy.sql.expression import func, null, false, or_, and_
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
 
 MIN_INT16 = -1 << 15
@@ -185,13 +185,13 @@ class Debtor(db.Model):
         default=0,
         comment='Debtor status flags.',
     )
-    # last_issuing_coordinator_request_id = db.Column(
-    #     db.BigInteger,
-    #     nullable=False,
-    #     default=0,
-    #     comment='Incremented when a `prepare_transfer` message is constructed for an '
-    #             'issuing transfer. Must never decrease.',
-    # )
+    last_issuing_coordinator_request_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        default=0,
+        comment='Incremented when a `prepare_transfer` message is constructed for an '
+                'issuing transfer. Must never decrease.',
+    )
     balance = db.Column(
         db.BigInteger,
         nullable=False,
@@ -255,51 +255,87 @@ class Debtor(db.Model):
     balance_lower_limits = _limits_property('bll_values', 'bll_cutoffs', lower_limits=True)
     interest_rate_lower_limits = _limits_property('irll_values', 'irll_cutoffs', lower_limits=True)
 
+    # TODO: Add DOS-prevention fields.
 
-# TODO: Add `UnpurgedTransfer` model.
+
+class PendingTransfer(db.Model):
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
+    amount = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The amount to be transferred. Must be positive.',
+    )
+    transfer_info = db.Column(
+        pg.JSON,
+        nullable=False,
+        default={},
+        comment='A note from the debtor. Can be anything that the debtor wants the recipient to see.',
+    )
+    finalized_at_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        comment='The moment at which the transfer was finalized. A `null` means that the '
+                'transfer has not been finalized yet.',
+    )
+    is_successful = db.Column(
+        db.BOOLEAN,
+        nullable=False,
+        default=False,
+        comment='Whether the transfer has been successful or not.',
+    )
+    __table_args__ = (
+        db.CheckConstraint(amount > 0),
+        db.CheckConstraint(or_(finalized_at_ts != null(), is_successful == false())),
+        {
+            'comment': 'Represents a pending issuing transfer. A new row is inserted when '
+                       'a debtor creates a new issuing transfer. The row is deleted when '
+                       'the debtor acknowledges (purges) the transfer.',
+        }
+    )
 
 
-# class Transfer(db.Model):
-#     debtor_id = db.Column(db.BigInteger, primary_key=True)
-#     transfer_uuid = db.Column(db.UUID(as_uuid=True), primary_key=True)
-#     amount = db.Column(
-#         db.BigInteger,
-#         nullable=False,
-#         comment='The amount to be transferred. Must be positive.',
-#     )
-#     transfer_info = db.Column(
-#         pg.JSON,
-#         default={},
-#         comment='A note from the debtor. Can be anything that the debtor wants the recipient to see.',
-#     )
-#     issuing_coordinator_request_id = db.Column(
-#         db.BigInteger,
-#         nullable=False,
-#         comment='This is the value of the `coordinator_request_id` parameter, which has been '
-#                 'sent with the `prepare_transfer` message for the payment. The value of '
-#                 '`debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` '
-#                 'is "issuing".',
-#     )
-#     issuing_transfer_id = db.Column(
-#         db.BigInteger,
-#         comment="This value, along with `debtor_id` uniquely identifies the prepared transfer "
-#                 "for the payment. (The sender is always the debtor's account.)",
-#     )
-#     finalized_at_ts = db.Column(
-#         db.TIMESTAMP(timezone=True),
-#         comment='The moment at which the payment order was finalized. NULL means that the '
-#                 'payment order has not been finalized yet.',
-#     )
-#     __table_args__ = (
-#         db.CheckConstraint(amount > 0),
-#         {
-#             'comment': 'Represents a recently initiated issuing transfer from a debtor. '
-#                        'Note that finalized issuing transfers (failed or successful) must not be '
-#                        'deleted right away. Instead, after they have been finalized, they should '
-#                        'stay in the database for at least few days. This is necessary in order '
-#                        'to prevent problems caused by message re-delivery.',
-#         }
-#     )
+class RecentTransfer(db.Model):
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
+    amount = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The amount to be transferred. Must be positive.',
+    )
+    transfer_info = db.Column(
+        pg.JSON,
+        nullable=False,
+        default={},
+        comment='A note from the debtor. Can be anything that the debtor wants the recipient to see.',
+    )
+    finalized_at_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        comment='The moment at which the transfer was finalized. A `null` means that the '
+                'transfer has not been finalized yet.',
+    )
+    issuing_coordinator_request_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='This is the value of the `coordinator_request_id` parameter, which has been '
+                'sent with the `prepare_transfer` message for the transfer. The value of '
+                '`debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` '
+                'is "issuing".',
+    )
+    issuing_transfer_id = db.Column(
+        db.BigInteger,
+        comment="This value, along with `debtor_id` uniquely identifies the successfully prepared "
+                "transfer. (The sender is always the debtor's account.)",
+    )
+    __table_args__ = (
+        db.CheckConstraint(amount > 0),
+        {
+            'comment': 'Represents a recently initiated issuing transfer from a debtor. '
+                       'Note that finalized issuing transfers (failed or successful) must not be '
+                       'deleted right away. Instead, after they have been finalized, they should '
+                       'stay in the database for at least few days. This is necessary in order '
+                       'to prevent problems caused by message re-delivery.',
+        }
+    )
 
 
 class Account(db.Model):

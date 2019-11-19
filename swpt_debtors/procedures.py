@@ -1,7 +1,7 @@
 from datetime import datetime, date, timedelta, timezone
 from typing import TypeVar, Optional, Callable, Tuple
 from .extensions import db
-from .models import Debtor, Account, ChangeInterestRateSignal, increment_seqnum, \
+from .models import Debtor, Account, ChangeInterestRateSignal, LimitSequence, increment_seqnum, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 
 T = TypeVar('T')
@@ -23,6 +23,30 @@ def get_current_interest_rate(debtor: Debtor) -> float:
     interest_rate = _calc_interest_rate(current_ts.date(), debtor)
     assert interest_rate is not None
     return interest_rate
+
+
+@atomic
+def update_debtor_policy(
+        debtor_id: int,
+        interest_rate_target: float,
+        new_interest_rate_limits: LimitSequence,
+        new_balance_limits: LimitSequence):
+    # TODO: This is probably not at all the function we need.
+
+    debtor = Debtor.get_instance(debtor_id)
+    if debtor is None:
+        # TODO: define own exception type.
+        raise Exception()
+
+    interest_rate_lower_limits = debtor.interest_rate_lower_limits
+    for l in new_interest_rate_limits:
+        interest_rate_lower_limits.insert_limit(l)
+    balance_lower_limits = debtor.balance_lower_limits
+    for l in new_balance_limits:
+        balance_lower_limits.insert_limit(l)
+    debtor.interest_rate_target = interest_rate_target
+    debtor.interest_rate_lower_limits = interest_rate_lower_limits
+    debtor.balance_lower_limits = balance_lower_limits
 
 
 def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:
