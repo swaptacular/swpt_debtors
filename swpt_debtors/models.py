@@ -48,7 +48,7 @@ class LowerLimitSequence(abc.Sequence):
     def __len__(self):
         return len(self._limits)
 
-    def sort(self):
+    def sort(self) -> None:
         """Sort the sequence by cutoff date."""
 
         self._limits.sort(key=lambda l: l.cutoff)
