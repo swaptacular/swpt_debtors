@@ -327,6 +327,12 @@ class RecentTransfer(db.Model):
                 "transfer. (The sender is always the debtor's account.)",
     )
     __table_args__ = (
+        db.Index(
+            'idx_issuing_coordinator_request_id',
+            debtor_id,
+            issuing_coordinator_request_id,
+            unique=True,
+        ),
         db.CheckConstraint(amount > 0),
         {
             'comment': 'Represents a recently initiated issuing transfer from a debtor. '
