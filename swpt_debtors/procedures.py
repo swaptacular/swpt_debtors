@@ -1,7 +1,7 @@
 from datetime import datetime, date, timedelta, timezone
 from typing import TypeVar, Optional, Callable, Tuple
 from .extensions import db
-from .models import Debtor, Account, ChangeInterestRateSignal, LimitSequence, increment_seqnum, \
+from .models import Debtor, Account, ChangeInterestRateSignal, LowerLimitSequence, increment_seqnum, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 
 T = TypeVar('T')
@@ -29,8 +29,8 @@ def get_current_interest_rate(debtor: Debtor) -> float:
 def update_debtor_policy(
         debtor_id: int,
         interest_rate_target: float,
-        new_interest_rate_limits: LimitSequence,
-        new_balance_limits: LimitSequence):
+        new_interest_rate_limits: LowerLimitSequence,
+        new_balance_limits: LowerLimitSequence):
     # TODO: This is probably not at all the function we need.
 
     debtor = Debtor.get_instance(debtor_id)
@@ -40,10 +40,10 @@ def update_debtor_policy(
 
     interest_rate_lower_limits = debtor.interest_rate_lower_limits
     for l in new_interest_rate_limits:
-        interest_rate_lower_limits.insert_limit(l)
+        interest_rate_lower_limits.add_limit(l)
     balance_lower_limits = debtor.balance_lower_limits
     for l in new_balance_limits:
-        balance_lower_limits.insert_limit(l)
+        balance_lower_limits.add_limit(l)
     debtor.interest_rate_target = interest_rate_target
     debtor.interest_rate_lower_limits = interest_rate_lower_limits
     debtor.balance_lower_limits = balance_lower_limits

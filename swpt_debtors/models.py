@@ -1,5 +1,4 @@
 from __future__ import annotations
-import math
 from numbers import Real
 from typing import NamedTuple, List, Tuple, Optional, Iterable
 from datetime import datetime, date, timezone
@@ -20,21 +19,27 @@ INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
 
 
-class Limit(NamedTuple):
+def increment_seqnum(n):
+    return MIN_INT32 if n == MAX_INT32 else n + 1
+
+
+def get_now_utc():
+    return datetime.now(tz=timezone.utc)
+
+
+class LowerLimit(NamedTuple):
+    """A numerical lower limit that should be enforced until a given date."""
+
     value: Real  # the limiting value
     cutoff: date  # the limit will stop to be enforced *after* this date
 
 
-class LimitSequence(abc.Sequence):
-    lower_limits: bool
-    upper_limits: bool
-    _limits: List[Limit]
+class LowerLimitSequence(abc.Sequence):
+    """A sequence of `LowerLimit`s."""
 
-    def __init__(self, limits: Iterable[Limit] = [], *, lower_limits: bool = False, upper_limits: bool = False):
-        assert lower_limits or upper_limits, 'the limits type must be specified when calling LimitSequence()'
-        assert not (lower_limits and upper_limits)
-        self.lower_limits = bool(lower_limits)
-        self.upper_limits = bool(upper_limits)
+    _limits: List[LowerLimit]
+
+    def __init__(self, limits: Iterable[LowerLimit] = []):
         self._limits = list(limits)
 
     def __getitem__(self, index):
@@ -43,101 +48,50 @@ class LimitSequence(abc.Sequence):
     def __len__(self):
         return len(self._limits)
 
-    def __eq__(self, other):
-        return (isinstance(other, LimitSequence)
-                and self._limits == other._limits
-                and self.lower_limits == other.lower_limits
-                and self.upper_limits == other.upper_limits)
-
     def sort(self):
+        """Sort the sequence by cutoff date."""
+
         self._limits.sort(key=lambda l: l.cutoff)
 
-    def insert_limit(self, new_limit: Limit) -> None:
-        def find_eliminator_in_sorted_limit_sequence(sorted_limits: LimitSequence) -> Optional[Limit]:
-            # Try to find a limit that makes some of the other limits
-            # in the sequence redundant.
-            restrictiveness: Real = math.inf
+    def add_limit(self, new_limit: LowerLimit) -> None:
+        """Add a limit, eliminate redundant limits, sort the sequence by cutoff date."""
+
+        def find_eliminator_in_sorted_limit_sequence(sorted_limits: LowerLimitSequence) -> Optional[LowerLimit]:
+            # Try to find a limit in the sequence that makes redundant
+            # at least one of the other limits in the sequence.
+            previous_value = None
             for eliminator in sorted_limits:
-                r = self._calc_limit_restrictiveness(eliminator)
-                if r >= restrictiveness:
+                value = eliminator.value
+                if previous_value is not None and value >= previous_value:
                     return eliminator
-                restrictiveness = r
+                previous_value = value
             return None
 
-        eliminator: Optional[Limit] = new_limit
+        eliminator: Optional[LowerLimit] = new_limit
         while eliminator:
             self._apply_eliminator(eliminator)
             self.sort()
             eliminator = find_eliminator_in_sorted_limit_sequence(self)
 
-    def current_limits(self, current_date: date) -> LimitSequence:
-        return LimitSequence(
-            (l for l in self._limits if l.cutoff >= current_date),
-            lower_limits=self.lower_limits,
-            upper_limits=self.upper_limits,
-        )
+    def current_limits(self, current_date: date) -> LowerLimitSequence:
+        """Return a new sequence containing only the limits effectual to the `current_date`."""
+
+        return LowerLimitSequence(l for l in self._limits if l.cutoff >= current_date)
 
     def apply_to_value(self, value: Real) -> Real:
-        lower_limits = self.lower_limits
-        upper_limits = self.upper_limits
+        """Take a value, apply the limits, and return a possibly bigger value."""
+
         for limit in self._limits:
             limit_value = limit.value
-            if lower_limits and value < limit_value or upper_limits and value > limit_value:
+            if value < limit_value:
                 value = limit_value
         return value
 
-    def _calc_limit_restrictiveness(self, limit: Limit) -> Real:
-        return limit.value if self.lower_limits else -limit.value
-
-    def _apply_eliminator(self, eliminator: Limit) -> None:
-        r = self._calc_limit_restrictiveness(eliminator)
+    def _apply_eliminator(self, eliminator: LowerLimit) -> None:
+        value = eliminator.value
         cutoff = eliminator.cutoff
-        self._limits = [l for l in self._limits if self._calc_limit_restrictiveness(l) > r or l.cutoff > cutoff]
+        self._limits = [l for l in self._limits if l.value > value or l.cutoff > cutoff]
         self._limits.append(eliminator)
-
-
-def _limits_property(values_attrname: str, cutoffs_attrname: str,
-                     *, lower_limits: bool = False, upper_limits: bool = False):
-    def unpack_limits(values: Optional[List], cutoffs: Optional[List]) -> LimitSequence:
-        values = values or []
-        cutoffs = cutoffs or []
-        return LimitSequence(
-            (Limit(*t) for t in zip(values, cutoffs) if all(x is not None for x in t)),
-            lower_limits=lower_limits,
-            upper_limits=upper_limits,
-        )
-
-    def pack_limits(limits: LimitSequence) -> Tuple[Optional[List], Optional[List]]:
-        assert limits.lower_limits == lower_limits
-        assert limits.upper_limits == upper_limits
-        values = []
-        cutoffs = []
-        for limit in limits:
-            assert isinstance(limit.value, Real)
-            assert isinstance(limit.cutoff, date)
-            values.append(limit.value)
-            cutoffs.append(limit.cutoff)
-        return values or None, cutoffs or None
-
-    def getter(self) -> LimitSequence:
-        values = getattr(self, values_attrname)
-        cutoffs = getattr(self, cutoffs_attrname)
-        return unpack_limits(values, cutoffs)
-
-    def setter(self, value: LimitSequence) -> None:
-        values, cutoffs = pack_limits(value)
-        setattr(self, values_attrname, values)
-        setattr(self, cutoffs_attrname, cutoffs)
-
-    return property(getter, setter)
-
-
-def increment_seqnum(n):
-    return MIN_INT32 if n == MAX_INT32 else n + 1
-
-
-def get_now_utc():
-    return datetime.now(tz=timezone.utc)
 
 
 class Signal(db.Model):
@@ -173,6 +127,40 @@ class Signal(db.Model):
             options={},
         )
         broker.publish_message(message, exchange=MAIN_EXCHANGE_NAME, routing_key=routing_key)
+
+
+def _lower_limits_property(values_attrname: str, cutoffs_attrname: str):
+    """Return a property that treats two separate attributes (a list of
+    values, and a list of cutoffs) as a sequence of lower limits.
+
+    """
+
+    def unpack_limits(values: Optional[List], cutoffs: Optional[List]) -> LowerLimitSequence:
+        values = values or []
+        cutoffs = cutoffs or []
+        return LowerLimitSequence(LowerLimit(*t) for t in zip(values, cutoffs) if all(x is not None for x in t))
+
+    def pack_limits(limits: LowerLimitSequence) -> Tuple[Optional[List], Optional[List]]:
+        values = []
+        cutoffs = []
+        for limit in limits:
+            assert isinstance(limit.value, Real)
+            assert isinstance(limit.cutoff, date)
+            values.append(limit.value)
+            cutoffs.append(limit.cutoff)
+        return values or None, cutoffs or None
+
+    def getter(self) -> LowerLimitSequence:
+        values = getattr(self, values_attrname)
+        cutoffs = getattr(self, cutoffs_attrname)
+        return unpack_limits(values, cutoffs)
+
+    def setter(self, value: LowerLimitSequence) -> None:
+        values, cutoffs = pack_limits(value)
+        setattr(self, values_attrname, values)
+        setattr(self, cutoffs_attrname, cutoffs)
+
+    return property(getter, setter)
 
 
 class Debtor(db.Model):
@@ -252,8 +240,8 @@ class Debtor(db.Model):
         }
     )
 
-    balance_lower_limits = _limits_property('bll_values', 'bll_cutoffs', lower_limits=True)
-    interest_rate_lower_limits = _limits_property('irll_values', 'irll_cutoffs', lower_limits=True)
+    balance_lower_limits = _lower_limits_property('bll_values', 'bll_cutoffs')
+    interest_rate_lower_limits = _lower_limits_property('irll_values', 'irll_cutoffs')
 
     # TODO: Add DOS-prevention fields.
 
