@@ -130,8 +130,8 @@ class Signal(db.Model):
 
 
 def _lower_limits_property(values_attrname: str, cutoffs_attrname: str):
-    """Return a property that treats two separate attributes (a list of
-    values, and a list of cutoffs) as a sequence of lower limits.
+    """Return a class property that treats two separate attributes (a list
+    of values, and a list of cutoffs) as a sequence of lower limits.
 
     """
 
