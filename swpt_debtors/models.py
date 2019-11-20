@@ -245,7 +245,7 @@ class Debtor(db.Model):
     #       time. There is no good reason why a debtor would want to
     #       make more than say 1000 issuing transfers per week. The
     #       same is true for the number of policy updates that a
-    #       debtor makes.
+    #       debtor does.
 
 
 class PendingTransfer(db.Model):
