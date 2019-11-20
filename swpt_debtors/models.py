@@ -243,7 +243,9 @@ class Debtor(db.Model):
     # TODO: Consider adding fields that prevent one debtor to make an
     #       enormous amount of issuing transfers for a short period of
     #       time. There is no good reason why a debtor would want to
-    #       make more than say 1000 issuing transfers per week.
+    #       make more than say 1000 issuing transfers per week. The
+    #       same is true for the number of policy updates that a
+    #       debtor makes.
 
 
 class PendingTransfer(db.Model):
