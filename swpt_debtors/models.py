@@ -240,7 +240,10 @@ class Debtor(db.Model):
     balance_lower_limits = _lower_limits_property('bll_values', 'bll_cutoffs')
     interest_rate_lower_limits = _lower_limits_property('irll_values', 'irll_cutoffs')
 
-    # TODO: Add DOS-prevention fields.
+    # TODO: Consider adding fields that prevent one debtor to make an
+    #       enormous amount of issuing transfers for a short period of
+    #       time. There is no good reason why a debtor would want to
+    #       make more than say 1000 issuing transfers per week.
 
 
 class PendingTransfer(db.Model):
