@@ -20,7 +20,6 @@ def test_update_debtor_balance(db_session):
     a.update_debtor_balance(
         debtor_id=D_ID,
         balance=0,
-        status=0,
         update_seqnum=1234,
         update_ts='2019-10-01T00:00:00Z',
     )

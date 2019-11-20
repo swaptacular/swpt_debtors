@@ -164,14 +164,11 @@ def _lower_limits_property(values_attrname: str, cutoffs_attrname: str):
 
 
 class Debtor(db.Model):
-    STATUS_TERMINATED_FLAG = 1
-
     debtor_id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
-    status = db.Column(
-        db.SmallInteger,
-        nullable=False,
-        default=0,
-        comment='Debtor status flags.',
+    deactivated_at_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        comment='The moment at which the debtor was deactivated. A `null` means that the '
+                'debtor has not been deactivated yet.',
     )
     last_issuing_coordinator_request_id = db.Column(
         db.BigInteger,

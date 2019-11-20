@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: a84a3756a7d9
+Revision ID: 9f32a39c94e6
 Revises: 
-Create Date: 2019-11-19 15:34:44.718052
+Create Date: 2019-11-20 20:24:41.921466
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'a84a3756a7d9'
+revision = '9f32a39c94e6'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -46,7 +46,7 @@ def upgrade():
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
-    sa.Column('status', sa.SmallInteger(), nullable=False, comment='Debtor status flags.'),
+    sa.Column('deactivated_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet.'),
     sa.Column('last_issuing_coordinator_request_id', sa.BigInteger(), nullable=False, comment='Incremented when a `prepare_transfer` message is constructed for an issuing transfer. Must never decrease.'),
     sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
     sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
