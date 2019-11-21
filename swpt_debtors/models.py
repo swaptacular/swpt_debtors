@@ -164,11 +164,30 @@ def _lower_limits_property(values_attrname: str, cutoffs_attrname: str):
 
 
 class Debtor(db.Model):
+    STATUS_IS_ACTIVE_FLAG = 1
+
     debtor_id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
-    deactivated_at_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        comment='The moment at which the debtor was deactivated. A `null` means that the '
-                'debtor has not been deactivated yet.',
+    status = db.Column(
+        db.SmallInteger,
+        nullable=False,
+        default=0,
+        comment=f"Debtor's status bits: {STATUS_IS_ACTIVE_FLAG} - is active.",
+    )
+    created_at_date = db.Column(
+        db.DATE,
+        nullable=False,
+        default=get_now_utc,
+        comment='The date on which the debtor was created.',
+    )
+    deactivated_at_date = db.Column(
+        db.DATE,
+        comment='The date on which the debtor was deactivated. A `null` means that the '
+                'debtor has not been deactivated yet. Management operations (like policy '
+                'updates and credit issuing) are not allowed on deactivated debtors. Once '
+                'deactivated, a debtor stays deactivated until it is deleted. Important '
+                'note: All debtors are created with their "is active" status bit set to `0`, '
+                'and it gets set to `1` only after the first management operation has been '
+                'performed.',
     )
     last_issuing_coordinator_request_id = db.Column(
         db.BigInteger,
@@ -224,6 +243,10 @@ class Debtor(db.Model):
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     __table_args__ = (
+        db.CheckConstraint(or_(
+            deactivated_at_date == null(),
+            status.op('&')(STATUS_IS_ACTIVE_FLAG) == 0,
+        )),
         db.CheckConstraint(and_(
             interest_rate_target >= INTEREST_RATE_FLOOR,
             interest_rate_target <= INTEREST_RATE_CEIL,

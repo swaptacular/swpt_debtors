@@ -131,6 +131,11 @@ class DebtorInfoSchema(ResourceSchema):
         description=SPEC_DEBTOR_ID['description'],
         example=1,
     )
+    created_at_date = fields.Date(
+        dump_only=True,
+        data_key='createdOn',
+        description=Debtor.created_at_date.comment,
+    )
     balance = fields.Int(
         dump_only=True,
         format="int64",
@@ -164,10 +169,18 @@ class DebtorInfoSchema(ResourceSchema):
         description="The current annual interest rate (in percents) at which "
                     "interest accumulates on creditors' accounts.",
     )
+    isActive = fields.Method(
+        'get_is_active',
+        type='boolean',
+        description="Whether the debtor is active or not."
+    )
 
     def get_interest_rate(self, obj):
         assert isinstance(obj, Debtor)
         return procedures.get_current_interest_rate(obj)
+
+    def get_is_active(self, obj):
+        return bool(obj.status & Debtor.STATUS_IS_ACTIVE_FLAG)
 
 
 class DebtorSchema(DebtorInfoSchema):

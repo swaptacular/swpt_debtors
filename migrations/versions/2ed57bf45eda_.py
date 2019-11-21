@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9f32a39c94e6
+Revision ID: 2ed57bf45eda
 Revises: 
-Create Date: 2019-11-20 20:24:41.921466
+Create Date: 2019-11-21 16:10:50.127154
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '9f32a39c94e6'
+revision = '2ed57bf45eda'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -46,7 +46,9 @@ def upgrade():
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
-    sa.Column('deactivated_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet.'),
+    sa.Column('status', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is active."),
+    sa.Column('created_at_date', sa.DATE(), nullable=False, comment='The date on which the debtor was created.'),
+    sa.Column('deactivated_at_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet. Management operations (like policy updates and credit issuing) are not allowed on deactivated debtors. Once deactivated, a debtor stays deactivated until it is deleted. Important note: All debtors are created with their "is active" status bit set to `0`, and it gets set to `1` only after the first management operation has been performed.'),
     sa.Column('last_issuing_coordinator_request_id', sa.BigInteger(), nullable=False, comment='Incremented when a `prepare_transfer` message is constructed for an issuing transfer. Must never decrease.'),
     sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
     sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
@@ -57,6 +59,7 @@ def upgrade():
     sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.CheckConstraint('bll_cutoffs IS NULL OR array_ndims(bll_cutoffs) = 1'),
     sa.CheckConstraint('bll_values IS NULL OR array_ndims(bll_values) = 1'),
+    sa.CheckConstraint('deactivated_at_date IS NULL OR (status & 1) = 0'),
     sa.CheckConstraint('interest_rate_target >= -50.0 AND interest_rate_target <= 100.0'),
     sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
     sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1'),
