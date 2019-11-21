@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 2ed57bf45eda
-Revises: 
-Create Date: 2019-11-21 16:10:50.127154
+Revision ID: 86d966b87abe
+Revises: 8d09bea9c7d1
+Create Date: 2019-11-21 16:41:36.160105
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '2ed57bf45eda'
-down_revision = None
+revision = '86d966b87abe'
+down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
 
@@ -49,7 +49,6 @@ def upgrade():
     sa.Column('status', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is active."),
     sa.Column('created_at_date', sa.DATE(), nullable=False, comment='The date on which the debtor was created.'),
     sa.Column('deactivated_at_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet. Management operations (like policy updates and credit issuing) are not allowed on deactivated debtors. Once deactivated, a debtor stays deactivated until it is deleted. Important note: All debtors are created with their "is active" status bit set to `0`, and it gets set to `1` only after the first management operation has been performed.'),
-    sa.Column('last_issuing_coordinator_request_id', sa.BigInteger(), nullable=False, comment='Incremented when a `prepare_transfer` message is constructed for an issuing transfer. Must never decrease.'),
     sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
     sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
     sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The desired annual rate (in percents) at which the interest should accumulate on creditors' accounts. The actual interest rate could be different if interest rate limits are enforced."),
@@ -72,7 +71,7 @@ def upgrade():
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
     sa.Column('transfer_info', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='A note from the debtor. Can be anything that the debtor wants the recipient to see.'),
     sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),
-    sa.Column('issuing_coordinator_request_id', sa.BigInteger(), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
+    sa.Column('issuing_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('issuing_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
     sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
     sa.CheckConstraint('amount > 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),

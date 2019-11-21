@@ -189,13 +189,6 @@ class Debtor(db.Model):
                 'and it gets set to `1` only after the first management operation has been '
                 'performed.',
     )
-    last_issuing_coordinator_request_id = db.Column(
-        db.BigInteger,
-        nullable=False,
-        default=0,
-        comment='Incremented when a `prepare_transfer` message is constructed for an '
-                'issuing transfer. Must never decrease.',
-    )
     balance = db.Column(
         db.BigInteger,
         nullable=False,
@@ -314,6 +307,8 @@ class PendingTransfer(db.Model):
 
 
 class RecentTransfer(db.Model):
+    _icr_seq = db.Sequence('issuing_coordinator_request_id_seq', metadata=db.Model.metadata)
+
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
     amount = db.Column(
@@ -335,6 +330,7 @@ class RecentTransfer(db.Model):
     issuing_coordinator_request_id = db.Column(
         db.BigInteger,
         nullable=False,
+        server_default=_icr_seq.next_value(),
         comment='This is the value of the `coordinator_request_id` parameter, which has been '
                 'sent with the `prepare_transfer` message for the transfer. The value of '
                 '`debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` '
