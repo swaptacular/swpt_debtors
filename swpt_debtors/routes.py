@@ -129,7 +129,7 @@ class BalanceLowerLimitSchema(Schema):
     )
 
 
-class DebtorIdSchema(Schema):
+class CreateDebtorRequestSchema(Schema):
     debtor_id = fields.Int(
         required=True,
         data_key='debtorId',
@@ -251,7 +251,7 @@ class TransfersCollectionSchema(CollectionSchema):
 
 @admin_api.route('')
 class DebtorsCollection(MethodView):
-    @admin_api.arguments(DebtorIdSchema)
+    @admin_api.arguments(CreateDebtorRequestSchema)
     @admin_api.response(DebtorSchema, code=201)
     def post(self, debtor_info):
         """Try to create a new debtor."""
