@@ -267,6 +267,11 @@ class Debtor(db.Model):
 class PendingTransfer(db.Model):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
+    recipient_creditor_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The recipient of the transfer.',
+    )
     amount = db.Column(
         db.BigInteger,
         nullable=False,
@@ -306,11 +311,16 @@ class PendingTransfer(db.Model):
     )
 
 
-class RecentTransfer(db.Model):
+class InitiatedTransfer(db.Model):
     _icr_seq = db.Sequence('issuing_coordinator_request_id_seq', metadata=db.Model.metadata)
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
+    recipient_creditor_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+        comment='The recipient of the transfer.',
+    )
     amount = db.Column(
         db.BigInteger,
         nullable=False,
@@ -444,3 +454,29 @@ class ChangeInterestRateSignal(Signal):
     change_seqnum = db.Column(db.Integer, nullable=False)
     change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
     interest_rate = db.Column(db.REAL, nullable=False)
+
+
+class PrepareTransferSignal(Signal):
+    queue_name = 'swpt_accounts'
+    actor_name = 'prepare_transfer'
+
+    class __marshmallow__(Schema):
+        coordinator_type = fields.String(default='issuing')
+        coordinator_id = fields.Integer(attribute='debtor_id', dump_only=True)
+        coordinator_request_id = fields.Integer()
+        min_amount = fields.Integer()
+        max_amount = fields.Integer()
+        debtor_id = fields.Integer()
+        sender_creditor_id = fields.Integer()
+        recipient_creditor_id = fields.Integer()
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
+    min_amount = db.Column(db.BigInteger, nullable=False)
+    max_amount = db.Column(db.BigInteger, nullable=False)
+    sender_creditor_id = db.Column(db.BigInteger, nullable=False)
+    recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
+    __table_args__ = (
+        db.CheckConstraint(min_amount > 0),
+        db.CheckConstraint(max_amount >= min_amount),
+    )

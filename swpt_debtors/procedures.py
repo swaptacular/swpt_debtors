@@ -1,8 +1,10 @@
 from datetime import datetime, date, timedelta, timezone
+from uuid import UUID
 from typing import TypeVar, Optional, Callable, Tuple
 from sqlalchemy.exc import IntegrityError
 from .extensions import db
-from .models import Debtor, Account, ChangeInterestRateSignal, LowerLimitSequence, increment_seqnum, \
+from .models import Debtor, Account, ChangeInterestRateSignal, LowerLimitSequence, PendingTransfer, \
+    InitiatedTransfer, PrepareTransferSignal, increment_seqnum, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 
 T = TypeVar('T')
@@ -12,9 +14,25 @@ TD_ZERO = timedelta(seconds=0)
 TD_SECOND = timedelta(seconds=1)
 TD_MINUS_SECOND = -TD_SECOND
 
+# The account `(debtor_id, ROOT_CREDITOR_ID)` is special. This is the
+# debtor's account. It issuers all the money. Also, all interest and
+# demurrage payments come from/to this account.
+ROOT_CREDITOR_ID = 0
 
-class DebtorAlreadyExistsError(Exception):
-    """A debtor with the same ID already exists."""
+
+class DebtorExistsError(Exception):
+    """The same debtor record already exists."""
+
+
+class TransferExistsError(Exception):
+    """The same pending transfer record already exists."""
+
+    def __init__(self, transfer: PendingTransfer):
+        self.transfer = transfer
+
+
+class TransfersConflictError(Exception):
+    """A different transfer with the same UUID already exists."""
 
 
 @atomic
@@ -100,6 +118,16 @@ def _insert_change_interest_rate_signal(account: Account, interest_rate: Optiona
         ))
 
 
+def _compare_pending_transfers(first: PendingTransfer, second: PendingTransfer) -> bool:
+    return all([
+        first.debtor_id == second.debtor_id,
+        first.transfer_uuid == second.transfer_uuid,
+        first.recipient_creditor_id == second.recipient_creditor_id,
+        first.amount == second.amount,
+        first.transfer_info == second.transfer_info,
+    ])
+
+
 @atomic
 def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
@@ -108,7 +136,7 @@ def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
     try:
         db.session.flush()
     except IntegrityError:
-        raise DebtorAlreadyExistsError(debtor_id)
+        raise DebtorExistsError(debtor_id)
     return debtor
 
 
@@ -121,6 +149,59 @@ def get_or_create_debtor(debtor_id: int) -> Debtor:
         with db.retry_on_integrity_error():
             db.session.add(debtor)
     return debtor
+
+
+@atomic
+def create_pending_transfer(debtor_id: int,
+                            transfer_uuid: UUID,
+                            recipient_creditor_id: int,
+                            amount: int,
+                            transfer_info: dict) -> PendingTransfer:
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
+    assert 0 < amount <= MAX_INT64
+
+    # Create a `PendingTransfer` record.
+    new_pending_transfer = PendingTransfer(
+        debtor_id=debtor_id,
+        transfer_uuid=transfer_uuid,
+        recipient_creditor_id=recipient_creditor_id,
+        amount=amount,
+        transfer_info=transfer_info,
+    )
+    existing_pending_transfer = PendingTransfer.get_instance((debtor_id, transfer_uuid))
+    if existing_pending_transfer:
+        if _compare_pending_transfers(new_pending_transfer, existing_pending_transfer):
+            raise TransferExistsError(existing_pending_transfer)
+        else:
+            raise TransfersConflictError
+    with db.retry_on_integrity_error():
+        db.session.add(new_pending_transfer)
+
+    # Create an `InitiatedTransfer` record.
+    initiated_transfer = InitiatedTransfer(
+        debtor_id=debtor_id,
+        transfer_uuid=transfer_uuid,
+        recipient_creditor_id=recipient_creditor_id,
+        amount=amount,
+        transfer_info=transfer_info,
+    )
+    db.session.add(initiated_transfer)
+    try:
+        db.session.flush()
+    except IntegrityError:
+        raise TransfersConflictError
+
+    # Send a `prepare_transfer` message.
+    db.session.add(PrepareTransferSignal(
+        debtor_id=debtor_id,
+        coordinator_request_id=initiated_transfer.issuing_coordinator_request_id,
+        amount=amount,
+        sender_creditor_id=ROOT_CREDITOR_ID,
+        recipient_creditor_id=recipient_creditor_id,
+    ))
+
+    return new_pending_transfer
 
 
 @atomic

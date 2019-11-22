@@ -1,8 +1,9 @@
 from collections import abc
+from flask import redirect
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from marshmallow import Schema, fields, validate, pre_dump, missing
-from .models import Debtor, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
+from .models import Debtor, PendingTransfer, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
 from . import procedures
 
 admin_api = Blueprint(
@@ -231,6 +232,36 @@ class TransferSchema(ResourceSchema):
         description="A client-generated UUID for the transfer.",
         example='123e4567-e89b-12d3-a456-426655440000',
     )
+    recipient_creditor_id = fields.Integer(
+        required=True,
+        data_key='recipientCreditorId',
+        format="int64",
+        description=PendingTransfer.recipient_creditor_id.comment,
+        example=2,
+    )
+    amount = fields.Integer(
+        required=True,
+        validate=validate.Range(min=1, max=MAX_INT64),
+        format="int64",
+        description=PendingTransfer.amount.comment,
+        example=1000,
+    )
+    transfer_info = fields.Raw(
+        default={},
+        data_key='transferInfo',
+        description=PendingTransfer.transfer_info.comment,
+    )
+    is_successful = fields.Boolean(
+        dump_only=True,
+        data_key='isSuccessful',
+        description=PendingTransfer.is_successful.comment,
+        example=False,
+    )
+    finalized_at_ts = fields.DateTime(
+        dump_only=True,
+        data_key='finalizedAt',
+        description=PendingTransfer.finalized_at_ts.comment,
+    )
 
     def get_type(self, obj):
         return 'Transfer'
@@ -260,7 +291,7 @@ class DebtorsCollection(MethodView):
         try:
             debtor = procedures.create_new_debtor(debtor_id)
             # debtor = procedures.get_or_create_debtor(debtor_id)
-        except procedures.DebtorAlreadyExistsError:
+        except procedures.DebtorExistsError:
             abort(409)
         # TODO: Add schema and domain?
         return debtor, {'Location': f'debtors/{debtor_id}'}
@@ -308,11 +339,25 @@ class TransfersCollection(MethodView):
         return range(10)
 
     @policy_api.arguments(TransferSchema)
-    @transfers_api.response(code=201)
-    def post(self, debtorId):
+    @transfers_api.response(TransferSchema, code=201)
+    def post(self, transfer_info, debtorId):
         """Create a new credit-issuing transfer."""
 
-        return ''
+        transfer_uuid = transfer_info['transfer_uuid']
+        try:
+            transfer = procedures.create_pending_transfer(
+                debtorId,
+                transfer_uuid,
+                transfer_info['recipient_creditor_id'],
+                transfer_info['amount'],
+                transfer_info['transfer_info'],
+            )
+        except procedures.TransferExistsError:
+            # TODO: Add schema and domain?
+            return redirect(f'/debtors/{debtorId}/transfers/{transfer_uuid}', code=303)
+        except procedures.TransfersConflictError:
+            abort(409)
+        return transfer
 
 
 @transfers_api.route('/<int:debtorId>/transfers/<transferUuid>', parameters=[SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID])
