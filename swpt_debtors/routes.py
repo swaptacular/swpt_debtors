@@ -5,6 +5,12 @@ from marshmallow import Schema, fields, validate, pre_dump, missing
 from .models import Debtor, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
 from . import procedures
 
+admin_api = Blueprint(
+    'admin',
+    __name__,
+    url_prefix='/debtors',
+    description="Create new debtors.",
+)
 public_api = Blueprint(
     'public',
     __name__,
@@ -123,6 +129,16 @@ class BalanceLowerLimitSchema(Schema):
     )
 
 
+class DebtorIdSchema(Schema):
+    debtor_id = fields.Int(
+        required=True,
+        data_key='debtorId',
+        format="int64",
+        description=SPEC_DEBTOR_ID['description'],
+        example=1,
+    )
+
+
 class DebtorInfoSchema(ResourceSchema):
     debtor_id = fields.Int(
         dump_only=True,
@@ -231,6 +247,23 @@ class TransfersCollectionSchema(CollectionSchema):
     def get_uri(self, obj):
         # TODO: Add schema and domain?
         return 'transfers'
+
+
+@admin_api.route('')
+class DebtorsCollection(MethodView):
+    @admin_api.arguments(DebtorIdSchema)
+    @admin_api.response(DebtorSchema, code=201)
+    def post(self, debtor_info):
+        """Try to create a new debtor."""
+
+        debtor_id = debtor_info['debtor_id']
+        try:
+            debtor = procedures.create_new_debtor(debtor_id)
+            # debtor = procedures.get_or_create_debtor(debtor_id)
+        except procedures.DebtorAlreadyExistsError:
+            abort(409)
+        # TODO: Add schema and domain?
+        return debtor, {'Location': f'debtors/{debtor_id}'}
 
 
 @public_api.route('/<int:debtorId>', parameters=[SPEC_DEBTOR_ID])

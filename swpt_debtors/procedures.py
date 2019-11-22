@@ -1,5 +1,6 @@
 from datetime import datetime, date, timedelta, timezone
 from typing import TypeVar, Optional, Callable, Tuple
+from sqlalchemy.exc import IntegrityError
 from .extensions import db
 from .models import Debtor, Account, ChangeInterestRateSignal, LowerLimitSequence, increment_seqnum, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
@@ -10,6 +11,10 @@ atomic: Callable[[T], T] = db.atomic
 TD_ZERO = timedelta(seconds=0)
 TD_SECOND = timedelta(seconds=1)
 TD_MINUS_SECOND = -TD_SECOND
+
+
+class DebtorAlreadyExistsError(Exception):
+    """A debtor with the same ID already exists."""
 
 
 @atomic
@@ -93,6 +98,18 @@ def _insert_change_interest_rate_signal(account: Account, interest_rate: Optiona
             change_ts=account.interest_rate_last_change_ts,
             interest_rate=interest_rate,
         ))
+
+
+@atomic
+def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    debtor = Debtor(debtor_id=debtor_id)
+    db.session.add(debtor)
+    try:
+        db.session.flush()
+    except IntegrityError:
+        raise DebtorAlreadyExistsError(debtor_id)
+    return debtor
 
 
 @atomic
