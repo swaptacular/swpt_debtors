@@ -218,6 +218,20 @@ class DebtorPolicySchema(DebtorInfoSchema):
         return f'/debtors/{obj.debtor_id}/policy'
 
 
+class TransferErrorSchema(Schema):
+    error_code = fields.String(
+        dump_only=True,
+        data_key='code',
+        description='The error code.',
+        example='ACC003',
+    )
+    message = fields.String(
+        dump_only=True,
+        description='The error message.',
+        example='The recipient account does not exist.',
+    )
+
+
 class TransferSchema(ResourceSchema):
     debtor_id = fields.Int(
         dump_only=True,
@@ -229,7 +243,7 @@ class TransferSchema(ResourceSchema):
     transfer_uuid = fields.UUID(
         required=True,
         data_key='transferUuid',
-        description="A client-generated UUID for the transfer.",
+        description="The client-generated UUID for the transfer.",
         example='123e4567-e89b-12d3-a456-426655440000',
     )
     recipient_creditor_id = fields.Integer(
@@ -237,7 +251,7 @@ class TransferSchema(ResourceSchema):
         data_key='recipientCreditorId',
         format="int64",
         description=PendingTransfer.recipient_creditor_id.comment,
-        example=2,
+        example=54321,
     )
     amount = fields.Integer(
         required=True,
@@ -246,10 +260,28 @@ class TransferSchema(ResourceSchema):
         description=PendingTransfer.amount.comment,
         example=1000,
     )
-    transfer_info = fields.Raw(
-        default={},
+    transfer_info = fields.Dict(
         data_key='transferInfo',
         description=PendingTransfer.transfer_info.comment,
+    )
+    initiated_at_ts = fields.DateTime(
+        dump_only=True,
+        data_key='initiatedAt',
+        description=PendingTransfer.initiated_at_ts.comment,
+    )
+    isFinalized = fields.Function(
+        lambda obj: not obj.finalized_at_ts,
+        type='boolean',
+        data_key='isFinalized',
+        description='Whether the transfer has been finalized or not.',
+        example=True,
+    )
+    finalizedAt = fields.Function(
+        lambda obj: obj.finalized_at_ts or missing,
+        type='string',
+        format='date-time',
+        description='The moment at which the transfer has been finalized. If the transfer '
+                    'has not been finalized yet, this field will not be present.',
     )
     is_successful = fields.Boolean(
         dump_only=True,
@@ -257,10 +289,10 @@ class TransferSchema(ResourceSchema):
         description=PendingTransfer.is_successful.comment,
         example=False,
     )
-    finalized_at_ts = fields.DateTime(
+    errors = fields.Nested(
+        TransferErrorSchema(many=True),
         dump_only=True,
-        data_key='finalizedAt',
-        description=PendingTransfer.finalized_at_ts.comment,
+        description='Errors that occurred during the transfer.'
     )
 
     def get_type(self, obj):
@@ -343,6 +375,7 @@ class TransfersCollection(MethodView):
     def post(self, transfer_info, debtorId):
         """Create a new credit-issuing transfer."""
 
+        debtor = procedures.get_or_create_debtor(debtorId)
         transfer_uuid = transfer_info['transfer_uuid']
         try:
             transfer = procedures.create_pending_transfer(
@@ -350,7 +383,7 @@ class TransfersCollection(MethodView):
                 transfer_uuid,
                 transfer_info['recipient_creditor_id'],
                 transfer_info['amount'],
-                transfer_info['transfer_info'],
+                transfer_info.get('transfer_info', {}),
             )
         except procedures.TransferExistsError:
             # TODO: Add schema and domain?
@@ -368,10 +401,10 @@ class Transfer(MethodView):
 
         class Transfer:
             pass
-        transfer = Transfer()
-        transfer.debtor_id = debtorId
-        transfer.transfer_uuid = '666'
-        return transfer
+        transfer = PendingTransfer.get_instance((debtorId, transferUuid))
+        if transfer:
+            return transfer
+        abort(404)
 
     @transfers_api.response(code=204)
     def delete(self, debtorId, transferUuid):

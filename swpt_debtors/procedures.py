@@ -196,7 +196,8 @@ def create_pending_transfer(debtor_id: int,
     db.session.add(PrepareTransferSignal(
         debtor_id=debtor_id,
         coordinator_request_id=initiated_transfer.issuing_coordinator_request_id,
-        amount=amount,
+        min_amount=amount,
+        max_amount=amount,
         sender_creditor_id=ROOT_CREDITOR_ID,
         recipient_creditor_id=recipient_creditor_id,
     ))

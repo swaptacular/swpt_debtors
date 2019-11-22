@@ -281,7 +281,13 @@ class PendingTransfer(db.Model):
         pg.JSON,
         nullable=False,
         default={},
-        comment='A note from the debtor. Can be anything that the debtor wants the recipient to see.',
+        comment='Notes from the debtor. Can be any object that the debtor wants the recipient to see.',
+    )
+    initiated_at_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        nullable=False,
+        default=get_now_utc,
+        comment='The moment at which the transfer was initiated.',
     )
     finalized_at_ts = db.Column(
         db.TIMESTAMP(timezone=True),
@@ -330,7 +336,7 @@ class InitiatedTransfer(db.Model):
         pg.JSON,
         nullable=False,
         default={},
-        comment='A note from the debtor. Can be anything that the debtor wants the recipient to see.',
+        comment='Notes from the debtor. Can be any object that the debtor wants the recipient to see.',
     )
     finalized_at_ts = db.Column(
         db.TIMESTAMP(timezone=True),
