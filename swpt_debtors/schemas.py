@@ -3,26 +3,6 @@ from marshmallow import Schema, fields, validate, pre_dump, missing
 from .models import Debtor, PendingTransfer, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
 from . import procedures
 
-SPEC_DEBTOR_ID = {
-    'in': 'path',
-    'name': 'debtorId',
-    'required': True,
-    'description': "The debtor's ID",
-    'schema': {
-        'type': 'integer',
-        'format': 'int64',
-    },
-}
-SPEC_TRANSFER_UUID = {
-    'in': 'path',
-    'name': 'transferUuid',
-    'required': True,
-    'description': "The transfer's UUID",
-    'schema': {
-        'type': 'string',
-    },
-}
-
 
 class ResourceSchema(Schema):
     uri = fields.Method(
@@ -104,7 +84,7 @@ class DebtorCreationRequestSchema(Schema):
         required=True,
         data_key='debtorId',
         format="int64",
-        description=SPEC_DEBTOR_ID['description'],
+        description="The debtor's ID",
         example=1,
     )
 
@@ -115,7 +95,7 @@ class DebtorSchema(ResourceSchema):
         dump_only=True,
         data_key='debtorId',
         format="int64",
-        description=SPEC_DEBTOR_ID['description'],
+        description="The debtor's ID",
         example=1,
     )
     created_at_date = fields.Date(
@@ -237,7 +217,7 @@ class TransferInfoSchema(Schema):
         required=True,
         data_key='debtorId',
         format="int64",
-        description=SPEC_DEBTOR_ID['description'],
+        description="The debtor's ID",
         example=1,
     )
     transfer_uuid = fields.UUID(

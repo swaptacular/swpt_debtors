@@ -2,11 +2,29 @@ from flask import redirect
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from .models import PendingTransfer
-from .schemas import SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID, DebtorCreationRequestSchema, DebtorSchema, \
-    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema, \
-    DebtorPolicyUpdateRequestSchema
+from .schemas import DebtorCreationRequestSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
+    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
 from . import procedures
 
+SPEC_DEBTOR_ID = {
+    'in': 'path',
+    'name': 'debtorId',
+    'required': True,
+    'description': "The debtor's ID",
+    'schema': {
+        'type': 'integer',
+        'format': 'int64',
+    },
+}
+SPEC_TRANSFER_UUID = {
+    'in': 'path',
+    'name': 'transferUuid',
+    'required': True,
+    'description': "The transfer's UUID",
+    'schema': {
+        'type': 'string',
+    },
+}
 SPEC_DEBTOR_DOES_NOT_EXIST = {'description': 'The debtor does not exist.'}
 SPEC_CONFLICTING_DEBTOR = {'description': 'A debtor with the same ID already exists.'}
 SPEC_CONFLICTING_POLICY = {'description': 'The new policy is in conflict with the old one.'}
