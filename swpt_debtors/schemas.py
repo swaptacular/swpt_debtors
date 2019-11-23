@@ -257,6 +257,11 @@ class TransferInfoSchema(Schema):
         description=PendingTransfer.amount.comment,
         example=1000,
     )
+    transfer_info = fields.Dict(
+        required=True,
+        data_key='transferInfo',
+        description=PendingTransfer.transfer_info.comment,
+    )
     initiated_at_ts = fields.DateTime(
         required=True,
         data_key='initiatedAt',
@@ -328,12 +333,6 @@ class TransferSchema(ResourceSchema, TransferInfoSchema):
             'is_successful',
             'errors',
         ]
-
-    transfer_info = fields.Dict(
-        required=True,
-        data_key='transferInfo',
-        description=PendingTransfer.transfer_info.comment,
-    )
 
     def get_type(self, obj):
         return 'Transfer'
