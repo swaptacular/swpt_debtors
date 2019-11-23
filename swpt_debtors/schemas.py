@@ -172,7 +172,6 @@ class DebtorSchema(Schema):
     )
 
     def get_interest_rate(self, obj):
-        assert isinstance(obj, Debtor)
         return procedures.get_current_interest_rate(obj)
 
     def get_is_active(self, obj):
@@ -199,7 +198,7 @@ class DebtorPolicyUpdateRequestSchema(Schema):
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
         data_key='balanceLowerLimits',
-        description='Additional lower limits for the `balance` field to enforce.',
+        description='Additional balance lower limits to enforce.',
     )
     interest_rate_target = fields.Float(
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
