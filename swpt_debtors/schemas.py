@@ -99,7 +99,7 @@ class BalanceLowerLimitSchema(Schema):
     )
 
 
-class DebtorInfoSchema(Schema):
+class DebtorCreationRequestSchema(Schema):
     debtor_id = fields.Int(
         required=True,
         data_key='debtorId',
@@ -107,18 +107,32 @@ class DebtorInfoSchema(Schema):
         description=SPEC_DEBTOR_ID['description'],
         example=1,
     )
+
+
+class DebtorSchema(Schema):
+    debtor_id = fields.Int(
+        required=True,
+        dump_only=True,
+        data_key='debtorId',
+        format="int64",
+        description=SPEC_DEBTOR_ID['description'],
+        example=1,
+    )
     created_at_date = fields.Date(
         required=True,
+        dump_only=True,
         data_key='createdOn',
         description=Debtor.created_at_date.comment,
     )
     balance = fields.Int(
         required=True,
+        dump_only=True,
         format="int64",
         description=Debtor.balance.comment,
     )
     balance_ts = fields.DateTime(
         required=True,
+        dump_only=True,
         data_key='balanceTimestamp',
         description='The moment at which the last change in the `balance` field happened.',
     )
@@ -130,7 +144,7 @@ class DebtorInfoSchema(Schema):
     )
     interest_rate_target = fields.Float(
         required=True,
-        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
+        dump_only=True,
         data_key='interestRateTarget',
         description=Debtor.interest_rate_target.comment,
         example=0,
@@ -138,6 +152,7 @@ class DebtorInfoSchema(Schema):
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
         required=True,
+        dump_only=True,
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.',
     )
@@ -153,7 +168,7 @@ class DebtorInfoSchema(Schema):
         'get_is_active',
         required=True,
         type='boolean',
-        description="Whether the debtor is active or not."
+        description="Whether the debtor is currently active or not."
     )
 
     def get_interest_rate(self, obj):
@@ -162,26 +177,6 @@ class DebtorInfoSchema(Schema):
 
     def get_is_active(self, obj):
         return bool(obj.status & Debtor.STATUS_IS_ACTIVE_FLAG)
-
-
-class DebtorCreationRequestSchema(DebtorInfoSchema):
-    class Meta:
-        fields = ['debtor_id']
-
-
-class DebtorSchema(ResourceSchema, DebtorInfoSchema):
-    class Meta:
-        dump_only = [
-            'debtor_id',
-            'created_at_date',
-            'balance',
-            'balance_ts',
-            'balance_lower_limits',
-            'interest_rate_target',
-            'interest_rate_lower_limits',
-            'interestRate',
-            'isActive',
-        ]
 
     def get_type(self, obj):
         return 'Debtor'
@@ -198,6 +193,25 @@ class DebtorPolicySchema(DebtorSchema):
     def get_uri(self, obj):
         # TODO: Add schema and domain?
         return f'/debtors/{obj.debtor_id}/policy'
+
+
+class DebtorPolicyUpdateRequestSchema(Schema):
+    balance_lower_limits = fields.Nested(
+        BalanceLowerLimitSchema(many=True),
+        data_key='balanceLowerLimits',
+        description='Additional lower limits for the `balance` field to enforce.',
+    )
+    interest_rate_target = fields.Float(
+        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
+        data_key='interestRateTarget',
+        description=Debtor.interest_rate_target.comment,
+        example=0,
+    )
+    interest_rate_lower_limits = fields.Nested(
+        InterestRateLowerLimitSchema(many=True),
+        data_key='interestRateLowerLimits',
+        description='Additional interest rate lower limits to enforce.',
+    )
 
 
 class TransferErrorSchema(Schema):

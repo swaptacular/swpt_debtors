@@ -3,7 +3,8 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from .models import PendingTransfer
 from .schemas import SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID, DebtorCreationRequestSchema, DebtorSchema, \
-    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
+    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema, \
+    DebtorPolicyUpdateRequestSchema
 from . import procedures
 
 admin_api = Blueprint(
@@ -71,7 +72,7 @@ class DebtorPolicy(MethodView):
 
         return procedures.get_debtor(debtorId) or abort(404)
 
-    @policy_api.arguments(DebtorPolicySchema)
+    @policy_api.arguments(DebtorPolicyUpdateRequestSchema)
     @policy_api.response(code=204)
     def patch(self, debtor_info, debtorId):
         """Update debtor's policy.
