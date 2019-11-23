@@ -109,7 +109,7 @@ class DebtorCreationRequestSchema(Schema):
     )
 
 
-class DebtorSchema(Schema):
+class DebtorSchema(ResourceSchema):
     debtor_id = fields.Int(
         required=True,
         dump_only=True,
