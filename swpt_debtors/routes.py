@@ -25,18 +25,33 @@ SPEC_TRANSFER_UUID = {
         'type': 'string',
     },
 }
-SPEC_DEBTOR_DOES_NOT_EXIST = {'description': 'The debtor does not exist.'}
-SPEC_CONFLICTING_DEBTOR = {'description': 'A debtor with the same ID already exists.'}
-SPEC_CONFLICTING_POLICY = {'description': 'The new policy is in conflict with the old one.'}
-SPEC_TRANSFER_DOES_NOT_EXIST = {'description': 'The transfer entry does not exist.'}
-SPEC_CONFLICTING_TRANSFER = {'description': 'A different transfer entry with the same UUID already exists.'}
-SPEC_TOO_MANY_TRANSFERS = {'description': 'Too many pending transfers.'}
+SPEC_DEBTOR_DOES_NOT_EXIST = {
+    'description': 'The debtor does not exist.',
+}
+SPEC_CONFLICTING_DEBTOR = {
+    'description': 'A debtor with the same ID already exists.',
+}
+SPEC_CONFLICTING_POLICY = {
+    'description': 'The new policy is in conflict with the old one.',
+}
+SPEC_TRANSFER_DOES_NOT_EXIST = {
+    'description': 'The transfer entry does not exist.',
+}
+SPEC_CONFLICTING_TRANSFER = {
+    'description': 'A different transfer entry with the same UUID already exists.',
+}
+SPEC_TOO_MANY_TRANSFERS = {
+    'description': 'Too many pending transfers.',
+}
 SPEC_DUPLICATED_TRANSFER = {
     'description': 'The same transfer entry already exists.',
     'headers': {
         'Location': {
             'description': 'The URI of the already existing entry.',
-            'schema': {'type': 'string', 'format': 'uri'},
+            'schema': {
+                'type': 'string',
+                'format': 'uri',
+            },
         },
     }
 }
