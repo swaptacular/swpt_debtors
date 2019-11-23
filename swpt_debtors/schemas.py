@@ -212,10 +212,9 @@ class TransferErrorSchema(Schema):
     )
 
 
-class TransferSchema(ResourceSchema):
+class TransferInfoSchema(Schema):
     debtor_id = fields.Int(
         required=True,
-        dump_only=True,
         data_key='debtorId',
         format="int64",
         description=SPEC_DEBTOR_ID['description'],
@@ -241,14 +240,8 @@ class TransferSchema(ResourceSchema):
         description=PendingTransfer.amount.comment,
         example=1000,
     )
-    transfer_info = fields.Dict(
-        required=True,
-        data_key='transferInfo',
-        description=PendingTransfer.transfer_info.comment,
-    )
     initiated_at_ts = fields.DateTime(
         required=True,
-        dump_only=True,
         data_key='initiatedAt',
         description=PendingTransfer.initiated_at_ts.comment,
     )
@@ -268,7 +261,6 @@ class TransferSchema(ResourceSchema):
                     'has not been finalized yet, this field will not be present.',
     )
     is_successful = fields.Boolean(
-        dump_only=True,
         required=True,
         data_key='isSuccessful',
         description=PendingTransfer.is_successful.comment,
@@ -277,16 +269,8 @@ class TransferSchema(ResourceSchema):
     errors = fields.Nested(
         TransferErrorSchema(many=True),
         required=True,
-        dump_only=True,
         description='Errors that occurred during the transfer.'
     )
-
-    def get_type(self, obj):
-        return 'Transfer'
-
-    def get_uri(self, obj):
-        # TODO: Add schema and domain?
-        return f'/debtors/{obj.debtor_id}/transfers/{obj.transfer_uuid}'
 
 
 class TransfersCollectionSchema(ResourceSchema, CollectionSchema):
@@ -298,6 +282,45 @@ class TransfersCollectionSchema(ResourceSchema, CollectionSchema):
         return 'transfers'
 
 
-class TransfersCreationRequestSchema(TransferSchema):
+class TransfersCreationRequestSchema(TransferInfoSchema):
     class Meta:
-        fields = ['transfer_uuid', 'recipient_creditor_id', 'amount', 'transfer_info']
+        fields = [
+            'transfer_uuid',
+            'recipient_creditor_id',
+            'amount',
+            'transfer_info',
+        ]
+
+    transfer_info = fields.Dict(
+        data_key='transferInfo',
+        description=PendingTransfer.transfer_info.comment,
+    )
+
+
+class TransferSchema(ResourceSchema, TransferInfoSchema):
+    class Meta:
+        dump_only = [
+            'debtor_id',
+            'transfer_uuid',
+            'recipient_creditor_id',
+            'amount',
+            'transfer_info',
+            'initiated_at_ts',
+            'isFinalized',
+            'finalizedAt',
+            'is_successful',
+            'errors',
+        ]
+
+    transfer_info = fields.Dict(
+        required=True,
+        data_key='transferInfo',
+        description=PendingTransfer.transfer_info.comment,
+    )
+
+    def get_type(self, obj):
+        return 'Transfer'
+
+    def get_uri(self, obj):
+        # TODO: Add schema and domain?
+        return f'/debtors/{obj.debtor_id}/transfers/{obj.transfer_uuid}'
