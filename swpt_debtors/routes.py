@@ -104,7 +104,7 @@ class TransfersCollection(MethodView):
                 transfer_uuid,
                 transfer_info['recipient_creditor_id'],
                 transfer_info['amount'],
-                transfer_info.get('transfer_info', {}),
+                transfer_info['transfer_info'],
             )
         except procedures.TransferExistsError:
             # TODO: Add schema and domain?

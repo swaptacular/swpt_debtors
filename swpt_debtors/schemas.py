@@ -197,10 +197,12 @@ class DebtorPolicySchema(DebtorSchema):
 class DebtorPolicyUpdateRequestSchema(Schema):
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
+        missing=[],
         data_key='balanceLowerLimits',
         description='Additional balance lower limits to enforce.',
     )
     interest_rate_target = fields.Float(
+        missing=None,
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
         data_key='interestRateTarget',
         description=Debtor.interest_rate_target.comment,
@@ -208,6 +210,7 @@ class DebtorPolicyUpdateRequestSchema(Schema):
     )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
+        missing=[],
         data_key='interestRateLowerLimits',
         description='Additional interest rate lower limits to enforce.',
     )
@@ -314,6 +317,7 @@ class TransferCreationRequestSchema(TransferInfoSchema):
         ]
 
     transfer_info = fields.Dict(
+        missing={},
         data_key='transferInfo',
         description=PendingTransfer.transfer_info.comment,
     )
