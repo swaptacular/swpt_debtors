@@ -136,26 +136,20 @@ class DebtorSchema(ResourceSchema):
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.',
     )
-    interestRate = fields.Method(
-        'get_interest_rate',
+    interestRate = fields.Function(
+        lambda obj: procedures.get_current_interest_rate(obj),
         required=True,
         type='number',
         format='float',
         description="The current annual interest rate (in percents) at which "
                     "interest accumulates on creditors' accounts.",
     )
-    isActive = fields.Method(
-        'get_is_active',
+    isActive = fields.Function(
+        lambda obj: bool(obj.status & Debtor.STATUS_IS_ACTIVE_FLAG),
         required=True,
         type='boolean',
         description="Whether the debtor is currently active or not."
     )
-
-    def get_interest_rate(self, obj):
-        return procedures.get_current_interest_rate(obj)
-
-    def get_is_active(self, obj):
-        return bool(obj.status & Debtor.STATUS_IS_ACTIVE_FLAG)
 
     def get_type(self, obj):
         return 'Debtor'
