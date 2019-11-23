@@ -47,7 +47,7 @@ class DebtorsCollection(MethodView):
     @admin_api.arguments(DebtorCreationRequestSchema)
     @admin_api.response(DebtorSchema, code=201)
     @admin_api.doc(responses={
-        '409': CONFLICTING_DEBTOR_EXISTS,
+        409: CONFLICTING_DEBTOR_EXISTS,
     })
     def post(self, debtor_info):
         """Try to create a new debtor."""
@@ -66,7 +66,7 @@ class DebtorsCollection(MethodView):
 class DebtorInfo(MethodView):
     @public_api.response(DebtorSchema)
     @admin_api.doc(responses={
-        '404': DEBTOR_DOES_NOT_EXIST,
+        404: DEBTOR_DOES_NOT_EXIST,
     })
     def get(self, debtorId):
         """Return information about a debtor.
@@ -83,7 +83,7 @@ class DebtorInfo(MethodView):
 class DebtorPolicy(MethodView):
     @policy_api.response(DebtorPolicySchema)
     @admin_api.doc(responses={
-        '404': DEBTOR_DOES_NOT_EXIST,
+        404: DEBTOR_DOES_NOT_EXIST,
     })
     def get(self, debtorId):
         """Return information about debtor's policy."""
@@ -94,8 +94,8 @@ class DebtorPolicy(MethodView):
     @policy_api.arguments(DebtorPolicyUpdateRequestSchema)
     @policy_api.response(code=204)
     @admin_api.doc(responses={
-        '404': DEBTOR_DOES_NOT_EXIST,
-        '409': CONFLICTING_POLICY,
+        404: DEBTOR_DOES_NOT_EXIST,
+        409: CONFLICTING_POLICY,
     })
     def patch(self, debtor_info, debtorId):
         """Update debtor's policy.
@@ -112,7 +112,7 @@ class DebtorPolicy(MethodView):
 class TransfersCollection(MethodView):
     @transfers_api.response(TransfersCollectionSchema)
     @admin_api.doc(responses={
-        '404': DEBTOR_DOES_NOT_EXIST,
+        404: DEBTOR_DOES_NOT_EXIST,
     })
     def get(self, debtorId):
         """Return all credit-issuing transfers for a given debtor."""
@@ -122,10 +122,10 @@ class TransfersCollection(MethodView):
     @policy_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema, code=201)
     @admin_api.doc(responses={
-        '303': IDENTICAL_TRANSFER_EXISTS,
-        '403': TOO_MANY_TRANSFERS,
-        '404': DEBTOR_DOES_NOT_EXIST,
-        '409': CONFLICTING_TRANSFER_EXISTS,
+        303: IDENTICAL_TRANSFER_EXISTS,
+        403: TOO_MANY_TRANSFERS,
+        404: DEBTOR_DOES_NOT_EXIST,
+        409: CONFLICTING_TRANSFER_EXISTS,
     })
     def post(self, transfer_info, debtorId):
         """Create a new credit-issuing transfer."""
@@ -151,7 +151,9 @@ class TransfersCollection(MethodView):
 @transfers_api.route('/<int:debtorId>/transfers/<transferUuid>', parameters=[SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID])
 class Transfer(MethodView):
     @transfers_api.response(TransferSchema)
-    @admin_api.doc(responses={'404': TRANSFER_DOES_NOT_EXIST})
+    @admin_api.doc(responses={
+        404: TRANSFER_DOES_NOT_EXIST,
+    })
     def get(self, debtorId, transferUuid):
         """Return details about a credit-issuing transfer."""
 
