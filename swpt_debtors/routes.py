@@ -7,13 +7,13 @@ from .schemas import SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID, DebtorCreationRequestSc
     DebtorPolicyUpdateRequestSchema
 from . import procedures
 
-SPEC_CONFLICTING_DEBTOR_EXISTS = {'description': 'A debtor with the same ID already exists.'}
 SPEC_DEBTOR_DOES_NOT_EXIST = {'description': 'The debtor does not exist.'}
+SPEC_CONFLICTING_DEBTOR = {'description': 'A debtor with the same ID already exists.'}
 SPEC_CONFLICTING_POLICY = {'description': 'The new policy is in conflict with the old one.'}
 SPEC_TRANSFER_DOES_NOT_EXIST = {'description': 'The transfer entry does not exist.'}
-SPEC_CONFLICTING_TRANSFER_EXISTS = {'description': 'A different transfer entry with the same UUID already exists.'}
+SPEC_CONFLICTING_TRANSFER = {'description': 'A different transfer entry with the same UUID already exists.'}
 SPEC_TOO_MANY_TRANSFERS = {'description': 'Too many pending transfers.'}
-SPEC_IDENTICAL_TRANSFER_EXISTS = {
+SPEC_DUPLICATED_TRANSFER = {
     'description': 'The same transfer entry already exists.',
     'headers': {
         'Location': {
@@ -22,7 +22,6 @@ SPEC_IDENTICAL_TRANSFER_EXISTS = {
         },
     }
 }
-
 
 admin_api = Blueprint(
     'admin',
@@ -55,7 +54,7 @@ class DebtorsCollection(MethodView):
     @admin_api.arguments(DebtorCreationRequestSchema)
     @admin_api.response(DebtorSchema, code=201)
     @admin_api.doc(responses={
-        409: SPEC_CONFLICTING_DEBTOR_EXISTS,
+        409: SPEC_CONFLICTING_DEBTOR,
     })
     def post(self, debtor_info):
         """Try to create a new debtor."""
@@ -130,10 +129,10 @@ class TransfersCollection(MethodView):
     @policy_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema, code=201)
     @admin_api.doc(responses={
-        303: SPEC_IDENTICAL_TRANSFER_EXISTS,
+        303: SPEC_DUPLICATED_TRANSFER,
         403: SPEC_TOO_MANY_TRANSFERS,
         404: SPEC_DEBTOR_DOES_NOT_EXIST,
-        409: SPEC_CONFLICTING_TRANSFER_EXISTS,
+        409: SPEC_CONFLICTING_TRANSFER,
     })
     def post(self, transfer_info, debtorId):
         """Create a new credit-issuing transfer."""
