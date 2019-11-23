@@ -286,7 +286,7 @@ class TransfersCollectionSchema(ResourceSchema, CollectionSchema):
         return 'transfers'
 
 
-class TransfersCreationRequestSchema(TransferInfoSchema):
+class TransferCreationRequestSchema(TransferInfoSchema):
     class Meta:
         fields = [
             'transfer_uuid',

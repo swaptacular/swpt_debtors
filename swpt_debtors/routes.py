@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from .models import PendingTransfer
 from .schemas import SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID, DebtorCreationRequestSchema, DebtorSchema, \
-    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransfersCreationRequestSchema
+    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
 from . import procedures
 
 admin_api = Blueprint(
@@ -90,7 +90,7 @@ class TransfersCollection(MethodView):
 
         return range(10)
 
-    @policy_api.arguments(TransfersCreationRequestSchema)
+    @policy_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema, code=201)
     def post(self, transfer_info, debtorId):
         """Create a new credit-issuing transfer."""
