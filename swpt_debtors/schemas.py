@@ -99,20 +99,9 @@ class BalanceLowerLimitSchema(Schema):
     )
 
 
-class DebtorCreationRequestSchema(Schema):
-    debtor_id = fields.Int(
-        required=True,
-        data_key='debtorId',
-        format="int64",
-        description=SPEC_DEBTOR_ID['description'],
-        example=1,
-    )
-
-
 class DebtorInfoSchema(Schema):
     debtor_id = fields.Int(
         required=True,
-        dump_only=True,
         data_key='debtorId',
         format="int64",
         description=SPEC_DEBTOR_ID['description'],
@@ -120,19 +109,16 @@ class DebtorInfoSchema(Schema):
     )
     created_at_date = fields.Date(
         required=True,
-        dump_only=True,
         data_key='createdOn',
         description=Debtor.created_at_date.comment,
     )
     balance = fields.Int(
         required=True,
-        dump_only=True,
         format="int64",
         description=Debtor.balance.comment,
     )
     balance_ts = fields.DateTime(
         required=True,
-        dump_only=True,
         data_key='balanceTimestamp',
         description='The moment at which the last change in the `balance` field happened.',
     )
@@ -178,7 +164,25 @@ class DebtorInfoSchema(Schema):
         return bool(obj.status & Debtor.STATUS_IS_ACTIVE_FLAG)
 
 
+class DebtorCreationRequestSchema(DebtorInfoSchema):
+    class Meta:
+        fields = ['debtor_id']
+
+
 class DebtorSchema(ResourceSchema, DebtorInfoSchema):
+    class Meta:
+        dump_only = [
+            'debtor_id',
+            'created_at_date',
+            'balance',
+            'balance_ts',
+            'balance_lower_limits',
+            'interest_rate_target',
+            'interest_rate_lower_limits',
+            'interestRate',
+            'isActive',
+        ]
+
     def get_type(self, obj):
         return 'Debtor'
 
@@ -187,7 +191,7 @@ class DebtorSchema(ResourceSchema, DebtorInfoSchema):
         return f'/debtors/{obj.debtor_id}'
 
 
-class DebtorPolicySchema(ResourceSchema, DebtorInfoSchema):
+class DebtorPolicySchema(DebtorSchema):
     def get_type(self, obj):
         return 'DebtorPolicy'
 
