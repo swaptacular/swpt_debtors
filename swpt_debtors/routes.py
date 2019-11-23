@@ -2,8 +2,8 @@ from flask import redirect
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from .models import PendingTransfer
-from .schemas import SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID, CreateDebtorRequestSchema, DebtorSchema, \
-    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema
+from .schemas import SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID, DebtorCreationRequestSchema, DebtorSchema, \
+    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransfersCreationRequestSchema
 from . import procedures
 
 admin_api = Blueprint(
@@ -34,7 +34,7 @@ transfers_api = Blueprint(
 
 @admin_api.route('')
 class DebtorsCollection(MethodView):
-    @admin_api.arguments(CreateDebtorRequestSchema)
+    @admin_api.arguments(DebtorCreationRequestSchema)
     @admin_api.response(DebtorSchema, code=201)
     def post(self, debtor_info):
         """Try to create a new debtor."""
@@ -90,7 +90,7 @@ class TransfersCollection(MethodView):
 
         return range(10)
 
-    @policy_api.arguments(TransferSchema)
+    @policy_api.arguments(TransfersCreationRequestSchema)
     @transfers_api.response(TransferSchema, code=201)
     def post(self, transfer_info, debtorId):
         """Create a new credit-issuing transfer."""
