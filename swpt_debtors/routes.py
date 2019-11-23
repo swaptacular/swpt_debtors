@@ -2,18 +2,26 @@ from flask import redirect
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from .models import PendingTransfer
-from .schemas import SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID, SPEC_303_HEADERS, DebtorCreationRequestSchema, \
+from .schemas import SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID, DebtorCreationRequestSchema, DebtorSchema, \
     DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema, \
-    DebtorPolicyUpdateRequestSchema, DebtorSchema
+    DebtorPolicyUpdateRequestSchema
 from . import procedures
 
-CONFLICTING_DEBTOR_EXISTS = {'description': 'A debtor with the same ID already exists.'}
-DEBTOR_DOES_NOT_EXIST = {'description': 'The debtor does not exist.'}
-CONFLICTING_POLICY = {'description': 'The new policy is in conflict with the old one.'}
-TRANSFER_DOES_NOT_EXIST = {'description': 'The transfer entry does not exist.'}
-CONFLICTING_TRANSFER_EXISTS = {'description': 'A different transfer entry with the same UUID already exists.'}
-TOO_MANY_TRANSFERS = {'description': 'Too many pending transfers.'}
-IDENTICAL_TRANSFER_EXISTS = {'description': 'The same transfer entry already exists.', 'headers': SPEC_303_HEADERS}
+SPEC_CONFLICTING_DEBTOR_EXISTS = {'description': 'A debtor with the same ID already exists.'}
+SPEC_DEBTOR_DOES_NOT_EXIST = {'description': 'The debtor does not exist.'}
+SPEC_CONFLICTING_POLICY = {'description': 'The new policy is in conflict with the old one.'}
+SPEC_TRANSFER_DOES_NOT_EXIST = {'description': 'The transfer entry does not exist.'}
+SPEC_CONFLICTING_TRANSFER_EXISTS = {'description': 'A different transfer entry with the same UUID already exists.'}
+SPEC_TOO_MANY_TRANSFERS = {'description': 'Too many pending transfers.'}
+SPEC_IDENTICAL_TRANSFER_EXISTS = {
+    'description': 'The same transfer entry already exists.',
+    'headers': {
+        'Location': {
+            'description': 'The URI of the already existing entry.',
+            'schema': {'type': 'string', 'format': 'uri'},
+        },
+    }
+}
 
 
 admin_api = Blueprint(
@@ -47,7 +55,7 @@ class DebtorsCollection(MethodView):
     @admin_api.arguments(DebtorCreationRequestSchema)
     @admin_api.response(DebtorSchema, code=201)
     @admin_api.doc(responses={
-        409: CONFLICTING_DEBTOR_EXISTS,
+        409: SPEC_CONFLICTING_DEBTOR_EXISTS,
     })
     def post(self, debtor_info):
         """Try to create a new debtor."""
@@ -66,7 +74,7 @@ class DebtorsCollection(MethodView):
 class DebtorInfo(MethodView):
     @public_api.response(DebtorSchema)
     @admin_api.doc(responses={
-        404: DEBTOR_DOES_NOT_EXIST,
+        404: SPEC_DEBTOR_DOES_NOT_EXIST,
     })
     def get(self, debtorId):
         """Return information about a debtor.
@@ -83,7 +91,7 @@ class DebtorInfo(MethodView):
 class DebtorPolicy(MethodView):
     @policy_api.response(DebtorPolicySchema)
     @admin_api.doc(responses={
-        404: DEBTOR_DOES_NOT_EXIST,
+        404: SPEC_DEBTOR_DOES_NOT_EXIST,
     })
     def get(self, debtorId):
         """Return information about debtor's policy."""
@@ -94,8 +102,8 @@ class DebtorPolicy(MethodView):
     @policy_api.arguments(DebtorPolicyUpdateRequestSchema)
     @policy_api.response(code=204)
     @admin_api.doc(responses={
-        404: DEBTOR_DOES_NOT_EXIST,
-        409: CONFLICTING_POLICY,
+        404: SPEC_DEBTOR_DOES_NOT_EXIST,
+        409: SPEC_CONFLICTING_POLICY,
     })
     def patch(self, debtor_info, debtorId):
         """Update debtor's policy.
@@ -112,7 +120,7 @@ class DebtorPolicy(MethodView):
 class TransfersCollection(MethodView):
     @transfers_api.response(TransfersCollectionSchema)
     @admin_api.doc(responses={
-        404: DEBTOR_DOES_NOT_EXIST,
+        404: SPEC_DEBTOR_DOES_NOT_EXIST,
     })
     def get(self, debtorId):
         """Return all credit-issuing transfers for a given debtor."""
@@ -122,10 +130,10 @@ class TransfersCollection(MethodView):
     @policy_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema, code=201)
     @admin_api.doc(responses={
-        303: IDENTICAL_TRANSFER_EXISTS,
-        403: TOO_MANY_TRANSFERS,
-        404: DEBTOR_DOES_NOT_EXIST,
-        409: CONFLICTING_TRANSFER_EXISTS,
+        303: SPEC_IDENTICAL_TRANSFER_EXISTS,
+        403: SPEC_TOO_MANY_TRANSFERS,
+        404: SPEC_DEBTOR_DOES_NOT_EXIST,
+        409: SPEC_CONFLICTING_TRANSFER_EXISTS,
     })
     def post(self, transfer_info, debtorId):
         """Create a new credit-issuing transfer."""
@@ -152,7 +160,7 @@ class TransfersCollection(MethodView):
 class Transfer(MethodView):
     @transfers_api.response(TransferSchema)
     @admin_api.doc(responses={
-        404: TRANSFER_DOES_NOT_EXIST,
+        404: SPEC_TRANSFER_DOES_NOT_EXIST,
     })
     def get(self, debtorId, transferUuid):
         """Return details about a credit-issuing transfer."""

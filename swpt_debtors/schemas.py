@@ -22,12 +22,6 @@ SPEC_TRANSFER_UUID = {
         'type': 'string',
     },
 }
-SPEC_303_HEADERS = {
-    'Location': {
-        'description': 'The URI of the already existing entry.',
-        'schema': {'type': 'string', 'format': 'uri'}
-    },
-}
 
 
 class ResourceSchema(Schema):
