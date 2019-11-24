@@ -21,10 +21,10 @@ class ResourceSchema(Schema):
         example='Resource',
     )
 
-    def get_type(self, obj):
+    def get_type(self, obj):  # pragma: no cover
         raise NotImplementedError
 
-    def get_uri(self, obj):
+    def get_uri(self, obj):  # pragma: no cover
         raise NotImplementedError
 
 

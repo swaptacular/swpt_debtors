@@ -25,6 +25,15 @@ SPEC_TRANSFER_UUID = {
         'type': 'string',
     },
 }
+SPEC_LOCATION_HEADER = {
+    'Location': {
+        'description': 'The URI of the entry.',
+        'schema': {
+            'type': 'string',
+            'format': 'uri',
+        },
+    },
+}
 SPEC_DEBTOR_DOES_NOT_EXIST = {
     'description': 'The debtor does not exist.',
 }
@@ -45,15 +54,7 @@ SPEC_TOO_MANY_TRANSFERS = {
 }
 SPEC_DUPLICATED_TRANSFER = {
     'description': 'The same transfer entry already exists.',
-    'headers': {
-        'Location': {
-            'description': 'The URI of the already existing entry.',
-            'schema': {
-                'type': 'string',
-                'format': 'uri',
-            },
-        },
-    }
+    'headers': SPEC_LOCATION_HEADER,
 }
 
 admin_api = Blueprint(
@@ -85,7 +86,7 @@ transfers_api = Blueprint(
 @admin_api.route('')
 class DebtorsCollection(MethodView):
     @admin_api.arguments(DebtorCreationRequestSchema)
-    @admin_api.response(DebtorSchema, code=201)
+    @admin_api.response(DebtorSchema, code=201, headers=SPEC_LOCATION_HEADER)
     @admin_api.doc(responses={409: SPEC_CONFLICTING_DEBTOR})
     def post(self, debtor_info):
         """Try to create a new debtor."""
@@ -150,7 +151,7 @@ class TransfersCollection(MethodView):
         return range(10)
 
     @transfers_api.arguments(TransferCreationRequestSchema)
-    @transfers_api.response(TransferSchema, code=201)
+    @transfers_api.response(TransferSchema, code=201, headers=SPEC_LOCATION_HEADER)
     @transfers_api.doc(responses={303: SPEC_DUPLICATED_TRANSFER,
                                   403: SPEC_TOO_MANY_TRANSFERS,
                                   404: SPEC_DEBTOR_DOES_NOT_EXIST,
