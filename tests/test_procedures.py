@@ -135,8 +135,8 @@ def test_process_account_change_signal(db_session, debtor):
     assert len(cirs) == 1
 
 
-def test_interest_rate_absolute_limits(db_session, debtor, current_ts):
+def test_interest_rate_absolute_limits(db_session, debtor):
     debtor.interest_rate_target = -100.0
-    assert p._calc_interest_rate(current_ts.date(), debtor) == INTEREST_RATE_FLOOR
+    assert debtor.interest_rate == INTEREST_RATE_FLOOR
     debtor.interest_rate_target = 1e100
-    assert p._calc_interest_rate(current_ts.date(), debtor) == INTEREST_RATE_CEIL
+    assert debtor.interest_rate == INTEREST_RATE_CEIL

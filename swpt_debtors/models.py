@@ -263,6 +263,29 @@ class Debtor(db.Model):
     #       same is true for the number of policy updates that a
     #       debtor does.
 
+    def calc_interest_rate(self, on_day: date) -> float:
+        # Apply debtor's enforced interest rate limits.
+        interest_rate = self.interest_rate_target
+        interest_rate = self.interest_rate_lower_limits.current_limits(on_day).apply_to_value(interest_rate)
+
+        # Apply the absolute interest rate limits.
+        if interest_rate < INTEREST_RATE_FLOOR:
+            interest_rate = INTEREST_RATE_FLOOR
+        if interest_rate > INTEREST_RATE_CEIL:
+            interest_rate = INTEREST_RATE_CEIL
+
+        assert INTEREST_RATE_FLOOR <= interest_rate <= INTEREST_RATE_CEIL
+        return interest_rate
+
+    @property
+    def interest_rate(self):
+        current_ts = datetime.now(tz=timezone.utc)
+        return self.calc_interest_rate(current_ts.date())
+
+    @property
+    def is_active(self):
+        return bool(self.status & Debtor.STATUS_IS_ACTIVE_FLAG)
+
 
 class PendingTransfer(db.Model):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
@@ -315,6 +338,10 @@ class PendingTransfer(db.Model):
         'Debtor',
         backref=db.backref('pending_transfers', cascade="all, delete-orphan", passive_deletes=True),
     )
+
+    @property
+    def is_finalized(self):
+        return bool(self.finalized_at_ts)
 
 
 class InitiatedTransfer(db.Model):
@@ -373,6 +400,10 @@ class InitiatedTransfer(db.Model):
                        'to prevent problems caused by message re-delivery.',
         }
     )
+
+    @property
+    def is_finalized(self):
+        return bool(self.finalized_at_ts)
 
 
 class Account(db.Model):

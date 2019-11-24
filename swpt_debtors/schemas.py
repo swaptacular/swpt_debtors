@@ -119,6 +119,7 @@ class DebtorSchema(ResourceSchema):
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
         required=True,
+        dump_only=True,
         data_key='balanceLowerLimits',
         description='Enforced lower limits for the `balance` field.',
     )
@@ -136,18 +137,17 @@ class DebtorSchema(ResourceSchema):
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.',
     )
-    interestRate = fields.Function(
-        lambda obj: procedures.get_current_interest_rate(obj),
+    interest_rate = fields.Float(
         required=True,
-        type='number',
-        format='float',
+        dump_only=True,
+        data_key='interestRate',
         description="The current annual interest rate (in percents) at which "
                     "interest accumulates on creditors' accounts.",
     )
-    isActive = fields.Function(
-        lambda obj: bool(obj.status & Debtor.STATUS_IS_ACTIVE_FLAG),
+    is_active = fields.Boolean(
         required=True,
-        type='boolean',
+        dump_only=True,
+        data_key='isActive',
         description="Whether the debtor is currently active or not."
     )
 
@@ -244,10 +244,8 @@ class TransferInfoSchema(Schema):
         data_key='initiatedAt',
         description=PendingTransfer.initiated_at_ts.comment,
     )
-    isFinalized = fields.Function(
-        lambda obj: not obj.finalized_at_ts,
+    is_finalized = fields.Boolean(
         required=True,
-        type='boolean',
         data_key='isFinalized',
         description='Whether the transfer has been finalized or not.',
         example=True,
