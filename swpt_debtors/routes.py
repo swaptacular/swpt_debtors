@@ -89,7 +89,7 @@ transferSchema = TransferSchema(context={'endpoint': 'transfers.Transfer'})
 
 
 @admin_api.route('')
-class DebtorsCollection(MethodView):
+class DebtorCreator(MethodView):
     @admin_api.arguments(DebtorCreationRequestSchema)
     @admin_api.response(debtorSchema, code=201, headers=SPEC_LOCATION_HEADER)
     @admin_api.doc(responses={409: SPEC_CONFLICTING_DEBTOR})
