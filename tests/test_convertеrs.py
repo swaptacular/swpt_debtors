@@ -38,17 +38,17 @@ def test_werkzeug_converter():
     urls = m.bind('example.com', '/')
 
     # Test URL match:
-    assert urls.match('/debtors/0', 'GET') == ('debtors', {'debtorId': 0})
-    assert urls.match('/debtors/1', 'GET') == ('debtors', {'debtorId': 1})
-    assert urls.match('/debtors/9223372036854775807', 'GET') == ('debtors', {'debtorId': 9223372036854775807})
-    assert urls.match('/debtors/9223372036854775808', 'GET') == ('debtors', {'debtorId': -9223372036854775808})
-    assert urls.match('/debtors/18446744073709551615', 'GET') == ('debtors', {'debtorId': -1})
+    assert urls.match('/debtors/0') == ('debtors', {'debtorId': 0})
+    assert urls.match('/debtors/1') == ('debtors', {'debtorId': 1})
+    assert urls.match('/debtors/9223372036854775807') == ('debtors', {'debtorId': 9223372036854775807})
+    assert urls.match('/debtors/9223372036854775808') == ('debtors', {'debtorId': -9223372036854775808})
+    assert urls.match('/debtors/18446744073709551615') == ('debtors', {'debtorId': -1})
     with pytest.raises(NotFound):
-        assert urls.match('/debtors/1x', 'GET')
+        assert urls.match('/debtors/1x')
     with pytest.raises(NotFound):
-        assert urls.match('/debtors/18446744073709551616', 'GET')
+        assert urls.match('/debtors/18446744073709551616')
     with pytest.raises(NotFound):
-        assert urls.match('/debtors/-1', 'GET')
+        assert urls.match('/debtors/-1')
 
     # Test URL build:
     assert urls.build('debtors', {'debtorId': 0}) == '/debtors/0'
