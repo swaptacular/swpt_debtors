@@ -1,15 +1,15 @@
 from collections import abc
 from marshmallow import Schema, fields, validate, pre_dump, missing
+from flask import url_for
 from .models import Debtor, PendingTransfer, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
-from . import procedures
 
 
 class ResourceSchema(Schema):
-    uri = fields.Method(
+    uri = fields.Method(  # TODO: Rename this field to 'id'.
         'get_uri',
         required=True,
         type='string',
-        format='uri',
+        format='uri-reference',
         description="The URI of this object.",
         example='https://example.com/resources/123',
     )
@@ -90,7 +90,7 @@ class DebtorCreationRequestSchema(Schema):
 
 
 class DebtorSchema(ResourceSchema):
-    debtor_id = fields.Int(
+    debtor_id = fields.Int(  # TODO: Remove this field.
         required=True,
         dump_only=True,
         data_key='debtorId',
@@ -155,8 +155,7 @@ class DebtorSchema(ResourceSchema):
         return 'Debtor'
 
     def get_uri(self, obj):
-        # TODO: Add schema and domain?
-        return f'/debtors/{obj.debtor_id}'
+        return url_for(self.context['endpoint'], debtorId=obj.debtor_id)
 
 
 class DebtorPolicySchema(DebtorSchema):
@@ -164,8 +163,7 @@ class DebtorPolicySchema(DebtorSchema):
         return 'DebtorPolicy'
 
     def get_uri(self, obj):
-        # TODO: Add schema and domain?
-        return f'/debtors/{obj.debtor_id}/policy'
+        return url_for(self.context['endpoint'], debtorId=obj.debtor_id)
 
 
 class DebtorPolicyUpdateRequestSchema(Schema):
@@ -275,8 +273,7 @@ class TransfersCollectionSchema(ResourceSchema, CollectionSchema):
         return 'TransfersCollection'
 
     def get_uri(self, obj):
-        # TODO: Add schema and domain?
-        return 'transfers'
+        return url_for(self.context['endpoint'], debtorId=obj.debtor_id)
 
 
 class TransferCreationRequestSchema(TransferInfoSchema):
@@ -314,5 +311,4 @@ class TransferSchema(ResourceSchema, TransferInfoSchema):
         return 'Transfer'
 
     def get_uri(self, obj):
-        # TODO: Add schema and domain?
-        return f'/debtors/{obj.debtor_id}/transfers/{obj.transfer_uuid}'
+        return url_for(self.context['endpoint'], debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)

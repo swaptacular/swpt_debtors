@@ -29,6 +29,8 @@ API_DESCRIPTION = """This API can be used to:
 
 class Configuration(metaclass=MetaFlaskEnv):
     SECRET_KEY = 'dummy-secret'
+    SERVER_NAME = None
+    PREFERRED_URL_SCHEME = 'http'
     SQLALCHEMY_DATABASE_URI = ''
     SQLALCHEMY_POOL_SIZE = None
     SQLALCHEMY_POOL_TIMEOUT = None
@@ -53,15 +55,19 @@ class Configuration(metaclass=MetaFlaskEnv):
 
 
 def create_app(config_dict={}):
-    from flask import Flask
+    from flask import Flask, Response
     from .extensions import db, migrate, broker, api
     from .routes import admin_api, public_api, policy_api, transfers_api
     from .cli import swpt_debtors
     from .converters import Int64Converter
     from . import models  # noqa
 
+    class CustomResponse(Response):
+        autocorrect_location_header = False
+
     app = Flask(__name__)
     app.url_map.converters['i64'] = Int64Converter
+    app.response_class = CustomResponse
     app.config.from_object(Configuration)
     app.config.from_mapping(config_dict)
     db.init_app(app)
