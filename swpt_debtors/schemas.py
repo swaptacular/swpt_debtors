@@ -33,7 +33,7 @@ class CollectionSchema(Schema):
         fields.Str(format='uri-reference'),
         required=True,
         dump_only=True,
-        description='A list of relative URIs for the contained items.',
+        description='A list of URIs for the contained items.',
         example=['111111', '222222', '333333'],
     )
     totalItems = fields.Function(
