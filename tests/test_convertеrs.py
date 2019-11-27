@@ -1,30 +1,33 @@
 import pytest
 from swpt_lib import converters as c
 
-
-def test_convert_i64_to_u64():
-    assert c.MAX_INT64 - c.MIN_INT64 == c.MAX_UINT64
-    assert c.convert_i64_to_u64(0) == 0
-    assert c.convert_i64_to_u64(1) == 1
-    assert c.convert_i64_to_u64(c.MAX_INT64) == c.MAX_INT64
-    assert c.convert_i64_to_u64(-1) == c.MAX_UINT64
-    assert c.convert_i64_to_u64(c.MIN_INT64) == c.MAX_INT64 + 1
-    with pytest.raises(ValueError):
-        c.convert_i64_to_u64(c.MAX_INT64 + 1)
-    with pytest.raises(ValueError):
-        c.convert_i64_to_u64(c.MIN_INT64 - 1)
+MIN_INT64 = -1 << 63
+MAX_INT64 = (1 << 63) - 1
+MAX_UINT64 = (1 << 64) - 1
 
 
-def test_convert_u64_to_i64():
-    assert c.convert_u64_to_i64(0) == 0
-    assert c.convert_u64_to_i64(1) == 1
-    assert c.convert_u64_to_i64(c.MAX_INT64) == c.MAX_INT64
-    assert c.convert_u64_to_i64(c.MAX_UINT64) == -1
-    assert c.convert_u64_to_i64(c.MAX_INT64 + 1) == c.MIN_INT64
+def test_i64_to_slug():
+    assert c.i64_to_slug(0) == '0'
+    assert c.i64_to_slug(1) == '1'
+    assert c.i64_to_slug(MAX_INT64) == str(MAX_INT64)
+    assert c.i64_to_slug(-1) == str(MAX_UINT64)
+    assert c.i64_to_slug(MIN_INT64) == str(MAX_INT64 + 1)
     with pytest.raises(ValueError):
-        c.convert_u64_to_i64(-1)
+        c.i64_to_slug(MAX_INT64 + 1)
     with pytest.raises(ValueError):
-        c.convert_u64_to_i64(c.MAX_UINT64 + 1)
+        c.i64_to_slug(MIN_INT64 - 1)
+
+
+def test_slug_to_i64():
+    assert c.slug_to_i64('0') == 0
+    assert c.slug_to_i64('1') == 1
+    assert c.slug_to_i64(str(MAX_INT64)) == MAX_INT64
+    assert c.slug_to_i64(str(MAX_UINT64)) == -1
+    assert c.slug_to_i64(str(MAX_INT64 + 1)) == MIN_INT64
+    with pytest.raises(ValueError):
+        c.slug_to_i64('-1')
+    with pytest.raises(ValueError):
+        c.slug_to_i64(str(MAX_UINT64 + 1))
 
 
 def test_werkzeug_converter():
