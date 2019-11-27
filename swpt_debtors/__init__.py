@@ -56,7 +56,7 @@ class Configuration(metaclass=MetaFlaskEnv):
 
 def create_app(config_dict={}):
     from flask import Flask, Response
-    from swpt_lib.converters import Int64Converter
+    from swpt_lib.utils import Int64Converter
     from .extensions import db, migrate, broker, api
     from .routes import admin_api, public_api, policy_api, transfers_api
     from .cli import swpt_debtors

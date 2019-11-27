@@ -39,7 +39,7 @@ class Int64Converter(BaseConverter):
     The converter can be registered with the Flask app like this::
 
       from flask import Flask
-      from swpt_lib.converters import Int64Converter
+      from swpt_lib.utils import Int64Converter
 
       app = Flask(__name__)
       app.url_map.converters['i64'] = Int64Converter

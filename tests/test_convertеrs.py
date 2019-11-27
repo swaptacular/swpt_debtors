@@ -1,5 +1,5 @@
 import pytest
-from swpt_lib import converters as c
+from swpt_lib import utils as c
 
 MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1

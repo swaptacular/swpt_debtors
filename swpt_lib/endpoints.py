@@ -2,7 +2,7 @@ import os
 from urllib.parse import urlsplit, urlunsplit
 from werkzeug.routing import Map, Rule, BuildError as WerkzeugBuildError
 from werkzeug.exceptions import NotFound
-from .converters import Int64Converter
+from .utils import Int64Converter
 
 
 rules = [
