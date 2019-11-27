@@ -1,6 +1,5 @@
 import pytest
-from werkzeug.routing import ValidationError
-from swpt_debtors import converters as c
+from swpt_lib import converters as c
 
 
 def test_convert_i64_to_u64():
