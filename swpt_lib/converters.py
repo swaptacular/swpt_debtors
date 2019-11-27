@@ -7,7 +7,7 @@ _I64_SPAN = _MAX_UINT64 + 1
 
 
 def i64_to_slug(value: int) -> str:
-    """"Convert a 64-bit signed integer to an URL-friendly string.
+    """"Convert a signed 64-bit integer to an URL-friendly string.
 
     Raises `ValueError` if the value is not a signed 64-bit integer.
     """
