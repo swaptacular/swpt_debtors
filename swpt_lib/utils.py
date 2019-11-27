@@ -46,7 +46,7 @@ class Int64Converter(BaseConverter):
 
     """
 
-    regex = r"\d{1,20}"
+    regex = r"0|[1-9][0-9]{0,19}"
 
     def to_python(self, value):
         try:
