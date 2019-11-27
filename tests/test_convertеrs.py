@@ -46,6 +46,8 @@ def test_werkzeug_converter():
     assert urls.match('/debtors/9223372036854775808') == ('debtors', {'debtorId': -9223372036854775808})
     assert urls.match('/debtors/18446744073709551615') == ('debtors', {'debtorId': -1})
     with pytest.raises(NotFound):
+        assert urls.match('/debtors/01')
+    with pytest.raises(NotFound):
         assert urls.match('/debtors/1x')
     with pytest.raises(NotFound):
         assert urls.match('/debtors/18446744073709551616')
