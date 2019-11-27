@@ -11,7 +11,7 @@ rules = [
 ]
 
 __doc__ = """
-Build and matche URLs to endpoints.
+Build and match URLs to endpoints.
 
 The available endpoints are:
 
