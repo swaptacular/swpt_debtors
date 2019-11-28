@@ -45,7 +45,7 @@ def match_url(endpoint, url):
     except ValueError:
         raise MatchError(url)
 
-    if scheme != _get_url_scheme() or netloc != _get_server_name():
+    if scheme != get_url_scheme() or netloc != get_server_name():
         raise MatchError(url)
 
     try:
@@ -76,20 +76,33 @@ def build_url(endpoint, **kw):
         path = _urls.build(endpoint, kw)
     except WerkzeugBuildError:
         raise BuildError()
-    return urlunsplit((_get_url_scheme(), _get_server_name(), path, '', ''))
+    url_scheme = get_url_scheme()
+    server_name = get_server_name()
+    if not server_name:
+        raise Exception(f'The SWPT_SERVER_NAME environment variable is not set.')
+    return urlunsplit((url_scheme, server_name, path, '', ''))
 
 
-def _get_url_scheme():
-    varname = 'SWPT_URL_SCHEME'
-    return os.environ.get(varname, 'https')
+def get_url_scheme():
+    """Return site's URL scheme, or "http" if not set.
+
+    The site's URL scheme can be configured by setting the
+    `SWPT_URL_SCHEME` environment variable.
+
+    """
+
+    return os.environ.get('SWPT_URL_SCHEME', '') or 'http'
 
 
-def _get_server_name():
-    varname = 'SWPT_SERVER_NAME'
-    try:
-        return os.environ[varname]
-    except KeyError:
-        raise Exception(f'The {varname} environment variable is not set.')
+def get_server_name():
+    """Return site's domain name (and maybe port), or `None` if not set.
+
+    The site's domain name and port can be configured by setting the
+    `SWPT_SERVER_NAME` environment variable.
+
+    """
+
+    return os.environ.get('SWPT_SERVER_NAME', '') or None
 
 
 assert not any(str(r).endswith("/") for r in rules), 'a rule ends with "/".'

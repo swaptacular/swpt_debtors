@@ -1,6 +1,8 @@
-from flask import redirect, url_for
+from urllib.parse import urljoin
+from flask import redirect, url_for, request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
+from swpt_lib import endpoints
 from .models import PendingTransfer
 from .schemas import DebtorCreationRequestSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
     DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
@@ -165,11 +167,13 @@ class TransfersCollection(MethodView):
         debtor = procedures.get_or_create_debtor(debtorId)
         transfer_uuid = transfer_info['transfer_uuid']
         location = url_for('transfers.Transfer', debtorId=debtorId, transferUuid=transfer_uuid)
+        recipient_url = urljoin(request.base_url, transfer_info['recipient'])
         try:
+            # TODO: Write `transfer_info['recipient']` directly to the DB.
             transfer = procedures.create_pending_transfer(
                 debtorId,
                 transfer_uuid,
-                transfer_info['recipient_creditor_id'],
+                endpoints.match_url('creditor', recipient_url)['creditorId'],
                 transfer_info['amount'],
                 transfer_info['transfer_info'],
             )

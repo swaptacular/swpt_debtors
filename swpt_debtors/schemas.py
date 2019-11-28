@@ -2,10 +2,11 @@ from collections import abc
 from marshmallow import Schema, fields, validate, pre_dump, missing
 from flask import url_for
 from .models import Debtor, PendingTransfer, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
+from swpt_lib import endpoints
 
 
 class ResourceSchema(Schema):
-    uri = fields.Method(  # TODO: Rename this field to 'id'.
+    id = fields.Method(
         'get_uri',
         required=True,
         type='string',
@@ -90,14 +91,6 @@ class DebtorCreationRequestSchema(Schema):
 
 
 class DebtorSchema(ResourceSchema):
-    debtor_id = fields.Int(  # TODO: Remove this field.
-        required=True,
-        dump_only=True,
-        data_key='debtorId',
-        format="int64",
-        description="The debtor's ID",
-        example=1,
-    )
     created_at_date = fields.Date(
         required=True,
         dump_only=True,
@@ -205,25 +198,13 @@ class TransferErrorSchema(Schema):
 
 
 class TransferInfoSchema(Schema):
-    debtor_id = fields.Int(
+    recipient = fields.Method(
+        'get_recipient_uri',
         required=True,
-        data_key='debtorId',
-        format="int64",
-        description="The debtor's ID",
-        example=1,
-    )
-    transfer_uuid = fields.UUID(
-        required=True,
-        data_key='transferUuid',
-        description="The client-generated UUID for the transfer.",
-        example='123e4567-e89b-12d3-a456-426655440000',
-    )
-    recipient_creditor_id = fields.Integer(
-        required=True,
-        data_key='recipientCreditorId',
-        format="int64",
-        description=PendingTransfer.recipient_creditor_id.comment,
-        example=54321,
+        type='string',
+        format="uri-reference",
+        description="The recipient's URI.",
+        example='/creditors/1111',
     )
     amount = fields.Integer(
         required=True,
@@ -267,6 +248,9 @@ class TransferInfoSchema(Schema):
         description='Errors that occurred during the transfer.'
     )
 
+    def get_recipient_uri(self, obj):
+        return endpoints.build_url('creditor', creditorId=obj.recipient_creditor_id)
+
 
 class TransfersCollectionSchema(ResourceSchema, CollectionSchema):
     def get_type(self, obj):
@@ -280,11 +264,25 @@ class TransferCreationRequestSchema(TransferInfoSchema):
     class Meta:
         fields = [
             'transfer_uuid',
-            'recipient_creditor_id',
+            'recipient',
             'amount',
             'transfer_info',
         ]
 
+    transfer_uuid = fields.UUID(
+        required=True,
+        data_key='transferUuid',
+        description="A client-generated UUID for the transfer.",
+        example='123e4567-e89b-12d3-a456-426655440000',
+    )
+    recipient = fields.Url(
+        required=True,
+        relative=True,
+        schemes=[endpoints.get_url_scheme()],
+        format='uri-reference',
+        description="The URI of the recipient of the transfer. Can be relative.",
+        example='/creditors/1111',
+    )
     transfer_info = fields.Dict(
         missing={},
         data_key='transferInfo',
@@ -295,9 +293,7 @@ class TransferCreationRequestSchema(TransferInfoSchema):
 class TransferSchema(ResourceSchema, TransferInfoSchema):
     class Meta:
         dump_only = [
-            'debtor_id',
-            'transfer_uuid',
-            'recipient_creditor_id',
+            'recipient',
             'amount',
             'transfer_info',
             'initiated_at_ts',

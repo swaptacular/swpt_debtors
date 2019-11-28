@@ -5,6 +5,7 @@ import os.path
 import logging
 import logging.config
 from flask_env import MetaFlaskEnv
+from swpt_lib import endpoints
 
 # Configure app logging. If the value of "$APP_LOGGING_CONFIG_FILE" is
 # a relative path, the directory of this (__init__.py) file will be
@@ -29,8 +30,8 @@ API_DESCRIPTION = """This API can be used to:
 
 class Configuration(metaclass=MetaFlaskEnv):
     SECRET_KEY = 'dummy-secret'
-    SERVER_NAME = None
-    PREFERRED_URL_SCHEME = 'http'
+    SERVER_NAME = endpoints.get_server_name()
+    PREFERRED_URL_SCHEME = endpoints.get_url_scheme()
     SQLALCHEMY_DATABASE_URI = ''
     SQLALCHEMY_POOL_SIZE = None
     SQLALCHEMY_POOL_TIMEOUT = None
@@ -55,19 +56,15 @@ class Configuration(metaclass=MetaFlaskEnv):
 
 
 def create_app(config_dict={}):
-    from flask import Flask, Response
+    from flask import Flask
     from swpt_lib.utils import Int64Converter
     from .extensions import db, migrate, broker, api
     from .routes import admin_api, public_api, policy_api, transfers_api
     from .cli import swpt_debtors
     from . import models  # noqa
 
-    class CustomResponse(Response):
-        autocorrect_location_header = False
-
     app = Flask(__name__)
     app.url_map.converters['i64'] = Int64Converter
-    app.response_class = CustomResponse
     app.config.from_object(Configuration)
     app.config.from_mapping(config_dict)
     db.init_app(app)
