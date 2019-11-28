@@ -85,7 +85,7 @@ transfers_api = Blueprint(
 
 
 contextedDebtorSchema = DebtorSchema(context={'endpoint': 'public.Debtor'})
-contextedDebtorPolicySchema = DebtorPolicySchema(context={'endpoint': 'public.DebtorPolicy'})
+contextedDebtorPolicySchema = DebtorPolicySchema(context={'endpoint': 'policy.DebtorPolicy'})
 contextedTransfersCollectionSchema = TransfersCollectionSchema(context={'endpoint': 'transfers.TransfersCollection'})
 contextedTransferSchema = TransferSchema(context={'endpoint': 'transfers.Transfer'})
 
