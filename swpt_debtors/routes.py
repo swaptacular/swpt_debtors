@@ -161,21 +161,21 @@ class TransfersCollection(MethodView):
                                   403: SPEC_TOO_MANY_TRANSFERS,
                                   404: SPEC_DEBTOR_DOES_NOT_EXIST,
                                   409: SPEC_CONFLICTING_TRANSFER})
-    def post(self, transfer_info, debtorId):
+    def post(self, transfer_request, debtorId):
         """Create a new credit-issuing transfer."""
 
         debtor = procedures.get_or_create_debtor(debtorId)
-        transfer_uuid = transfer_info['transfer_uuid']
+        transfer_uuid = transfer_request['transfer_uuid']
         location = url_for('transfers.Transfer', debtorId=debtorId, transferUuid=transfer_uuid)
-        recipient_url = urljoin(request.base_url, transfer_info['recipient'])
+        recipient_url = urljoin(request.base_url, transfer_request['recipient'])
         try:
-            # TODO: Write `transfer_info['recipient']` directly to the DB.
+            # TODO: Write `transfer_request['recipient']` directly to the DB.
             transfer = procedures.create_pending_transfer(
                 debtorId,
                 transfer_uuid,
                 endpoints.match_url('creditor', recipient_url)['creditorId'],
-                transfer_info['amount'],
-                transfer_info['transfer_info'],
+                transfer_request['amount'],
+                transfer_request['transfer_info'],
             )
         except procedures.TransferExistsError:
             return redirect(location, code=303)

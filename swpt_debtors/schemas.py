@@ -197,7 +197,7 @@ class TransferErrorSchema(Schema):
     )
 
 
-class TransferInfoSchema(Schema):
+class TransferDataSchema(Schema):
     recipient = fields.Method(
         'get_recipient_uri',
         required=True,
@@ -260,7 +260,7 @@ class TransfersCollectionSchema(ResourceSchema, CollectionSchema):
         return url_for(self.context['endpoint'], debtorId=obj.debtor_id)
 
 
-class TransferCreationRequestSchema(TransferInfoSchema):
+class TransferCreationRequestSchema(TransferDataSchema):
     class Meta:
         fields = [
             'transfer_uuid',
@@ -290,7 +290,7 @@ class TransferCreationRequestSchema(TransferInfoSchema):
     )
 
 
-class TransferSchema(ResourceSchema, TransferInfoSchema):
+class TransferSchema(ResourceSchema, TransferDataSchema):
     class Meta:
         dump_only = [
             'recipient',
