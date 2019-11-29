@@ -91,7 +91,7 @@ def _compare_pending_transfers(first: PendingTransfer, second: PendingTransfer) 
     return all([
         first.debtor_id == second.debtor_id,
         first.transfer_uuid == second.transfer_uuid,
-        first.recipient_creditor_id == second.recipient_creditor_id,
+        first.recipient_uri == second.recipient_uri,
         first.amount == second.amount,
         first.transfer_info == second.transfer_info,
     ])
@@ -124,19 +124,21 @@ def get_or_create_debtor(debtor_id: int) -> Debtor:
 def create_pending_transfer(debtor_id: int,
                             transfer_uuid: UUID,
                             recipient_creditor_id: int,
+                            recipient_uri: str,
                             amount: int,
                             transfer_info: dict) -> PendingTransfer:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
+    assert recipient_creditor_id is None or MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
 
     # Create a `PendingTransfer` record.
     new_pending_transfer = PendingTransfer(
         debtor_id=debtor_id,
         transfer_uuid=transfer_uuid,
-        recipient_creditor_id=recipient_creditor_id,
+        recipient_uri=recipient_uri,
         amount=amount,
         transfer_info=transfer_info,
+        finalized_at_ts=datetime.now(tz=timezone.utc) if recipient_creditor_id is None else None,
     )
     existing_pending_transfer = PendingTransfer.get_instance((debtor_id, transfer_uuid))
     if existing_pending_transfer:
@@ -147,29 +149,30 @@ def create_pending_transfer(debtor_id: int,
     with db.retry_on_integrity_error():
         db.session.add(new_pending_transfer)
 
-    # Create an `InitiatedTransfer` record.
-    initiated_transfer = InitiatedTransfer(
-        debtor_id=debtor_id,
-        transfer_uuid=transfer_uuid,
-        recipient_creditor_id=recipient_creditor_id,
-        amount=amount,
-        transfer_info=transfer_info,
-    )
-    db.session.add(initiated_transfer)
-    try:
-        db.session.flush()
-    except IntegrityError:
-        raise TransfersConflictError
+    if recipient_creditor_id is not None:
+        # Create an `InitiatedTransfer` record.
+        initiated_transfer = InitiatedTransfer(
+            debtor_id=debtor_id,
+            transfer_uuid=transfer_uuid,
+            recipient_creditor_id=recipient_creditor_id,
+            amount=amount,
+            transfer_info=transfer_info,
+        )
+        db.session.add(initiated_transfer)
+        try:
+            db.session.flush()
+        except IntegrityError:
+            raise TransfersConflictError
 
-    # Send a `prepare_transfer` message.
-    db.session.add(PrepareTransferSignal(
-        debtor_id=debtor_id,
-        coordinator_request_id=initiated_transfer.issuing_coordinator_request_id,
-        min_amount=amount,
-        max_amount=amount,
-        sender_creditor_id=ROOT_CREDITOR_ID,
-        recipient_creditor_id=recipient_creditor_id,
-    ))
+        # Send a `prepare_transfer` message.
+        db.session.add(PrepareTransferSignal(
+            debtor_id=debtor_id,
+            coordinator_request_id=initiated_transfer.issuing_coordinator_request_id,
+            min_amount=amount,
+            max_amount=amount,
+            sender_creditor_id=ROOT_CREDITOR_ID,
+            recipient_creditor_id=recipient_creditor_id,
+        ))
 
     return new_pending_transfer
 

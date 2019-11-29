@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 7e53e36aec2a
+Revision ID: 75d8041c30e8
 Revises: 8d09bea9c7d1
-Create Date: 2019-11-23 01:16:47.767569
+Create Date: 2019-11-29 22:38:51.063554
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '7e53e36aec2a'
+revision = '75d8041c30e8'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -51,7 +51,7 @@ def upgrade():
     sa.Column('deactivated_at_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet. Management operations (like policy updates and credit issuing) are not allowed on deactivated debtors. Once deactivated, a debtor stays deactivated until it is deleted. Important note: All debtors are created with their "is active" status bit set to `0`, and it gets set to `1` only after the first management operation has been performed.'),
     sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
     sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
-    sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The desired annual rate (in percents) at which the interest should accumulate on creditors' accounts. The actual interest rate could be different if interest rate limits are enforced."),
+    sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The annual rate (in percents) at which the debtor wants the interest to accumulate on creditors' accounts. The actual interest rate may be different if interest rate limits are enforced."),
     sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` field. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `null` is the same as an empty array.'),
     sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.Column('irll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `null` is the same as an empty array. If the array contains values bigger that 100.0, they are treated as equal to 100.0.'),
@@ -93,7 +93,7 @@ def upgrade():
     op.create_table('pending_transfer',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False, comment='The recipient of the transfer.'),
+    sa.Column('recipient_uri', sa.String(), nullable=False, comment="The recipient's URI."),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
     sa.Column('transfer_info', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='Notes from the debtor. Can be any object that the debtor wants the recipient to see.'),
     sa.Column('initiated_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was initiated.'),

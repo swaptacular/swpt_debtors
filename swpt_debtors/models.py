@@ -292,10 +292,10 @@ class Debtor(db.Model):
 class PendingTransfer(db.Model):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
-    recipient_creditor_id = db.Column(
-        db.BigInteger,
+    recipient_uri = db.Column(
+        db.String,
         nullable=False,
-        comment='The recipient of the transfer.',
+        comment="The recipient's URI.",
     )
     amount = db.Column(
         db.BigInteger,

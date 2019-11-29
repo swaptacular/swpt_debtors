@@ -282,11 +282,10 @@ class TransferSchema(Schema):
         description="The sender's URI.",
         example='https://example.com/creditors/0',
     )
-    recipientUri = fields.Method(
-        lambda obj: endpoints.build_url('creditor', creditorId=obj.recipient_creditor_id),
+    recipient_uri = fields.String(
         required=True,
         dump_only=True,
-        type='string',
+        data_key='recipientUri',
         format="uri",
         description="The recipient's URI.",
         example='https://example.com/creditors/1111',

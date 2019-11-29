@@ -171,13 +171,17 @@ class TransfersCollection(MethodView):
         debtor = procedures.get_or_create_debtor(debtorId)
         transfer_uuid = transfer_request['transfer_uuid']
         location = url_for('transfers.Transfer', _external=True, debtorId=debtorId, transferUuid=transfer_uuid)
-        recipient_url = urljoin(request.base_url, transfer_request['recipient'])
+        recipient_uri = urljoin(request.base_url, transfer_request['recipient_uri'])
         try:
-            # TODO: Write `transfer_request['recipient']` directly to the DB.
+            try:
+                recipient_creditor_id = endpoints.match_url('creditor', recipient_uri)['creditorId']
+            except endpoints.MatchError:
+                recipient_creditor_id = None
             transfer = procedures.create_pending_transfer(
                 debtorId,
                 transfer_uuid,
-                endpoints.match_url('creditor', recipient_url)['creditorId'],
+                recipient_creditor_id,
+                recipient_uri,
                 transfer_request['amount'],
                 transfer_request['transfer_info'],
             )
