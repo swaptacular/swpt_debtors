@@ -1,32 +1,9 @@
 from collections import abc
 from marshmallow import Schema, fields, validate, pre_dump, missing
 from flask import url_for
-from .models import Debtor, PendingTransfer, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64
+from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
+    Debtor, PendingTransfer
 from swpt_lib import endpoints
-
-
-class ResourceSchema(Schema):
-    id = fields.Method(
-        'get_uri',
-        required=True,
-        type='string',
-        format='uri-reference',
-        description="The URI of this object.",
-        example='https://example.com/resources/123',
-    )
-    type = fields.Method(
-        'get_type',
-        required=True,
-        type='string',
-        description='The type of this object.',
-        example='Resource',
-    )
-
-    def get_type(self, obj):  # pragma: no cover
-        raise NotImplementedError
-
-    def get_uri(self, obj):  # pragma: no cover
-        raise NotImplementedError
 
 
 class CollectionSchema(Schema):
@@ -90,7 +67,22 @@ class DebtorCreationRequestSchema(Schema):
     )
 
 
-class DebtorSchema(ResourceSchema):
+class DebtorSchema(Schema):
+    uri = fields.Method(
+        'get_uri',
+        required=True,
+        type='string',
+        format='uri',
+        description="The URI of this object.",
+        example='https://example.com/debtors/1',
+    )
+    type = fields.Constant(
+        'Debtor',
+        required=True,
+        dump_only=True,
+        type='string',
+        description='The type of this object.',
+    )
     created_at_date = fields.Date(
         required=True,
         dump_only=True,
@@ -144,19 +136,48 @@ class DebtorSchema(ResourceSchema):
         description="Whether the debtor is currently active or not."
     )
 
-    def get_type(self, obj):
-        return 'Debtor'
-
     def get_uri(self, obj):
-        return url_for(self.context['endpoint'], debtorId=obj.debtor_id)
+        return url_for(self.context['endpoint'], _external=True, debtorId=obj.debtor_id)
 
 
 class DebtorPolicySchema(DebtorSchema):
-    def get_type(self, obj):
-        return 'DebtorPolicy'
+    class Meta:
+        fields = [
+            'uri',
+            'type',
+            'debtorUri',
+            'balance_lower_limits',
+            'interest_rate_lower_limits',
+            'interest_rate_target',
+            'interest_rate',
+        ]
+
+    uri = fields.Method(
+        'get_uri',
+        required=True,
+        type='string',
+        format='uri',
+        description="The URI of this object.",
+        example='https://example.com/debtors/1/policy',
+    )
+    type = fields.Constant(
+        'DebtorPolicy',
+        required=True,
+        dump_only=True,
+        type='string',
+        description='The type of this object.',
+    )
+    debtorUri = fields.Function(
+        lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),
+        required=True,
+        type='string',
+        format="uri",
+        description="The debtor's URI.",
+        example='https://example.com/debtors/1',
+    )
 
     def get_uri(self, obj):
-        return url_for(self.context['endpoint'], debtorId=obj.debtor_id)
+        return url_for(self.context['endpoint'], _external=True, debtorId=obj.debtor_id)
 
 
 class DebtorPolicyUpdateRequestSchema(Schema):
@@ -197,14 +218,20 @@ class TransferErrorSchema(Schema):
     )
 
 
-class TransferDataSchema(Schema):
-    recipient = fields.Method(
-        'get_recipient_uri',
+class TransferCreationRequestSchema(Schema):
+    transfer_uuid = fields.UUID(
         required=True,
-        type='string',
-        format="uri-reference",
+        data_key='transferUuid',
+        description="A client-generated UUID for the transfer.",
+        example='123e4567-e89b-12d3-a456-426655440000',
+    )
+    recipient_uri = fields.Url(
+        required=True,
+        schemes=[endpoints.get_url_scheme()],
+        data_key='recipientUri',
+        format='uri',
         description="The recipient's URI.",
-        example='/creditors/1111',
+        example='https://example.com/creditors/1111',
     )
     amount = fields.Integer(
         required=True,
@@ -214,17 +241,78 @@ class TransferDataSchema(Schema):
         example=1000,
     )
     transfer_info = fields.Dict(
+        missing={},
+        data_key='transferInfo',
+        description=PendingTransfer.transfer_info.comment,
+    )
+
+
+class TransferSchema(Schema):
+    uri = fields.Method(
+        'get_uri',
         required=True,
+        type='string',
+        format='uri',
+        description="The URI of this object.",
+        example='https://example.com/debtors/1/transfers/123e4567-e89b-12d3-a456-426655440000',
+    )
+    type = fields.Constant(
+        'Transfer',
+        required=True,
+        dump_only=True,
+        type='string',
+        description='The type of this object.',
+    )
+    debtorUri = fields.Function(
+        lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),
+        required=True,
+        dump_only=True,
+        type='string',
+        format="uri",
+        description="The debtor's URI.",
+        example='https://example.com/debtors/1',
+    )
+    senderUri = fields.Function(
+        lambda obj: endpoints.build_url('creditor', creditorId=ROOT_CREDITOR_ID),
+        required=True,
+        dump_only=True,
+        type='string',
+        format="uri",
+        description="The sender's URI.",
+        example='https://example.com/creditors/0',
+    )
+    recipientUri = fields.Method(
+        lambda obj: endpoints.build_url('creditor', creditorId=obj.recipient_creditor_id),
+        required=True,
+        dump_only=True,
+        type='string',
+        format="uri",
+        description="The recipient's URI.",
+        example='https://example.com/creditors/1111',
+    )
+    amount = fields.Integer(
+        required=True,
+        dump_only=True,
+        validate=validate.Range(min=1, max=MAX_INT64),
+        format="int64",
+        description=PendingTransfer.amount.comment,
+        example=1000,
+    )
+    transfer_info = fields.Dict(
+        required=True,
+        dump_only=True,
         data_key='transferInfo',
         description=PendingTransfer.transfer_info.comment,
     )
     initiated_at_ts = fields.DateTime(
         required=True,
+        dump_only=True,
         data_key='initiatedAt',
         description=PendingTransfer.initiated_at_ts.comment,
     )
     is_finalized = fields.Boolean(
         required=True,
+        dump_only=True,
         data_key='isFinalized',
         description='Whether the transfer has been finalized or not.',
         example=True,
@@ -238,73 +326,32 @@ class TransferDataSchema(Schema):
     )
     is_successful = fields.Boolean(
         required=True,
+        dump_only=True,
         data_key='isSuccessful',
         description=PendingTransfer.is_successful.comment,
         example=False,
     )
     errors = fields.Nested(
         TransferErrorSchema(many=True),
+        dump_only=True,
         required=True,
         description='Errors that occurred during the transfer.'
     )
 
-    def get_recipient_uri(self, obj):
-        return endpoints.build_url('creditor', creditorId=obj.recipient_creditor_id)
+    def get_uri(self, obj):
+        return url_for(self.context['endpoint'], _external=True, debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
 
 
-class TransfersCollectionSchema(ResourceSchema, CollectionSchema):
+class TransfersCollectionSchema(CollectionSchema):
     def get_type(self, obj):
         return 'TransfersCollection'
 
     def get_uri(self, obj):
-        return url_for(self.context['endpoint'], debtorId=obj.debtor_id)
+        return url_for(self.context['endpoint'], _external=True, debtorId=obj['debtor_id'])
 
-
-class TransferCreationRequestSchema(TransferDataSchema):
-    class Meta:
-        fields = [
-            'transfer_uuid',
-            'recipient',
-            'amount',
-            'transfer_info',
-        ]
-
-    transfer_uuid = fields.UUID(
-        required=True,
-        data_key='transferUuid',
-        description="A client-generated UUID for the transfer.",
-        example='123e4567-e89b-12d3-a456-426655440000',
-    )
-    recipient = fields.Url(
-        required=True,
-        relative=True,
-        schemes=[endpoints.get_url_scheme()],
-        format='uri-reference',
-        description="The URI of the recipient of the transfer. Can be relative.",
-        example='/creditors/1111',
-    )
-    transfer_info = fields.Dict(
-        missing={},
-        data_key='transferInfo',
-        description=PendingTransfer.transfer_info.comment,
-    )
-
-
-class TransferSchema(ResourceSchema, TransferDataSchema):
-    class Meta:
-        dump_only = [
-            'recipient',
-            'amount',
-            'transfer_info',
-            'initiated_at_ts',
-            'isFinalized',
-            'finalizedAt',
-            'is_successful',
-            'errors',
-        ]
-
-    def get_type(self, obj):
-        return 'Transfer'
-
-    def get_uri(self, obj):
-        return url_for(self.context['endpoint'], debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
+    @pre_dump
+    def _to_dict(self, obj, many):
+        assert not many
+        debtor_id, members = obj
+        assert isinstance(members, abc.Iterable)
+        return {'members': members, 'debtor_id': debtor_id}

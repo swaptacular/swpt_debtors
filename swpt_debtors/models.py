@@ -17,6 +17,7 @@ MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
 INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
+ROOT_CREDITOR_ID = 0
 
 
 def increment_seqnum(n):
@@ -207,8 +208,8 @@ class Debtor(db.Model):
         db.REAL,
         nullable=False,
         default=0.0,
-        comment="The desired annual rate (in percents) at which the interest should "
-                "accumulate on creditors' accounts. The actual interest rate could be "
+        comment="The annual rate (in percents) at which the debtor wants the interest "
+                "to accumulate on creditors' accounts. The actual interest rate may be "
                 "different if interest rate limits are enforced.",
     )
 

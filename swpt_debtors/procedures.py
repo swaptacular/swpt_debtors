@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from .extensions import db
 from .models import Debtor, Account, ChangeInterestRateSignal, LowerLimitSequence, PendingTransfer, \
     InitiatedTransfer, PrepareTransferSignal, increment_seqnum, \
-    MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64
+    MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -13,11 +13,6 @@ atomic: Callable[[T], T] = db.atomic
 TD_ZERO = timedelta(seconds=0)
 TD_SECOND = timedelta(seconds=1)
 TD_MINUS_SECOND = -TD_SECOND
-
-# The account `(debtor_id, ROOT_CREDITOR_ID)` is special. This is the
-# debtor's account. It issuers all the money. Also, all interest and
-# demurrage payments come from/to this account.
-ROOT_CREDITOR_ID = 0
 
 
 class DebtorExistsError(Exception):

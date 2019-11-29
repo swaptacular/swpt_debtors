@@ -103,7 +103,7 @@ class DebtorCreator(MethodView):
             debtor = procedures.create_new_debtor(debtor_id)
         except procedures.DebtorExistsError:
             abort(409)
-        return debtor, {'Location': url_for('public.Debtor', debtorId=debtor_id)}
+        return debtor, {'Location': endpoints.build_url('debtor', debtorId=debtor_id)}
 
 
 @public_api.route('/<i64:debtorId>', parameters=[SPEC_DEBTOR_ID], endpoint='Debtor')
@@ -153,7 +153,7 @@ class TransfersCollection(MethodView):
     def get(self, debtorId):
         """Return all credit-issuing transfers for a given debtor."""
 
-        return range(10)
+        return debtorId, [url_for('transfers.Transfer', debtorId=debtorId, transferUuid=uuid) for uuid in range(10)]
 
     @transfers_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(contextedTransferSchema, code=201, headers=SPEC_LOCATION_HEADER)
@@ -166,7 +166,7 @@ class TransfersCollection(MethodView):
 
         debtor = procedures.get_or_create_debtor(debtorId)
         transfer_uuid = transfer_request['transfer_uuid']
-        location = url_for('transfers.Transfer', debtorId=debtorId, transferUuid=transfer_uuid)
+        location = url_for('transfers.Transfer', _external=True, debtorId=debtorId, transferUuid=transfer_uuid)
         recipient_url = urljoin(request.base_url, transfer_request['recipient'])
         try:
             # TODO: Write `transfer_request['recipient']` directly to the DB.
