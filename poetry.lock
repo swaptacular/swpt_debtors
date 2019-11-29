@@ -23,7 +23,6 @@ version = "3.1.0"
 [[package]]
 category = "main"
 description = "An unobtrusive argparse wrapper with natural syntax"
-marker = "extra == \"watch\""
 name = "argh"
 optional = false
 python-versions = "*"
@@ -64,7 +63,7 @@ version = "0.12.17"
 [[package]]
 category = "main"
 description = "Foreign Function Interface for Python calling C code."
-marker = "sys_platform == \"win32\" and platform_python_implementation == \"CPython\" and extra == \"watch\""
+marker = "sys_platform == \"win32\" and platform_python_implementation == \"CPython\""
 name = "cffi"
 optional = false
 python-versions = "*"
@@ -116,6 +115,7 @@ watchdog_gevent = "0.1"
 reference = "d45e9f7daee5d95c5789ae4ce95c4a486f040bb9"
 type = "git"
 url = "https://github.com/epandurski/dramatiq.git"
+
 [[package]]
 category = "dev"
 description = "Discover and load entry points from installed packages."
@@ -227,7 +227,6 @@ SQLAlchemy = ">=0.8.0"
 [[package]]
 category = "main"
 description = "Coroutine-based network library"
-marker = "extra == \"watch\""
 name = "gevent"
 optional = false
 python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*"
@@ -240,7 +239,7 @@ greenlet = ">=0.4.14"
 [[package]]
 category = "main"
 description = "Lightweight in-process concurrent programming"
-marker = "extra == \"watch\" and platform_python_implementation == \"CPython\""
+marker = "platform_python_implementation == \"CPython\""
 name = "greenlet"
 optional = false
 python-versions = "*"
@@ -388,7 +387,6 @@ six = "*"
 [[package]]
 category = "main"
 description = "File system general utilities"
-marker = "extra == \"watch\""
 name = "pathtools"
 optional = false
 python-versions = "*"
@@ -397,7 +395,6 @@ version = "0.1.2"
 [[package]]
 category = "main"
 description = "Pika Python AMQP Client Library"
-marker = "extra == \"rabbitmq\""
 name = "pika"
 optional = false
 python-versions = "*"
@@ -463,7 +460,7 @@ version = "2.5.0"
 [[package]]
 category = "main"
 description = "C parser in Python"
-marker = "sys_platform == \"win32\" and platform_python_implementation == \"CPython\" and extra == \"watch\""
+marker = "sys_platform == \"win32\" and platform_python_implementation == \"CPython\""
 name = "pycparser"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -604,7 +601,6 @@ version = "0.1.11"
 [[package]]
 category = "main"
 description = "YAML parser and emitter for Python"
-marker = "extra == \"watch\""
 name = "pyyaml"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -638,7 +634,7 @@ version = "0.1.0"
 flask = "^1.1"
 
 [package.source]
-reference = "f156ee76eda11f345d27585e97b7aa5224adb874"
+reference = "196987a46a744832776f44d75240a5b0dfa7d349"
 type = "git"
 url = "https://github.com/epandurski/swpt_lib.git"
 [[package]]
@@ -668,7 +664,6 @@ version = "2.1.0"
 [[package]]
 category = "main"
 description = "Filesystem events monitoring"
-marker = "extra == \"watch\""
 name = "watchdog"
 optional = false
 python-versions = "*"
@@ -682,7 +677,6 @@ pathtools = ">=0.1.1"
 [[package]]
 category = "main"
 description = "A gevent-based observer for watchdog."
-marker = "extra == \"watch\""
 name = "watchdog-gevent"
 optional = false
 python-versions = "*"

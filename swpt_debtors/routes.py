@@ -3,7 +3,8 @@ from flask import redirect, url_for, request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib import endpoints
-from .models import PendingTransfer
+from swpt_lib.utils import u64_to_i64
+from .models import PendingTransfer, MAX_UINT64
 from .schemas import DebtorCreationRequestSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
     DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
 from . import procedures
@@ -15,6 +16,9 @@ SPEC_DEBTOR_ID = {
     'description': "The debtor's ID",
     'schema': {
         'type': 'integer',
+        'format': 'uint64',
+        'minimum': 0,
+        'maximum': MAX_UINT64,
     },
 }
 SPEC_TRANSFER_UUID = {
@@ -98,7 +102,7 @@ class DebtorCreator(MethodView):
     def post(self, debtor_info):
         """Try to create a new debtor."""
 
-        debtor_id = debtor_info['debtor_id']
+        debtor_id = u64_to_i64(debtor_info['debtor_id'])
         try:
             debtor = procedures.create_new_debtor(debtor_id)
         except procedures.DebtorExistsError:

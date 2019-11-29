@@ -1,7 +1,7 @@
 from collections import abc
 from marshmallow import Schema, fields, validate, pre_dump, missing
 from flask import url_for
-from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
+from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
     Debtor, PendingTransfer
 from swpt_lib import endpoints
 
@@ -60,8 +60,9 @@ class BalanceLowerLimitSchema(Schema):
 class DebtorCreationRequestSchema(Schema):
     debtor_id = fields.Int(
         required=True,
+        validate=validate.Range(min=0, max=MAX_UINT64),
         data_key='debtorId',
-        format="int64",
+        format='uint64',
         description="The debtor's ID",
         example=1,
     )
