@@ -1,3 +1,4 @@
+from typing import NamedTuple, List
 from urllib.parse import urljoin
 from flask import redirect, url_for, request
 from flask.views import MethodView
@@ -6,7 +7,7 @@ from swpt_lib import endpoints
 from swpt_lib.utils import u64_to_i64
 from .models import InitiatedTransfer, MAX_UINT64
 from .schemas import DebtorCreationRequestSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
-    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
+    DebtorPolicySchema, TransferSchema, InitiatedIssuingTransfersSchema, TransferCreationRequestSchema
 from . import procedures
 
 SPEC_DEBTOR_ID = {
@@ -90,9 +91,14 @@ transfers_api = Blueprint(
 context = {
     'Debtor': 'public.Debtor',
     'DebtorPolicy': 'policy.DebtorPolicy',
-    'InitiatedTransfers': 'transfers.TransfersCollection',
+    'InitiatedIssuingTransfers': 'transfers.InitiatedIssuingTransfers',
     'Transfer': 'transfers.Transfer'
 }
+
+
+class TransfersCollection(NamedTuple):
+    debtor_id: int
+    transfers: List[str]
 
 
 @admin_api.route('')
@@ -152,13 +158,13 @@ class DebtorPolicy(MethodView):
 
 
 @transfers_api.route('/<i64:debtorId>/transfers', parameters=[SPEC_DEBTOR_ID])
-class TransfersCollection(MethodView):
-    @transfers_api.response(TransfersCollectionSchema(context=context))
+class InitiatedIssuingTransfers(MethodView):
+    @transfers_api.response(InitiatedIssuingTransfersSchema(context=context))
     @transfers_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
-        """Return all credit-issuing transfers for a given debtor."""
+        """Return the initiated credit-issuing transfers for a given debtor."""
 
-        return debtorId, [url_for('transfers.Transfer', debtorId=debtorId, transferUuid=uuid) for uuid in range(10)]
+        return TransfersCollection(debtor_id=debtorId, transfers=list(range(10)))
 
     @transfers_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)

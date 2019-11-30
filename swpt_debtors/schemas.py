@@ -1,33 +1,8 @@
-from collections import abc
-from marshmallow import Schema, fields, validate, pre_dump, missing
+from marshmallow import Schema, fields, validate, missing
 from flask import url_for
 from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
     Debtor, InitiatedTransfer
 from swpt_lib import endpoints
-
-
-class CollectionSchema(Schema):
-    members = fields.List(
-        fields.Str(format='uri-reference'),
-        required=True,
-        dump_only=True,
-        description='A list of URIs for the contained items.',
-        example=['111111', '222222', '333333'],
-    )
-    totalItems = fields.Function(
-        lambda obj: len(obj['members']),
-        required=True,
-        type='number',
-        format='int32',
-        description='The total number of items in the collection.',
-        example=3,
-    )
-
-    @pre_dump
-    def _to_dict(self, obj, many):
-        assert not many
-        assert isinstance(obj, abc.Iterable)
-        return {'members': obj}
 
 
 class InterestRateLowerLimitSchema(Schema):
@@ -100,8 +75,8 @@ class DebtorSchema(Schema):
         description="The endpoint for changing debtor's policy. Can be accessed only by the debtor.",
         example='https://example.com/debtors/1/policy',
     )
-    initiatedTransfersUri = fields.Method(
-        'get_initiated_transfers_uri',
+    initiatedIssuingTransfersUri = fields.Method(
+        'get_initiated_issuing_transfers_uri',
         required=True,
         type='string',
         format="uri",
@@ -162,13 +137,13 @@ class DebtorSchema(Schema):
     )
 
     def get_uri(self, obj):
-        return endpoints.build_url('debtor', debtorId=obj.debtor_id)
+        return url_for(self.context['Debtor'], _external=True, debtorId=obj.debtor_id)
 
     def get_debtor_policy_uri(self, obj):
         return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
 
-    def get_initiated_transfers_uri(self, obj):
-        return url_for(self.context['InitiatedTransfers'], _external=True, debtorId=obj.debtor_id)
+    def get_initiated_issuing_transfers_uri(self, obj):
+        return url_for(self.context['InitiatedIssuingTransfers'], _external=True, debtorId=obj.debtor_id)
 
 
 class DebtorPolicySchema(DebtorSchema):
@@ -370,16 +345,37 @@ class TransferSchema(Schema):
         return url_for(self.context['Transfer'], _external=True, debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
 
 
-class TransfersCollectionSchema(CollectionSchema):
-    def get_type(self, obj):
-        return 'TransfersCollection'
+class InitiatedIssuingTransfersSchema(Schema):
+    uri = fields.Method(
+        'get_uri',
+        required=True,
+        type='string',
+        format='uri',
+        description="The URI of this object.",
+        example='https://example.com/debtors/1/transfers',
+    )
+    type = fields.Constant(
+        'InitiatedIssuingTransfers',
+        required=True,
+        dump_only=True,
+        type='string',
+        description='The type of this object.',
+    )
+    debtorUri = fields.Function(
+        lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),
+        required=True,
+        type='string',
+        format="uri",
+        description="The debtor's URI.",
+        example='https://example.com/debtors/1',
+    )
+    transfers = fields.List(
+        fields.Str(format='uri-reference'),
+        required=True,
+        dump_only=True,
+        description='A list of relative URIs for the initiated issuing transfers.',
+        example=['123e4567-e89b-12d3-a456-426655440000', '183ea7c7-7a96-4ed7-a50a-a2b069687d23'],
+    )
 
     def get_uri(self, obj):
-        return url_for(self.context['InitiatedTransfers'], _external=True, debtorId=obj['debtor_id'])
-
-    @pre_dump
-    def _to_dict(self, obj, many):
-        assert not many
-        debtor_id, members = obj
-        assert isinstance(members, abc.Iterable)
-        return {'members': members, 'debtor_id': debtor_id}
+        return url_for(self.context['InitiatedIssuingTransfers'], _external=True, debtorId=obj.debtor_id)
