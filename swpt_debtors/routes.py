@@ -4,7 +4,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib import endpoints
 from swpt_lib.utils import u64_to_i64
-from .models import PendingTransfer, MAX_UINT64
+from .models import InitiatedTransfer, MAX_UINT64
 from .schemas import DebtorCreationRequestSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
     DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
 from . import procedures
@@ -55,7 +55,7 @@ SPEC_CONFLICTING_TRANSFER = {
     'description': 'A different transfer entry with the same UUID already exists.',
 }
 SPEC_TOO_MANY_TRANSFERS = {
-    'description': 'Too many pending transfers.',
+    'description': 'Too many initiated transfers.',
 }
 SPEC_DUPLICATED_TRANSFER = {
     'description': 'The same transfer entry already exists.',
@@ -178,7 +178,7 @@ class TransfersCollection(MethodView):
                 recipient_creditor_id = endpoints.match_url('creditor', recipient_uri)['creditorId']
             except endpoints.MatchError:
                 recipient_creditor_id = None
-            transfer = procedures.create_pending_transfer(
+            transfer = procedures.initiate_transfer(
                 debtorId,
                 transfer_uuid,
                 recipient_creditor_id,
@@ -202,7 +202,7 @@ class Transfer(MethodView):
 
         class Transfer:
             pass
-        transfer = PendingTransfer.get_instance((debtorId, transferUuid))
+        transfer = InitiatedTransfer.get_instance((debtorId, transferUuid))
         if transfer:
             return transfer
         abort(404)

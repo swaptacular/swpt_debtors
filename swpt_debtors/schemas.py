@@ -2,7 +2,7 @@ from collections import abc
 from marshmallow import Schema, fields, validate, pre_dump, missing
 from flask import url_for
 from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
-    Debtor, PendingTransfer
+    Debtor, InitiatedTransfer
 from swpt_lib import endpoints
 
 
@@ -268,13 +268,13 @@ class TransferCreationRequestSchema(Schema):
         required=True,
         validate=validate.Range(min=1, max=MAX_INT64),
         format="int64",
-        description=PendingTransfer.amount.comment,
+        description=InitiatedTransfer.amount.comment,
         example=1000,
     )
     transfer_info = fields.Dict(
         missing={},
         data_key='transferInfo',
-        description=PendingTransfer.transfer_info.comment,
+        description=InitiatedTransfer.transfer_info.comment,
     )
 
 
@@ -323,20 +323,20 @@ class TransferSchema(Schema):
         dump_only=True,
         validate=validate.Range(min=1, max=MAX_INT64),
         format="int64",
-        description=PendingTransfer.amount.comment,
+        description=InitiatedTransfer.amount.comment,
         example=1000,
     )
     transfer_info = fields.Dict(
         required=True,
         dump_only=True,
         data_key='transferInfo',
-        description=PendingTransfer.transfer_info.comment,
+        description=InitiatedTransfer.transfer_info.comment,
     )
     initiated_at_ts = fields.DateTime(
         required=True,
         dump_only=True,
         data_key='initiatedAt',
-        description=PendingTransfer.initiated_at_ts.comment,
+        description=InitiatedTransfer.initiated_at_ts.comment,
     )
     is_finalized = fields.Boolean(
         required=True,
@@ -356,7 +356,7 @@ class TransferSchema(Schema):
         required=True,
         dump_only=True,
         data_key='isSuccessful',
-        description=PendingTransfer.is_successful.comment,
+        description=InitiatedTransfer.is_successful.comment,
         example=False,
     )
     errors = fields.Nested(

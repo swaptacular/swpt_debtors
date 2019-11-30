@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 75d8041c30e8
+Revision ID: ba83fa916846
 Revises: 8d09bea9c7d1
-Create Date: 2019-11-29 22:38:51.063554
+Create Date: 2019-11-30 16:16:19.128313
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '75d8041c30e8'
+revision = 'ba83fa916846'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -65,20 +65,6 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id'),
     comment="Represents debtor's principal information."
     )
-    op.create_table('initiated_transfer',
-    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
-    sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False, comment='The recipient of the transfer.'),
-    sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
-    sa.Column('transfer_info', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='Notes from the debtor. Can be any object that the debtor wants the recipient to see.'),
-    sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),
-    sa.Column('issuing_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('issuing_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
-    sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
-    sa.CheckConstraint('amount > 0'),
-    sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
-    comment='Represents a recently initiated issuing transfer from a debtor. Note that finalized issuing transfers (failed or successful) must not be deleted right away. Instead, after they have been finalized, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
-    )
-    op.create_index('idx_issuing_coordinator_request_id', 'initiated_transfer', ['debtor_id', 'issuing_coordinator_request_id'], unique=True)
     op.create_table('prepare_transfer_signal',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
@@ -90,7 +76,21 @@ def upgrade():
     sa.CheckConstraint('min_amount > 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'coordinator_request_id')
     )
-    op.create_table('pending_transfer',
+    op.create_table('running_transfer',
+    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
+    sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False, comment='The recipient of the transfer.'),
+    sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
+    sa.Column('transfer_info', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='Notes from the debtor. Can be any object that the debtor wants the recipient to see.'),
+    sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),
+    sa.Column('issuing_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('issuing_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
+    sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
+    sa.CheckConstraint('amount > 0'),
+    sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
+    comment='Represents a running issuing transfer. Important note: The records for the finalized issuing transfers (failed or successful) must not be deleted right away. Instead, after they have been finalized, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
+    )
+    op.create_index('idx_issuing_coordinator_request_id', 'running_transfer', ['debtor_id', 'issuing_coordinator_request_id'], unique=True)
+    op.create_table('initiated_transfer',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
     sa.Column('recipient_uri', sa.String(), nullable=False, comment="The recipient's URI."),
@@ -103,17 +103,17 @@ def upgrade():
     sa.CheckConstraint('finalized_at_ts IS NOT NULL OR is_successful = false'),
     sa.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
-    comment='Represents a pending issuing transfer. A new row is inserted when a debtor creates a new issuing transfer. The row is deleted when the debtor acknowledges (purges) the transfer.'
+    comment='Represents an initiated issuing transfer. A new row is inserted when a debtor creates a new issuing transfer. The row is deleted when the debtor acknowledges (purges) the transfer.'
     )
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table('pending_transfer')
-    op.drop_table('prepare_transfer_signal')
-    op.drop_index('idx_issuing_coordinator_request_id', table_name='initiated_transfer')
     op.drop_table('initiated_transfer')
+    op.drop_index('idx_issuing_coordinator_request_id', table_name='running_transfer')
+    op.drop_table('running_transfer')
+    op.drop_table('prepare_transfer_signal')
     op.drop_table('debtor')
     op.drop_table('change_interest_rate_signal')
     op.drop_table('account')

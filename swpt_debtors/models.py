@@ -289,7 +289,7 @@ class Debtor(db.Model):
         return bool(self.status & Debtor.STATUS_IS_ACTIVE_FLAG)
 
 
-class PendingTransfer(db.Model):
+class InitiatedTransfer(db.Model):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
     recipient_uri = db.Column(
@@ -330,15 +330,15 @@ class PendingTransfer(db.Model):
         db.CheckConstraint(amount > 0),
         db.CheckConstraint(or_(finalized_at_ts != null(), is_successful == false())),
         {
-            'comment': 'Represents a pending issuing transfer. A new row is inserted when '
-                       'a debtor creates a new issuing transfer. The row is deleted when '
-                       'the debtor acknowledges (purges) the transfer.',
+            'comment': 'Represents an initiated issuing transfer. A new row is inserted when '
+                       'a debtor creates a new issuing transfer. The row is deleted when the '
+                       'debtor acknowledges (purges) the transfer.',
         }
     )
 
     debtor = db.relationship(
         'Debtor',
-        backref=db.backref('pending_transfers', cascade="all, delete-orphan", passive_deletes=True),
+        backref=db.backref('initiated_transfers', cascade="all, delete-orphan", passive_deletes=True),
     )
 
     @property
@@ -346,7 +346,7 @@ class PendingTransfer(db.Model):
         return bool(self.finalized_at_ts)
 
 
-class InitiatedTransfer(db.Model):
+class RunningTransfer(db.Model):
     _icr_seq = db.Sequence('issuing_coordinator_request_id_seq', metadata=db.Model.metadata)
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
@@ -395,11 +395,11 @@ class InitiatedTransfer(db.Model):
         ),
         db.CheckConstraint(amount > 0),
         {
-            'comment': 'Represents a recently initiated issuing transfer from a debtor. '
-                       'Note that finalized issuing transfers (failed or successful) must not be '
-                       'deleted right away. Instead, after they have been finalized, they should '
-                       'stay in the database for at least few days. This is necessary in order '
-                       'to prevent problems caused by message re-delivery.',
+            'comment': 'Represents a running issuing transfer. Important note: The records for the '
+                       'finalized issuing transfers (failed or successful) must not be deleted '
+                       'right away. Instead, after they have been finalized, they should stay in '
+                       'the database for at least few days. This is necessary in order to prevent '
+                       'problems caused by message re-delivery.',
         }
     )
 
