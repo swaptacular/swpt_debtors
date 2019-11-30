@@ -325,6 +325,18 @@ class InitiatedTransfer(db.Model):
         default=False,
         comment='Whether the transfer has been successful or not.',
     )
+    error_code = db.Column(
+        db.String,
+        nullable=False,
+        default='',
+        comment="The error code, in case the transfer has not been successful.",
+    )
+    error_message = db.Column(
+        db.String,
+        nullable=False,
+        default='',
+        comment="The error message, in case the transfer has not been successful.",
+    )
     __table_args__ = (
         db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
         db.CheckConstraint(amount > 0),
@@ -344,6 +356,12 @@ class InitiatedTransfer(db.Model):
     @property
     def is_finalized(self):
         return bool(self.finalized_at_ts)
+
+    @property
+    def errors(self):
+        if self.is_finalized and not self.is_successful and self.error_code:
+            return [{'error_code': self.error_code, 'message': self.error_message}]
+        return []
 
 
 class RunningTransfer(db.Model):

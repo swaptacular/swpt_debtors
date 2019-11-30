@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: ba83fa916846
+Revision ID: 350c01931f2e
 Revises: 8d09bea9c7d1
-Create Date: 2019-11-30 16:16:19.128313
+Create Date: 2019-11-30 20:14:26.858152
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'ba83fa916846'
+revision = '350c01931f2e'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -99,6 +99,8 @@ def upgrade():
     sa.Column('initiated_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was initiated.'),
     sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),
     sa.Column('is_successful', sa.BOOLEAN(), nullable=False, comment='Whether the transfer has been successful or not.'),
+    sa.Column('error_code', sa.String(), nullable=False, comment='The error code, in case the transfer has not been successful.'),
+    sa.Column('error_message', sa.String(), nullable=False, comment='The error message, in case the transfer has not been successful.'),
     sa.CheckConstraint('amount > 0'),
     sa.CheckConstraint('finalized_at_ts IS NOT NULL OR is_successful = false'),
     sa.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),

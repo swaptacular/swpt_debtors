@@ -132,14 +132,25 @@ def initiate_transfer(debtor_id: int,
     assert 0 < amount <= MAX_INT64
 
     # Create an `InitiatedTransfer` record.
-    new_initiated_transfer = InitiatedTransfer(
-        debtor_id=debtor_id,
-        transfer_uuid=transfer_uuid,
-        recipient_uri=recipient_uri,
-        amount=amount,
-        transfer_info=transfer_info,
-        finalized_at_ts=datetime.now(tz=timezone.utc) if recipient_creditor_id is None else None,
-    )
+    if recipient_creditor_id is not None:
+        new_initiated_transfer = InitiatedTransfer(
+            debtor_id=debtor_id,
+            transfer_uuid=transfer_uuid,
+            recipient_uri=recipient_uri,
+            amount=amount,
+            transfer_info=transfer_info,
+        )
+    else:
+        new_initiated_transfer = InitiatedTransfer(
+            debtor_id=debtor_id,
+            transfer_uuid=transfer_uuid,
+            recipient_uri=recipient_uri,
+            amount=amount,
+            transfer_info=transfer_info,
+            finalized_at_ts=datetime.now(tz=timezone.utc),
+            error_code='DEB001',
+            error_message='Unrecognized recipient URI.',
+        )
     existing_initiated_transfer = InitiatedTransfer.get_instance((debtor_id, transfer_uuid))
     if existing_initiated_transfer:
         if _compare_initiated_transfers(new_initiated_transfer, existing_initiated_transfer):
