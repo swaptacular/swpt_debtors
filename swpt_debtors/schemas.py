@@ -89,8 +89,24 @@ class DebtorSchema(Schema):
         required=True,
         type='string',
         format="uri",
-        description="The authority that manages creditors' accounts.",
+        description="The URI of the authority that manages creditors' accounts.",
         example='https://example.com/authority',
+    )
+    debtorPolicyUri = fields.Method(
+        'get_debtor_policy_uri',
+        required=True,
+        type='string',
+        format="uri",
+        description="The endpoint for changing debtor's policy. Can be accessed only by the debtor.",
+        example='https://example.com/debtors/1/policy',
+    )
+    initiatedTransfersUri = fields.Method(
+        'get_initiated_transfers_uri',
+        required=True,
+        type='string',
+        format="uri",
+        description="The endpoint for initiating credit-issuing transfers. Can be accessed only by the debtor.",
+        example='https://example.com/debtors/1/transfers',
     )
     created_at_date = fields.Date(
         required=True,
@@ -146,7 +162,13 @@ class DebtorSchema(Schema):
     )
 
     def get_uri(self, obj):
-        return url_for(self.context['endpoint'], _external=True, debtorId=obj.debtor_id)
+        return endpoints.build_url('debtor', debtorId=obj.debtor_id)
+
+    def get_debtor_policy_uri(self, obj):
+        return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
+
+    def get_initiated_transfers_uri(self, obj):
+        return url_for(self.context['InitiatedTransfers'], _external=True, debtorId=obj.debtor_id)
 
 
 class DebtorPolicySchema(DebtorSchema):
@@ -186,7 +208,7 @@ class DebtorPolicySchema(DebtorSchema):
     )
 
     def get_uri(self, obj):
-        return url_for(self.context['endpoint'], _external=True, debtorId=obj.debtor_id)
+        return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
 
 
 class DebtorPolicyUpdateRequestSchema(Schema):
@@ -345,7 +367,7 @@ class TransferSchema(Schema):
     )
 
     def get_uri(self, obj):
-        return url_for(self.context['endpoint'], _external=True, debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
+        return url_for(self.context['Transfer'], _external=True, debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
 
 
 class TransfersCollectionSchema(CollectionSchema):
@@ -353,7 +375,7 @@ class TransfersCollectionSchema(CollectionSchema):
         return 'TransfersCollection'
 
     def get_uri(self, obj):
-        return url_for(self.context['endpoint'], _external=True, debtorId=obj['debtor_id'])
+        return url_for(self.context['InitiatedTransfers'], _external=True, debtorId=obj['debtor_id'])
 
     @pre_dump
     def _to_dict(self, obj, many):
