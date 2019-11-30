@@ -226,7 +226,7 @@ class Debtor(db.Model):
 
     # Interest Rate Lower Limits
     irll_values = db.Column(
-        pg.ARRAY(db.BigInteger, dimensions=1),
+        pg.ARRAY(db.REAL, dimensions=1),
         comment=(
             'Enforced interest rate lower limits. Each element in this array '
             'should have a corresponding element in the `irll_cutoffs` array '
@@ -327,20 +327,17 @@ class InitiatedTransfer(db.Model):
     )
     error_code = db.Column(
         db.String,
-        nullable=False,
-        default='',
         comment="The error code, in case the transfer has not been successful.",
     )
     error_message = db.Column(
         db.String,
-        nullable=False,
-        default='',
         comment="The error message, in case the transfer has not been successful.",
     )
     __table_args__ = (
         db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
         db.CheckConstraint(amount > 0),
         db.CheckConstraint(or_(finalized_at_ts != null(), is_successful == false())),
+        db.CheckConstraint(or_(error_code == null(), error_message != null())),
         {
             'comment': 'Represents an initiated issuing transfer. A new row is inserted when '
                        'a debtor creates a new issuing transfer. The row is deleted when the '
@@ -359,7 +356,7 @@ class InitiatedTransfer(db.Model):
 
     @property
     def errors(self):
-        if self.is_finalized and not self.is_successful and self.error_code:
+        if self.is_finalized and not self.is_successful and self.error_code is not None:
             return [{'error_code': self.error_code, 'message': self.error_message}]
         return []
 

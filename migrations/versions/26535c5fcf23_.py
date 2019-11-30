@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 350c01931f2e
+Revision ID: 26535c5fcf23
 Revises: 8d09bea9c7d1
-Create Date: 2019-11-30 20:14:26.858152
+Create Date: 2019-11-30 20:41:29.474525
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '350c01931f2e'
+revision = '26535c5fcf23'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -54,7 +54,7 @@ def upgrade():
     sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The annual rate (in percents) at which the debtor wants the interest to accumulate on creditors' accounts. The actual interest rate may be different if interest rate limits are enforced."),
     sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` field. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `null` is the same as an empty array.'),
     sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.Column('irll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `null` is the same as an empty array. If the array contains values bigger that 100.0, they are treated as equal to 100.0.'),
+    sa.Column('irll_values', postgresql.ARRAY(sa.REAL(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `null` is the same as an empty array. If the array contains values bigger that 100.0, they are treated as equal to 100.0.'),
     sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.CheckConstraint('bll_cutoffs IS NULL OR array_ndims(bll_cutoffs) = 1'),
     sa.CheckConstraint('bll_values IS NULL OR array_ndims(bll_values) = 1'),
@@ -99,9 +99,10 @@ def upgrade():
     sa.Column('initiated_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was initiated.'),
     sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),
     sa.Column('is_successful', sa.BOOLEAN(), nullable=False, comment='Whether the transfer has been successful or not.'),
-    sa.Column('error_code', sa.String(), nullable=False, comment='The error code, in case the transfer has not been successful.'),
-    sa.Column('error_message', sa.String(), nullable=False, comment='The error message, in case the transfer has not been successful.'),
+    sa.Column('error_code', sa.String(), nullable=True, comment='The error code, in case the transfer has not been successful.'),
+    sa.Column('error_message', sa.String(), nullable=True, comment='The error message, in case the transfer has not been successful.'),
     sa.CheckConstraint('amount > 0'),
+    sa.CheckConstraint('error_code IS NULL OR error_message IS NOT NULL'),
     sa.CheckConstraint('finalized_at_ts IS NOT NULL OR is_successful = false'),
     sa.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
