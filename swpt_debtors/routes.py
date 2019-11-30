@@ -161,7 +161,7 @@ class IssuingTransfers(MethodView):
     @transfers_api.response(IssuingTransfersSchema(context=context))
     @transfers_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
-        """Return the credit-issuing transfers for a given debtor."""
+        """Return the credit-issuing transfers for a debtor."""
 
         return TransfersCollection(debtor_id=debtorId, transfers=list(range(10)))
 
@@ -203,7 +203,7 @@ class Transfer(MethodView):
     @transfers_api.response(TransferSchema(context=context))
     @transfers_api.doc(responses={404: SPEC_TRANSFER_DOES_NOT_EXIST})
     def get(self, debtorId, transferUuid):
-        """Return details about a credit-issuing transfer."""
+        """Return information about a credit-issuing transfer."""
 
         class Transfer:
             pass
@@ -214,4 +214,4 @@ class Transfer(MethodView):
 
     @transfers_api.response(code=204)
     def delete(self, debtorId, transferUuid):
-        """Purge a finalized credit-issuing transfer."""
+        """Delete a credit-issuing transfer."""

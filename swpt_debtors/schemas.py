@@ -108,13 +108,6 @@ class DebtorSchema(Schema):
         data_key='balanceLowerLimits',
         description='Enforced lower limits for the `balance` field.',
     )
-    interest_rate_target = fields.Float(
-        required=True,
-        dump_only=True,
-        data_key='interestRateTarget',
-        description=Debtor.interest_rate_target.comment,
-        example=0,
-    )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
         required=True,
@@ -155,7 +148,6 @@ class DebtorPolicySchema(DebtorSchema):
             'balance_lower_limits',
             'interest_rate_lower_limits',
             'interest_rate_target',
-            'interest_rate',
         ]
 
     uri = fields.Method(
@@ -180,6 +172,13 @@ class DebtorPolicySchema(DebtorSchema):
         format="uri",
         description="The debtor's URI.",
         example='https://example.com/debtors/1',
+    )
+    interest_rate_target = fields.Float(
+        required=True,
+        dump_only=True,
+        data_key='interestRateTarget',
+        description=Debtor.interest_rate_target.comment,
+        example=0,
     )
 
     def get_uri(self, obj):
