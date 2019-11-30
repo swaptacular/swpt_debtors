@@ -75,8 +75,8 @@ class DebtorSchema(Schema):
         description="The endpoint for changing debtor's policy. Can be accessed only by the debtor.",
         example='https://example.com/debtors/1/policy',
     )
-    initiatedIssuingTransfersUri = fields.Method(
-        'get_initiated_issuing_transfers_uri',
+    issuingTransfersUri = fields.Method(
+        'get_issuing_transfers_uri',
         required=True,
         type='string',
         format="uri",
@@ -142,8 +142,8 @@ class DebtorSchema(Schema):
     def get_debtor_policy_uri(self, obj):
         return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
 
-    def get_initiated_issuing_transfers_uri(self, obj):
-        return url_for(self.context['InitiatedIssuingTransfers'], _external=True, debtorId=obj.debtor_id)
+    def get_issuing_transfers_uri(self, obj):
+        return url_for(self.context['IssuingTransfers'], _external=True, debtorId=obj.debtor_id)
 
 
 class DebtorPolicySchema(DebtorSchema):
@@ -345,7 +345,7 @@ class TransferSchema(Schema):
         return url_for(self.context['Transfer'], _external=True, debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
 
 
-class InitiatedIssuingTransfersSchema(Schema):
+class IssuingTransfersSchema(Schema):
     uri = fields.Method(
         'get_uri',
         required=True,
@@ -355,7 +355,7 @@ class InitiatedIssuingTransfersSchema(Schema):
         example='https://example.com/debtors/1/transfers',
     )
     type = fields.Constant(
-        'InitiatedIssuingTransfers',
+        'IssuingTransfers',
         required=True,
         dump_only=True,
         type='string',
@@ -373,9 +373,9 @@ class InitiatedIssuingTransfersSchema(Schema):
         fields.Str(format='uri-reference'),
         required=True,
         dump_only=True,
-        description='A list of relative URIs for the initiated issuing transfers.',
+        description='A list of relative URIs for the issuing transfers.',
         example=['123e4567-e89b-12d3-a456-426655440000', '183ea7c7-7a96-4ed7-a50a-a2b069687d23'],
     )
 
     def get_uri(self, obj):
-        return url_for(self.context['InitiatedIssuingTransfers'], _external=True, debtorId=obj.debtor_id)
+        return url_for(self.context['IssuingTransfers'], _external=True, debtorId=obj.debtor_id)

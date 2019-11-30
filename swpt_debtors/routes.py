@@ -7,7 +7,7 @@ from swpt_lib import endpoints
 from swpt_lib.utils import u64_to_i64
 from .models import InitiatedTransfer, MAX_UINT64
 from .schemas import DebtorCreationRequestSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
-    DebtorPolicySchema, TransferSchema, InitiatedIssuingTransfersSchema, TransferCreationRequestSchema
+    DebtorPolicySchema, TransferSchema, IssuingTransfersSchema, TransferCreationRequestSchema
 from . import procedures
 
 SPEC_DEBTOR_ID = {
@@ -56,7 +56,7 @@ SPEC_CONFLICTING_TRANSFER = {
     'description': 'A different transfer entry with the same UUID already exists.',
 }
 SPEC_TOO_MANY_TRANSFERS = {
-    'description': 'Too many initiated transfers.',
+    'description': 'Too many issuing transfers.',
 }
 SPEC_DUPLICATED_TRANSFER = {
     'description': 'The same transfer entry already exists.',
@@ -91,7 +91,7 @@ transfers_api = Blueprint(
 context = {
     'Debtor': 'public.Debtor',
     'DebtorPolicy': 'policy.DebtorPolicy',
-    'InitiatedIssuingTransfers': 'transfers.InitiatedIssuingTransfers',
+    'IssuingTransfers': 'transfers.IssuingTransfers',
     'Transfer': 'transfers.Transfer'
 }
 
@@ -158,11 +158,11 @@ class DebtorPolicy(MethodView):
 
 
 @transfers_api.route('/<i64:debtorId>/transfers', parameters=[SPEC_DEBTOR_ID])
-class InitiatedIssuingTransfers(MethodView):
-    @transfers_api.response(InitiatedIssuingTransfersSchema(context=context))
+class IssuingTransfers(MethodView):
+    @transfers_api.response(IssuingTransfersSchema(context=context))
     @transfers_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
-        """Return the initiated credit-issuing transfers for a given debtor."""
+        """Return the credit-issuing transfers for a given debtor."""
 
         return TransfersCollection(debtor_id=debtorId, transfers=list(range(10)))
 
