@@ -84,6 +84,14 @@ class DebtorSchema(Schema):
         type='string',
         description='The type of this object.',
     )
+    accountingAuthorityUri = fields.Function(
+        lambda obj: endpoints.build_url('authority'),
+        required=True,
+        type='string',
+        format="uri",
+        description="The authority that manages creditors' accounts.",
+        example='https://example.com/authority',
+    )
     created_at_date = fields.Date(
         required=True,
         dump_only=True,
@@ -267,7 +275,6 @@ class TransferSchema(Schema):
     debtorUri = fields.Function(
         lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),
         required=True,
-        dump_only=True,
         type='string',
         format="uri",
         description="The debtor's URI.",
@@ -276,7 +283,6 @@ class TransferSchema(Schema):
     senderUri = fields.Function(
         lambda obj: endpoints.build_url('creditor', creditorId=ROOT_CREDITOR_ID),
         required=True,
-        dump_only=True,
         type='string',
         format="uri",
         description="The sender's URI.",
