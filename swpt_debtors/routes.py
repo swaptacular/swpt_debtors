@@ -143,7 +143,7 @@ class DebtorPolicy(MethodView):
         return debtor or abort(404)
 
     @policy_api.arguments(DebtorPolicyUpdateRequestSchema)
-    @policy_api.response(code=204)
+    @policy_api.response(DebtorPolicySchema(context=context))
     @policy_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST,
                                409: SPEC_CONFLICTING_POLICY})
     def patch(self, debtor_info, debtorId):
@@ -152,9 +152,8 @@ class DebtorPolicy(MethodView):
         This operation is **idempotent**!
         """
 
-        # TODO: abort(409, message='fdfd', headers={'xxxyyy': 'zzz'})
-        abort(409)
-        abort(404)
+        debtor = procedures.get_debtor(debtorId)
+        return debtor or abort(404)
 
 
 @transfers_api.route('/<i64:debtorId>/transfers', parameters=[SPEC_DEBTOR_ID])
