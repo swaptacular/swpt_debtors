@@ -101,7 +101,7 @@ class TransfersCollection(NamedTuple):
     transfers: List[str]
 
 
-@admin_api.route('')
+@admin_api.route('/')
 class DebtorCreator(MethodView):
     @admin_api.arguments(DebtorCreationRequestSchema)
     @admin_api.response(DebtorSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)
@@ -156,7 +156,7 @@ class DebtorPolicy(MethodView):
         return debtor or abort(404)
 
 
-@transfers_api.route('/<i64:debtorId>/transfers', parameters=[SPEC_DEBTOR_ID])
+@transfers_api.route('/<i64:debtorId>/transfers/', parameters=[SPEC_DEBTOR_ID])
 class IssuingTransfers(MethodView):
     @transfers_api.response(IssuingTransfersSchema(context=context))
     @transfers_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
