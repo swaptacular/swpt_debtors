@@ -355,7 +355,7 @@ class TransfersCollectionSchema(Schema):
         fields.Str(format='uri-reference'),
         required=True,
         dump_only=True,
-        description='A list of relative URIs for the issuing transfers.',
+        description="An *unordered* list of *relative* URIs for debtor's remaining credit-issuing transfers.",
         example=['123e4567-e89b-12d3-a456-426655440000', '183ea7c7-7a96-4ed7-a50a-a2b069687d23'],
     )
 
