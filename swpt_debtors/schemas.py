@@ -334,7 +334,7 @@ class TransferSchema(Schema):
         return url_for(self.context['Transfer'], _external=True, debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
 
 
-class IssuingTransfersSchema(Schema):
+class TransfersCollectionchema(Schema):
     uri = fields.Method(
         'get_uri',
         required=True,
@@ -344,7 +344,7 @@ class IssuingTransfersSchema(Schema):
         example='https://example.com/debtors/1/transfers',
     )
     type = fields.Constant(
-        'IssuingTransfers',
+        'TransfersCollection',
         required=True,
         dump_only=True,
         type='string',
@@ -358,7 +358,14 @@ class IssuingTransfersSchema(Schema):
         description="The debtor's URI.",
         example='https://example.com/debtors/1',
     )
-    transfers = fields.List(
+    totalItems = fields.Function(
+        lambda obj: len(obj.members),
+        required=True,
+        type='integer',
+        description="The number of items in the `members` array.",
+        example=2,
+    )
+    members = fields.List(
         fields.Str(format='uri-reference'),
         required=True,
         dump_only=True,

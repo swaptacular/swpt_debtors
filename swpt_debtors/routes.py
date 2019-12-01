@@ -7,7 +7,7 @@ from swpt_lib import endpoints
 from swpt_lib.utils import u64_to_i64
 from .models import InitiatedTransfer, MAX_UINT64
 from .schemas import DebtorCreationRequestSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
-    DebtorPolicySchema, TransferSchema, IssuingTransfersSchema, TransferCreationRequestSchema
+    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
 from . import procedures
 
 SPEC_DEBTOR_ID = {
@@ -98,7 +98,7 @@ context = {
 
 class TransfersCollection(NamedTuple):
     debtor_id: int
-    transfers: List[str]
+    members: List[str]
 
 
 @admin_api.route('/')
@@ -158,12 +158,12 @@ class DebtorPolicy(MethodView):
 
 @transfers_api.route('/<i64:debtorId>/transfers/', parameters=[SPEC_DEBTOR_ID])
 class IssuingTransfers(MethodView):
-    @transfers_api.response(IssuingTransfersSchema(context=context))
+    @transfers_api.response(TransfersCollectionSchema(context=context))
     @transfers_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
         """Return the credit-issuing transfers for a debtor."""
 
-        return TransfersCollection(debtor_id=debtorId, transfers=list(range(10)))
+        return TransfersCollection(debtor_id=debtorId, members=list(range(10)))
 
     @transfers_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)
