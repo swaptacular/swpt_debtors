@@ -150,7 +150,7 @@ class IssuingTransfers(MethodView):
     @transfers_api.response(TransfersCollectionSchema(context=context))
     @transfers_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
-        """Return the credit-issuing transfers for a debtor."""
+        """Return debtor's set of standing credit-issuing transfers."""
 
         return TransfersCollection(debtor_id=debtorId, members=list(range(10)))
 
