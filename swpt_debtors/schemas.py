@@ -334,7 +334,7 @@ class TransferSchema(Schema):
         return url_for(self.context['Transfer'], _external=True, debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
 
 
-class TransfersCollectionchema(Schema):
+class TransfersCollectionSchema(Schema):
     uri = fields.Method(
         'get_uri',
         required=True,
