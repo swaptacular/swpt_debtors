@@ -1,6 +1,6 @@
 from marshmallow import Schema, fields, validate, missing
 from flask import url_for
-from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
+from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
     Debtor, InitiatedTransfer
 from swpt_lib import endpoints
 
@@ -32,15 +32,8 @@ class BalanceLowerLimitSchema(Schema):
     )
 
 
-class DebtorCreationRequestSchema(Schema):
-    debtor_id = fields.Int(
-        required=True,
-        validate=validate.Range(min=0, max=MAX_UINT64),
-        data_key='debtorId',
-        format='uint64',
-        description="The debtor's ID",
-        example=1,
-    )
+class DebtorCreationOptionsSchema(Schema):
+    pass
 
 
 class DebtorSchema(Schema):
@@ -58,6 +51,7 @@ class DebtorSchema(Schema):
         dump_only=True,
         type='string',
         description='The type of this object.',
+        example='Debtor',
     )
     accountingAuthorityUri = fields.Function(
         lambda obj: endpoints.build_url('authority'),
@@ -72,6 +66,7 @@ class DebtorSchema(Schema):
         dump_only=True,
         data_key='createdOn',
         description=Debtor.created_at_date.comment,
+        example='2019-11-30',
     )
     balance = fields.Int(
         required=True,
@@ -142,6 +137,7 @@ class DebtorPolicySchema(DebtorSchema):
         dump_only=True,
         type='string',
         description='The type of this object.',
+        example='DebtorPolicy',
     )
     debtorUri = fields.Function(
         lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),
@@ -245,6 +241,7 @@ class TransferSchema(Schema):
         dump_only=True,
         type='string',
         description='The type of this object.',
+        example='Transfer',
     )
     debtorUri = fields.Function(
         lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),
@@ -337,6 +334,7 @@ class TransfersCollectionSchema(Schema):
         dump_only=True,
         type='string',
         description='The type of this object.',
+        example='TransfersCollection',
     )
     debtorUri = fields.Function(
         lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),

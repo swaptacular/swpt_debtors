@@ -21,10 +21,9 @@ else:
 
 
 API_DESCRIPTION = """This API can be used to:
-1. Create new debtors.
-2. Obtain public information about debtors.
-3. Change individual debtor's policies.
-4. Make credit-issuing transfers.
+1. Obtain public information about debtors and create new debtors.
+2. Change individual debtor's policies.
+3. Make credit-issuing transfers.
 """
 
 
@@ -59,7 +58,7 @@ def create_app(config_dict={}):
     from flask import Flask
     from swpt_lib.utils import Int64Converter
     from .extensions import db, migrate, broker, api
-    from .routes import admin_api, public_api, policy_api, transfers_api
+    from .routes import debtors_api, policies_api, transfers_api
     from .cli import swpt_debtors
     from . import models  # noqa
 
@@ -71,9 +70,8 @@ def create_app(config_dict={}):
     migrate.init_app(app, db)
     broker.init_app(app)
     api.init_app(app)
-    api.register_blueprint(admin_api)
-    api.register_blueprint(public_api)
-    api.register_blueprint(policy_api)
+    api.register_blueprint(debtors_api)
+    api.register_blueprint(policies_api)
     api.register_blueprint(transfers_api)
     app.cli.add_command(swpt_debtors)
     return app

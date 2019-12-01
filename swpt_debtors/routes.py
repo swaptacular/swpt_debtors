@@ -4,9 +4,8 @@ from flask import redirect, url_for, request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib import endpoints
-from swpt_lib.utils import u64_to_i64
 from .models import InitiatedTransfer, MAX_UINT64
-from .schemas import DebtorCreationRequestSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
+from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
     DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
 from . import procedures
 
@@ -63,20 +62,14 @@ SPEC_DUPLICATED_TRANSFER = {
     'headers': SPEC_LOCATION_HEADER,
 }
 
-admin_api = Blueprint(
-    'admin',
+debtors_api = Blueprint(
+    'debtors',
     __name__,
     url_prefix='/debtors',
-    description="Create new debtors.",
+    description="Obtain public information about debtors and create new debtors.",
 )
-public_api = Blueprint(
-    'public',
-    __name__,
-    url_prefix='/debtors',
-    description="Obtain public information about debtors.",
-)
-policy_api = Blueprint(
-    'policy',
+policies_api = Blueprint(
+    'policies',
     __name__,
     url_prefix='/debtors',
     description="Change individual debtor's policies.",
@@ -89,8 +82,8 @@ transfers_api = Blueprint(
 )
 
 context = {
-    'Debtor': 'public.Debtor',
-    'DebtorPolicy': 'policy.DebtorPolicy',
+    'Debtor': 'debtors.Debtor',
+    'DebtorPolicy': 'policies.DebtorPolicy',
     'IssuingTransfers': 'transfers.IssuingTransfers',
     'Transfer': 'transfers.Transfer'
 }
@@ -101,26 +94,10 @@ class TransfersCollection(NamedTuple):
     members: List[str]
 
 
-@admin_api.route('/')
-class DebtorCreator(MethodView):
-    @admin_api.arguments(DebtorCreationRequestSchema)
-    @admin_api.response(DebtorSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)
-    @admin_api.doc(responses={409: SPEC_CONFLICTING_DEBTOR})
-    def post(self, debtor_info):
-        """Try to create a new debtor."""
-
-        debtor_id = u64_to_i64(debtor_info['debtor_id'])
-        try:
-            debtor = procedures.create_new_debtor(debtor_id)
-        except procedures.DebtorExistsError:
-            abort(409)
-        return debtor, {'Location': endpoints.build_url('debtor', debtorId=debtor_id)}
-
-
-@public_api.route('/<i64:debtorId>', parameters=[SPEC_DEBTOR_ID], endpoint='Debtor')
+@debtors_api.route('/<i64:debtorId>', parameters=[SPEC_DEBTOR_ID], endpoint='Debtor')
 class DebtorInfo(MethodView):
-    @public_api.response(DebtorSchema(context=context))
-    @public_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
+    @debtors_api.response(DebtorSchema(context=context))
+    @debtors_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
         """Return information about a debtor.
 
@@ -131,22 +108,34 @@ class DebtorInfo(MethodView):
         debtor = procedures.get_or_create_debtor(debtorId)
         return debtor or abort(404)
 
+    @debtors_api.arguments(DebtorCreationOptionsSchema)
+    @debtors_api.response(DebtorSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)
+    @debtors_api.doc(responses={409: SPEC_CONFLICTING_DEBTOR})
+    def post(self, debtor_creation_options, debtorId):
+        """Try to create a new debtor. Requires special privileges."""
 
-@policy_api.route('/<i64:debtorId>/policy', parameters=[SPEC_DEBTOR_ID])
+        try:
+            debtor = procedures.create_new_debtor(debtorId)
+        except procedures.DebtorExistsError:
+            abort(409)
+        return debtor, {'Location': endpoints.build_url('debtor', debtorId=debtorId)}
+
+
+@policies_api.route('/<i64:debtorId>/policy', parameters=[SPEC_DEBTOR_ID])
 class DebtorPolicy(MethodView):
-    @policy_api.response(DebtorPolicySchema(context=context))
-    @policy_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
+    @policies_api.response(DebtorPolicySchema(context=context))
+    @policies_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
         """Return information about debtor's policy."""
 
         debtor = procedures.get_debtor(debtorId)
         return debtor or abort(404)
 
-    @policy_api.arguments(DebtorPolicyUpdateRequestSchema)
-    @policy_api.response(DebtorPolicySchema(context=context))
-    @policy_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST,
-                               409: SPEC_CONFLICTING_POLICY})
-    def patch(self, debtor_info, debtorId):
+    @policies_api.arguments(DebtorPolicyUpdateRequestSchema)
+    @policies_api.response(DebtorPolicySchema(context=context))
+    @policies_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST,
+                                 409: SPEC_CONFLICTING_POLICY})
+    def patch(self, policy_update_request, debtorId):
         """Update debtor's policy.
 
         This operation is **idempotent**!
