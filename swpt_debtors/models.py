@@ -6,7 +6,7 @@ from collections import abc
 from marshmallow import Schema, fields
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import func, null, false, or_, and_
+from sqlalchemy.sql.expression import func, null, true, false, or_, and_
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
 
 MIN_INT16 = -1 << 15
@@ -336,7 +336,8 @@ class InitiatedTransfer(db.Model):
     __table_args__ = (
         db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
         db.CheckConstraint(amount > 0),
-        db.CheckConstraint(or_(finalized_at_ts != null(), is_successful == false())),
+        db.CheckConstraint(or_(is_successful == false(), finalized_at_ts != null())),
+        db.CheckConstraint(or_(finalized_at_ts == null(), is_successful == true(), error_code != null())),
         db.CheckConstraint(or_(error_code == null(), error_message != null())),
         {
             'comment': 'Represents an initiated issuing transfer. A new row is inserted when '
@@ -356,7 +357,7 @@ class InitiatedTransfer(db.Model):
 
     @property
     def errors(self):
-        if self.is_finalized and not self.is_successful and self.error_code is not None:
+        if self.is_finalized and not self.is_successful:
             return [{'error_code': self.error_code, 'message': self.error_message}]
         return []
 

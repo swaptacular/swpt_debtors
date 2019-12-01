@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 26535c5fcf23
+Revision ID: 03057f23a9a7
 Revises: 8d09bea9c7d1
-Create Date: 2019-11-30 20:41:29.474525
+Create Date: 2019-12-01 15:14:06.634627
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '26535c5fcf23'
+revision = '03057f23a9a7'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -103,7 +103,8 @@ def upgrade():
     sa.Column('error_message', sa.String(), nullable=True, comment='The error message, in case the transfer has not been successful.'),
     sa.CheckConstraint('amount > 0'),
     sa.CheckConstraint('error_code IS NULL OR error_message IS NOT NULL'),
-    sa.CheckConstraint('finalized_at_ts IS NOT NULL OR is_successful = false'),
+    sa.CheckConstraint('finalized_at_ts IS NULL OR is_successful = true OR error_code IS NOT NULL'),
+    sa.CheckConstraint('is_successful = false OR finalized_at_ts IS NOT NULL'),
     sa.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
     comment='Represents an initiated issuing transfer. A new row is inserted when a debtor creates a new issuing transfer. The row is deleted when the debtor acknowledges (purges) the transfer.'
