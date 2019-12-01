@@ -99,7 +99,7 @@ class DebtorInfo(MethodView):
     @debtors_api.response(DebtorSchema(context=context))
     @debtors_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
-        """Return information about a debtor.
+        """Return public information about a debtor.
 
         ---
         Ignored
@@ -150,7 +150,7 @@ class IssuingTransfers(MethodView):
     @transfers_api.response(TransfersCollectionSchema(context=context))
     @transfers_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
-        """Return debtor's set of standing credit-issuing transfers."""
+        """Return the debtor's collection of credit-issuing transfers."""
 
         return TransfersCollection(debtor_id=debtorId, members=list(range(10)))
 
