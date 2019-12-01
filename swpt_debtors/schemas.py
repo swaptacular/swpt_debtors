@@ -126,7 +126,6 @@ class DebtorPolicySchema(DebtorSchema):
             'balance_lower_limits',
             'interest_rate_lower_limits',
             'interest_rate_target',
-            'transfersUri',
         ]
 
     uri = fields.Method(
@@ -159,20 +158,9 @@ class DebtorPolicySchema(DebtorSchema):
         description=Debtor.interest_rate_target.comment,
         example=0,
     )
-    transfersUri = fields.Method(
-        'get_transfers_uri',
-        required=True,
-        type='string',
-        format="uri",
-        description="The endpoint for initiating credit-issuing transfers.",
-        example='https://example.com/debtors/1/transfers',
-    )
 
     def get_uri(self, obj):
         return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
-
-    def get_transfers_uri(self, obj):
-        return url_for(self.context['IssuingTransfers'], _external=True, debtorId=obj.debtor_id)
 
 
 class DebtorPolicyUpdateRequestSchema(Schema):
