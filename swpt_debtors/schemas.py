@@ -67,22 +67,6 @@ class DebtorSchema(Schema):
         description="The URI of the authority that manages creditors' accounts.",
         example='https://example.com/authority',
     )
-    debtorPolicyUri = fields.Method(
-        'get_debtor_policy_uri',
-        required=True,
-        type='string',
-        format="uri",
-        description="The endpoint for changing debtor's policy. Can be accessed only by the debtor.",
-        example='https://example.com/debtors/1/policy',
-    )
-    issuingTransfersUri = fields.Method(
-        'get_issuing_transfers_uri',
-        required=True,
-        type='string',
-        format="uri",
-        description="The endpoint for initiating credit-issuing transfers. Can be accessed only by the debtor.",
-        example='https://example.com/debtors/1/transfers',
-    )
     created_at_date = fields.Date(
         required=True,
         dump_only=True,
@@ -132,12 +116,6 @@ class DebtorSchema(Schema):
     def get_uri(self, obj):
         return url_for(self.context['Debtor'], _external=True, debtorId=obj.debtor_id)
 
-    def get_debtor_policy_uri(self, obj):
-        return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
-
-    def get_issuing_transfers_uri(self, obj):
-        return url_for(self.context['IssuingTransfers'], _external=True, debtorId=obj.debtor_id)
-
 
 class DebtorPolicySchema(DebtorSchema):
     class Meta:
@@ -148,6 +126,7 @@ class DebtorPolicySchema(DebtorSchema):
             'balance_lower_limits',
             'interest_rate_lower_limits',
             'interest_rate_target',
+            'transfersUri',
         ]
 
     uri = fields.Method(
@@ -180,9 +159,20 @@ class DebtorPolicySchema(DebtorSchema):
         description=Debtor.interest_rate_target.comment,
         example=0,
     )
+    transfersUri = fields.Method(
+        'get_transfers_uri',
+        required=True,
+        type='string',
+        format="uri",
+        description="The endpoint for initiating credit-issuing transfers.",
+        example='https://example.com/debtors/1/transfers',
+    )
 
     def get_uri(self, obj):
         return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
+
+    def get_transfers_uri(self, obj):
+        return url_for(self.context['IssuingTransfers'], _external=True, debtorId=obj.debtor_id)
 
 
 class DebtorPolicyUpdateRequestSchema(Schema):
