@@ -1,5 +1,6 @@
 from datetime import date
-from swpt_debtors.models import LowerLimit, LowerLimitSequence, Debtor
+from swpt_debtors.lower_limits import LowerLimit, LowerLimitSequence
+from swpt_debtors.models import Debtor
 
 
 def test_limit_properties(db_session):

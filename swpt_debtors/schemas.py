@@ -1,8 +1,9 @@
 from typing import NamedTuple, List
 from marshmallow import Schema, fields, validate, missing, post_load
 from flask import url_for
+from .lower_limits import LowerLimit
 from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
-    LowerLimit, Debtor, InitiatedTransfer
+    Debtor, InitiatedTransfer
 from swpt_lib import endpoints
 
 

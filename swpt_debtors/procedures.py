@@ -3,7 +3,8 @@ from uuid import UUID
 from typing import TypeVar, Optional, Callable, Tuple, List
 from sqlalchemy.exc import IntegrityError
 from .extensions import db
-from .models import Debtor, Account, ChangeInterestRateSignal, LowerLimitSequence, \
+from .lower_limits import LowerLimitSequence
+from .models import Debtor, Account, ChangeInterestRateSignal, \
     InitiatedTransfer, RunningTransfer, PrepareTransferSignal, increment_seqnum, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
 
