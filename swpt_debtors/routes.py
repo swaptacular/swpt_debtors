@@ -151,8 +151,7 @@ class DebtorPolicy(MethodView):
             abort(404)
         except procedures.ConflictingPolicyError:
             abort(409)
-        else:
-            return debtor
+        return debtor
 
 
 @transfers_api.route('/<i64:debtorId>/transfers/', parameters=[SPEC_DEBTOR_ID])
@@ -199,8 +198,7 @@ class IssuingTransfers(MethodView):
             abort(409)
         except procedures.TransferExistsError:
             return redirect(location, code=303)
-        else:
-            return transfer, {'Location': location}
+        return transfer, {'Location': location}
 
 
 @transfers_api.route('/<i64:debtorId>/transfers/<transferUuid>', parameters=[SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID])
