@@ -38,6 +38,10 @@ class TooManyTransfersError(Exception):
     """Too many simultaneous transfers."""
 
 
+class ConflictingPolicyError(Exception):
+    """The new debtor policy conflicts with the old one."""
+
+
 @atomic
 def get_debtor(debtor_id: int) -> Optional[Debtor]:
     return Debtor.get_instance(debtor_id)
@@ -71,13 +75,14 @@ def update_debtor_policy(
         debtor_id: int,
         interest_rate_target: float,
         new_interest_rate_limits: LowerLimitSequence,
-        new_balance_limits: LowerLimitSequence):
+        new_balance_limits: LowerLimitSequence) -> Debtor:
     # TODO: This is probably not at all the function we need.
+
+    # TODO: Raise `ConflictingPolicyError` if necessary.
 
     debtor = Debtor.get_instance(debtor_id)
     if debtor is None:
-        # TODO: define own exception type.
-        raise Exception()
+        raise DebtorDoesNotExistError()
 
     interest_rate_lower_limits = debtor.interest_rate_lower_limits
     for l in new_interest_rate_limits:
@@ -88,6 +93,7 @@ def update_debtor_policy(
     debtor.interest_rate_target = interest_rate_target
     debtor.interest_rate_lower_limits = interest_rate_lower_limits
     debtor.balance_lower_limits = balance_lower_limits
+    return debtor
 
 
 @atomic

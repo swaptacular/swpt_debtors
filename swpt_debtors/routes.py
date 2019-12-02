@@ -106,7 +106,12 @@ class DebtorInfo(MethodView):
     @debtors_api.response(DebtorSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)
     @debtors_api.doc(responses={409: SPEC_CONFLICTING_DEBTOR})
     def post(self, debtor_creation_options, debtorId):
-        """Try to create a new debtor. Requires special privileges."""
+        """Try to create a new debtor. Requires special privileges
+
+        ---
+        Must fail if the debtor already exists.
+
+        """
 
         try:
             debtor = procedures.create_new_debtor(debtorId)
@@ -133,12 +138,21 @@ class DebtorPolicy(MethodView):
 
         This operation is **idempotent**!
 
-        ---
-        TODO:
         """
 
-        debtor = procedures.get_debtor(debtorId)
-        return debtor or abort(404)
+        try:
+            debtor = procedures.update_debtor_policy(
+                debtorId,
+                policy_update_request['interest_rate_target'],
+                policy_update_request['interest_rate_lower_limits'],
+                policy_update_request['balance_lower_limits'],
+            )
+        except procedures.DebtorDoesNotExistError:
+            abort(404)
+        except procedures.ConflictingPolicyError:
+            abort(409)
+        else:
+            return debtor
 
 
 @transfers_api.route('/<i64:debtorId>/transfers/', parameters=[SPEC_DEBTOR_ID])
