@@ -15,6 +15,10 @@ TD_SECOND = timedelta(seconds=1)
 TD_MINUS_SECOND = -TD_SECOND
 
 
+class DebtorDoesNotExistError(Exception):
+    """The debtor does not exist."""
+
+
 class DebtorExistsError(Exception):
     """The same debtor record already exists."""
 
@@ -28,6 +32,10 @@ class TransferExistsError(Exception):
 
 class TransfersConflictError(Exception):
     """A different transfer with the same UUID already exists."""
+
+
+class TooManyTransfersError(Exception):
+    """Too many simultaneous transfers."""
 
 
 @atomic
@@ -109,6 +117,12 @@ def initiate_transfer(debtor_id: int,
     assert recipient_creditor_id is None or MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
 
+    # Ensure the debtor does exist.
+    if Debtor.get_instance(debtor_id) is None:
+        raise DebtorDoesNotExistError()
+
+    # TODO: Raise `TooManyTransfersError` if there are too many transfers.
+
     # Create an `InitiatedTransfer` record.
     if recipient_creditor_id is not None:
         new_initiated_transfer = InitiatedTransfer(
@@ -134,7 +148,7 @@ def initiate_transfer(debtor_id: int,
         if _compare_initiated_transfers(new_initiated_transfer, existing_initiated_transfer):
             raise TransferExistsError(existing_initiated_transfer)
         else:
-            raise TransfersConflictError
+            raise TransfersConflictError()
     with db.retry_on_integrity_error():
         db.session.add(new_initiated_transfer)
 
@@ -151,7 +165,7 @@ def initiate_transfer(debtor_id: int,
         try:
             db.session.flush()
         except IntegrityError:
-            raise TransfersConflictError
+            raise TransfersConflictError()
 
         # Send a `prepare_transfer` message.
         db.session.add(PrepareTransferSignal(

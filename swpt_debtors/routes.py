@@ -50,13 +50,13 @@ SPEC_CONFLICTING_POLICY = {
 SPEC_TRANSFER_DOES_NOT_EXIST = {
     'description': 'The transfer entry does not exist.',
 }
-SPEC_CONFLICTING_TRANSFER = {
+SPEC_TRANSFER_CONFLICT = {
     'description': 'A different transfer entry with the same UUID already exists.',
 }
 SPEC_TOO_MANY_TRANSFERS = {
     'description': 'Too many issuing transfers.',
 }
-SPEC_DUPLICATED_TRANSFER = {
+SPEC_TRANSFER_EXISTS = {
     'description': 'The same transfer entry already exists.',
     'headers': SPEC_LOCATION_HEADER,
 }
@@ -154,39 +154,39 @@ class IssuingTransfers(MethodView):
 
     @transfers_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)
-    @transfers_api.doc(responses={303: SPEC_DUPLICATED_TRANSFER,
+    @transfers_api.doc(responses={303: SPEC_TRANSFER_EXISTS,
                                   403: SPEC_TOO_MANY_TRANSFERS,
                                   404: SPEC_DEBTOR_DOES_NOT_EXIST,
-                                  409: SPEC_CONFLICTING_TRANSFER})
-    def post(self, transfer_request, debtorId):
-        """Create a new credit-issuing transfer.
+                                  409: SPEC_TRANSFER_CONFLICT})
+    def post(self, transfer_creation_request, debtorId):
+        """Create a new credit-issuing transfer."""
 
-        ---
-        TODO:
-        """
-
-        debtor = procedures.get_or_create_debtor(debtorId)
-        transfer_uuid = transfer_request['transfer_uuid']
+        transfer_uuid = transfer_creation_request['transfer_uuid']
+        recipient_uri = urljoin(request.base_url, transfer_creation_request['recipient_uri'])
         location = url_for('transfers.Transfer', _external=True, debtorId=debtorId, transferUuid=transfer_uuid)
-        recipient_uri = urljoin(request.base_url, transfer_request['recipient_uri'])
         try:
-            try:
-                recipient_creditor_id = endpoints.match_url('creditor', recipient_uri)['creditorId']
-            except endpoints.MatchError:
-                recipient_creditor_id = None
+            recipient_creditor_id = endpoints.match_url('creditor', recipient_uri)['creditorId']
+        except endpoints.MatchError:
+            recipient_creditor_id = None
+        try:
             transfer = procedures.initiate_transfer(
                 debtorId,
                 transfer_uuid,
                 recipient_creditor_id,
                 recipient_uri,
-                transfer_request['amount'],
-                transfer_request['transfer_info'],
+                transfer_creation_request['amount'],
+                transfer_creation_request['transfer_info'],
             )
-        except procedures.TransferExistsError:
-            return redirect(location, code=303)
+        except procedures.TooManyTransfersError:
+            abort(403)
+        except procedures.DebtorDoesNotExistError:
+            abort(404)
         except procedures.TransfersConflictError:
             abort(409)
-        return transfer, {'Location': location}
+        except procedures.TransferExistsError:
+            return redirect(location, code=303)
+        else:
+            return transfer, {'Location': location}
 
 
 @transfers_api.route('/<i64:debtorId>/transfers/<transferUuid>', parameters=[SPEC_DEBTOR_ID, SPEC_TRANSFER_UUID])

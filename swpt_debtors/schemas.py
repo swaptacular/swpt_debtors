@@ -214,6 +214,7 @@ class TransferCreationRequestSchema(Schema):
     )
     recipient_uri = fields.Url(
         required=True,
+        relative=True,
         schemes=[endpoints.get_url_scheme()],
         data_key='recipientUri',
         format='uri',
