@@ -151,7 +151,7 @@ class TransfersCollectionEndpoint(MethodView):
         return transfer, {'Location': location}
 
 
-@transfers_api.route('/<i64:debtorId>/transfers/<transferUuid>', parameters=[specs.DEBTOR_ID, specs.TRANSFER_UUID])
+@transfers_api.route('/<i64:debtorId>/transfers/<uuid:transferUuid>', parameters=[specs.DEBTOR_ID, specs.TRANSFER_UUID])
 class TransferEndpoint(MethodView):
     @transfers_api.response(TransferSchema(context=CONTEXT))
     @transfers_api.doc(responses={404: specs.TRANSFER_DOES_NOT_EXIST})
