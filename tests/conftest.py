@@ -2,6 +2,7 @@ import pytest
 import sqlalchemy
 import flask_migrate
 from unittest import mock
+from datetime import datetime, timezone
 from swpt_debtors import create_app
 from swpt_debtors.extensions import db
 
@@ -57,3 +58,8 @@ def db_session(app):
         transaction.rollback()
     for connection in connections_by_engine.values():
         connection.close()
+
+
+@pytest.fixture(scope='function')
+def current_ts():
+    return datetime.now(tz=timezone.utc)

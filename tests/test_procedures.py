@@ -1,16 +1,11 @@
 import pytest
-from datetime import datetime, date, timedelta, timezone
+from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
 from swpt_debtors.models import Account, ChangeInterestRateSignal, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 from swpt_debtors import procedures as p
 
 D_ID = -1
 C_ID = 1
-
-
-@pytest.fixture(scope='function')
-def current_ts():
-    return datetime.now(tz=timezone.utc)
 
 
 @pytest.fixture
