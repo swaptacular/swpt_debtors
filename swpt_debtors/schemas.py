@@ -18,14 +18,14 @@ class InterestRateLowerLimitSchema(Schema):
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
         description='The annual interest rate (in percents) should be no less than this value.',
     )
-    cutoff = fields.DateTime(
+    cutoff = fields.Date(
         required=True,
         data_key='enforcedUntil',
-        description='The limit will not be enforced after this moment.',
+        description='The limit will not be enforced after this date.',
     )
 
     @post_load
-    def make_lower_limit(self, data):
+    def make_lower_limit(self, data, **kwargs):
         return LowerLimit(value=data['value'], cutoff=data['cutoff'])
 
 
@@ -36,14 +36,14 @@ class BalanceLowerLimitSchema(Schema):
         format='int64',
         description='The balance should be no less than this value.',
     )
-    cutoff = fields.DateTime(
+    cutoff = fields.Date(
         required=True,
         data_key='enforcedUntil',
-        description='The limit will not be enforced after this moment.',
+        description='The limit will not be enforced after this date.',
     )
 
     @post_load
-    def make_lower_limit(self, data):
+    def make_lower_limit(self, data, **kwargs):
         return LowerLimit(value=data['value'], cutoff=data['cutoff'])
 
 
