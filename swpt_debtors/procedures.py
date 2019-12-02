@@ -36,6 +36,29 @@ def get_debtor(debtor_id: int) -> Optional[Debtor]:
 
 
 @atomic
+def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    debtor = Debtor(debtor_id=debtor_id)
+    db.session.add(debtor)
+    try:
+        db.session.flush()
+    except IntegrityError:
+        raise DebtorExistsError(debtor_id)
+    return debtor
+
+
+@atomic
+def get_or_create_debtor(debtor_id: int) -> Debtor:
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    debtor = Debtor.get_instance(debtor_id)
+    if debtor is None:
+        debtor = Debtor(debtor_id=debtor_id)
+        with db.retry_on_integrity_error():
+            db.session.add(debtor)
+    return debtor
+
+
+@atomic
 def update_debtor_policy(
         debtor_id: int,
         interest_rate_target: float,
@@ -57,67 +80,6 @@ def update_debtor_policy(
     debtor.interest_rate_target = interest_rate_target
     debtor.interest_rate_lower_limits = interest_rate_lower_limits
     debtor.balance_lower_limits = balance_lower_limits
-
-
-def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:
-    seqnum, ts = event
-    other_seqnum, other_ts = other_event
-    if other_ts:
-        advance = ts - other_ts
-    else:
-        advance = TD_ZERO
-    return advance >= TD_MINUS_SECOND and (
-        advance > TD_SECOND
-        or other_seqnum is None
-        or 0 < (seqnum - other_seqnum) % 0x100000000 < 0x80000000
-    )
-
-
-def _insert_change_interest_rate_signal(account: Account, interest_rate: Optional[float]) -> None:
-    if interest_rate is not None:
-        current_ts = datetime.now(tz=timezone.utc)
-        account.interest_rate_last_change_seqnum = increment_seqnum(account.interest_rate_last_change_seqnum)
-        account.interest_rate_last_change_ts = max(account.interest_rate_last_change_ts, current_ts)
-        db.session.add(ChangeInterestRateSignal(
-            debtor_id=account.debtor_id,
-            creditor_id=account.creditor_id,
-            change_seqnum=account.interest_rate_last_change_seqnum,
-            change_ts=account.interest_rate_last_change_ts,
-            interest_rate=interest_rate,
-        ))
-
-
-def _compare_initiated_transfers(first: InitiatedTransfer, second: InitiatedTransfer) -> bool:
-    return all([
-        first.debtor_id == second.debtor_id,
-        first.transfer_uuid == second.transfer_uuid,
-        first.recipient_uri == second.recipient_uri,
-        first.amount == second.amount,
-        first.transfer_info == second.transfer_info,
-    ])
-
-
-@atomic
-def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    debtor = Debtor(debtor_id=debtor_id)
-    db.session.add(debtor)
-    try:
-        db.session.flush()
-    except IntegrityError:
-        raise DebtorExistsError(debtor_id)
-    return debtor
-
-
-@atomic
-def get_or_create_debtor(debtor_id: int) -> Debtor:
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    debtor = Debtor.get_instance(debtor_id)
-    if debtor is None:
-        debtor = Debtor(debtor_id=debtor_id)
-        with db.retry_on_integrity_error():
-            db.session.add(debtor)
-    return debtor
 
 
 @atomic
@@ -241,3 +203,41 @@ def process_account_change_signal(
         debtor = Debtor.get_instance(debtor_id)
         if debtor:
             _insert_change_interest_rate_signal(account, debtor.interest_rate)
+
+
+def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:
+    seqnum, ts = event
+    other_seqnum, other_ts = other_event
+    if other_ts:
+        advance = ts - other_ts
+    else:
+        advance = TD_ZERO
+    return advance >= TD_MINUS_SECOND and (
+        advance > TD_SECOND
+        or other_seqnum is None
+        or 0 < (seqnum - other_seqnum) % 0x100000000 < 0x80000000
+    )
+
+
+def _insert_change_interest_rate_signal(account: Account, interest_rate: Optional[float]) -> None:
+    if interest_rate is not None:
+        current_ts = datetime.now(tz=timezone.utc)
+        account.interest_rate_last_change_seqnum = increment_seqnum(account.interest_rate_last_change_seqnum)
+        account.interest_rate_last_change_ts = max(account.interest_rate_last_change_ts, current_ts)
+        db.session.add(ChangeInterestRateSignal(
+            debtor_id=account.debtor_id,
+            creditor_id=account.creditor_id,
+            change_seqnum=account.interest_rate_last_change_seqnum,
+            change_ts=account.interest_rate_last_change_ts,
+            interest_rate=interest_rate,
+        ))
+
+
+def _compare_initiated_transfers(first: InitiatedTransfer, second: InitiatedTransfer) -> bool:
+    return all([
+        first.debtor_id == second.debtor_id,
+        first.transfer_uuid == second.transfer_uuid,
+        first.recipient_uri == second.recipient_uri,
+        first.amount == second.amount,
+        first.transfer_info == second.transfer_info,
+    ])
