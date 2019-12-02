@@ -4,7 +4,6 @@ from flask import redirect, url_for, request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib import endpoints
-from .models import InitiatedTransfer, MAX_UINT64
 from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
     DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema
 from . import procedures
@@ -18,7 +17,7 @@ SPEC_DEBTOR_ID = {
         'type': 'integer',
         'format': 'uint64',
         'minimum': 0,
-        'maximum': MAX_UINT64,
+        'maximum': (1 << 64) - 1,
     },
 }
 SPEC_TRANSFER_UUID = {
@@ -99,14 +98,9 @@ class DebtorInfo(MethodView):
     @debtors_api.response(DebtorSchema(context=context))
     @debtors_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
-        """Return public information about a debtor.
+        """Return public information about a debtor."""
 
-        ---
-        Ignored
-        """
-
-        debtor = procedures.get_or_create_debtor(debtorId)
-        return debtor or abort(404)
+        return procedures.get_debtor(debtorId) or abort(404)
 
     @debtors_api.arguments(DebtorCreationOptionsSchema)
     @debtors_api.response(DebtorSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)
@@ -128,8 +122,7 @@ class DebtorPolicy(MethodView):
     def get(self, debtorId):
         """Return information about debtor's policy."""
 
-        debtor = procedures.get_debtor(debtorId)
-        return debtor or abort(404)
+        return procedures.get_debtor(debtorId) or abort(404)
 
     @policies_api.arguments(DebtorPolicyUpdateRequestSchema)
     @policies_api.response(DebtorPolicySchema(context=context))
@@ -139,6 +132,9 @@ class DebtorPolicy(MethodView):
         """Update debtor's policy.
 
         This operation is **idempotent**!
+
+        ---
+        TODO:
         """
 
         debtor = procedures.get_debtor(debtorId)
@@ -152,7 +148,9 @@ class IssuingTransfers(MethodView):
     def get(self, debtorId):
         """Return the debtor's collection of credit-issuing transfers."""
 
-        return TransfersCollection(debtor_id=debtorId, members=list(range(10)))
+        if procedures.get_debtor(debtorId) is None:
+            abort(404)
+        return TransfersCollection(debtor_id=debtorId, members=procedures.get_transfer_uuids(debtorId))
 
     @transfers_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)
@@ -161,7 +159,11 @@ class IssuingTransfers(MethodView):
                                   404: SPEC_DEBTOR_DOES_NOT_EXIST,
                                   409: SPEC_CONFLICTING_TRANSFER})
     def post(self, transfer_request, debtorId):
-        """Create a new credit-issuing transfer."""
+        """Create a new credit-issuing transfer.
+
+        ---
+        TODO:
+        """
 
         debtor = procedures.get_or_create_debtor(debtorId)
         transfer_uuid = transfer_request['transfer_uuid']
@@ -194,13 +196,10 @@ class Transfer(MethodView):
     def get(self, debtorId, transferUuid):
         """Return information about a credit-issuing transfer."""
 
-        class Transfer:
-            pass
-        transfer = InitiatedTransfer.get_instance((debtorId, transferUuid))
-        if transfer:
-            return transfer
-        abort(404)
+        return procedures.get_initiated_transfer(debtorId, transferUuid) or abort(404)
 
     @transfers_api.response(code=204)
     def delete(self, debtorId, transferUuid):
         """Delete a credit-issuing transfer."""
+
+        return procedures.delete_initiated_transfer(debtorId, transferUuid)

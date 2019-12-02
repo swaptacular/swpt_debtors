@@ -1,7 +1,7 @@
-from marshmallow import Schema, fields, validate, missing
+from marshmallow import Schema, fields, validate, missing, post_load
 from flask import url_for
 from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
-    Debtor, InitiatedTransfer
+    LowerLimit, Debtor, InitiatedTransfer
 from swpt_lib import endpoints
 
 
@@ -17,6 +17,10 @@ class InterestRateLowerLimitSchema(Schema):
         description='The limit will not be enforced after this moment.',
     )
 
+    @post_load
+    def make_lower_limit(self, data):
+        return LowerLimit(value=data['value'], cutoff=data['cutoff'])
+
 
 class BalanceLowerLimitSchema(Schema):
     value = fields.Int(
@@ -30,6 +34,10 @@ class BalanceLowerLimitSchema(Schema):
         data_key='enforcedUntil',
         description='The limit will not be enforced after this moment.',
     )
+
+    @post_load
+    def make_lower_limit(self, data):
+        return LowerLimit(value=data['value'], cutoff=data['cutoff'])
 
 
 class DebtorCreationOptionsSchema(Schema):

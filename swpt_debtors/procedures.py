@@ -1,6 +1,6 @@
 from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
-from typing import TypeVar, Optional, Callable, Tuple
+from typing import TypeVar, Optional, Callable, Tuple, List
 from sqlalchemy.exc import IntegrityError
 from .extensions import db
 from .models import Debtor, Account, ChangeInterestRateSignal, LowerLimitSequence, \
@@ -80,6 +80,22 @@ def update_debtor_policy(
     debtor.interest_rate_target = interest_rate_target
     debtor.interest_rate_lower_limits = interest_rate_lower_limits
     debtor.balance_lower_limits = balance_lower_limits
+
+
+@atomic
+def get_transfer_uuids(debtor_id: int) -> List[UUID]:
+    rows = db.session.query(InitiatedTransfer.transfer_uuid).filter_by(debtor_id=debtor_id).all()
+    return [uuid for (uuid,) in rows]
+
+
+@atomic
+def get_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> Optional[InitiatedTransfer]:
+    return InitiatedTransfer.get_instance((debtor_id, transfer_uuid))
+
+
+@atomic
+def delete_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> int:
+    return InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).delete()
 
 
 @atomic
