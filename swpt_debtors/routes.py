@@ -83,12 +83,12 @@ transfers_api = Blueprint(
 context = {
     'Debtor': 'debtors.Debtor',
     'DebtorPolicy': 'policies.DebtorPolicy',
-    'IssuingTransfers': 'transfers.IssuingTransfers',
+    'TransfersCollection': 'transfers.TransfersCollection',
     'Transfer': 'transfers.Transfer'
 }
 
 
-class TransfersCollection(NamedTuple):
+class DebtorTransfers(NamedTuple):
     debtor_id: int
     members: List[str]
 
@@ -155,15 +155,17 @@ class DebtorPolicy(MethodView):
 
 
 @transfers_api.route('/<i64:debtorId>/transfers/', parameters=[SPEC_DEBTOR_ID])
-class IssuingTransfers(MethodView):
+class TransfersCollection(MethodView):
     @transfers_api.response(TransfersCollectionSchema(context=context))
     @transfers_api.doc(responses={404: SPEC_DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
         """Return the debtor's collection of credit-issuing transfers."""
 
-        if procedures.get_debtor(debtorId) is None:
+        try:
+            transfer_uuids = procedures.get_debtor_transfer_uuids(debtorId)
+        except procedures.DebtorDoesNotExistError:
             abort(404)
-        return TransfersCollection(debtor_id=debtorId, members=procedures.get_transfer_uuids(debtorId))
+        return DebtorTransfers(debtor_id=debtorId, members=transfer_uuids)
 
     @transfers_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=context), code=201, headers=SPEC_LOCATION_HEADER)

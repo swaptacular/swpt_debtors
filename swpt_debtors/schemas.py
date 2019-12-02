@@ -369,4 +369,4 @@ class TransfersCollectionSchema(Schema):
     )
 
     def get_uri(self, obj):
-        return url_for(self.context['IssuingTransfers'], _external=True, debtorId=obj.debtor_id)
+        return url_for(self.context['TransfersCollection'], _external=True, debtorId=obj.debtor_id)

@@ -97,7 +97,9 @@ def update_debtor_policy(
 
 
 @atomic
-def get_transfer_uuids(debtor_id: int) -> List[UUID]:
+def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
+    # TODO: Raise `DebtorDoesNotExistError` if the debtor does not exist.
+
     rows = db.session.query(InitiatedTransfer.transfer_uuid).filter_by(debtor_id=debtor_id).all()
     return [uuid for (uuid,) in rows]
 
