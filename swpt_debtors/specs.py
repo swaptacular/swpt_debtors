@@ -20,6 +20,7 @@ TRANSFER_UUID = {
     'description': "The transfer's UUID",
     'schema': {
         'type': 'string',
+        'format': 'uuid',
     },
 }
 
