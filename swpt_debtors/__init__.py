@@ -29,8 +29,6 @@ API_DESCRIPTION = """This API can be used to:
 
 class Configuration(metaclass=MetaFlaskEnv):
     SECRET_KEY = 'dummy-secret'
-    SERVER_NAME = endpoints.get_server_name()
-    PREFERRED_URL_SCHEME = endpoints.get_url_scheme()
     SQLALCHEMY_DATABASE_URI = ''
     SQLALCHEMY_POOL_SIZE = None
     SQLALCHEMY_POOL_TIMEOUT = None
@@ -65,6 +63,10 @@ def create_app(config_dict={}):
     app = Flask(__name__)
     app.url_map.converters['i64'] = Int64Converter
     app.config.from_object(Configuration)
+    app.config.from_mapping(dict(
+        SERVER_NAME=endpoints.get_server_name(),
+        PREFERRED_URL_SCHEME=endpoints.get_url_scheme(),
+    ))
     app.config.from_mapping(config_dict)
     db.init_app(app)
     migrate.init_app(app, db)

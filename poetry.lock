@@ -634,7 +634,7 @@ version = "0.1.0"
 flask = "^1.1"
 
 [package.source]
-reference = "ba426b6a9be1d640a0bf97db074f45c6147a8344"
+reference = "3c0eee44ab027b2dff044407b1df4103d9f4b1e3"
 type = "git"
 url = "https://github.com/epandurski/swpt_lib.git"
 [[package]]
