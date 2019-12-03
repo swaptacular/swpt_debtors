@@ -21,6 +21,8 @@ def app():
 
     app = create_app({
         'TESTING': True,
+        'SERVER_NAME': 'example.com',
+        'SWPT_SERVER_NAME': 'example.com',
     })
     with app.app_context():
         flask_migrate.upgrade()
