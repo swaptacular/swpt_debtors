@@ -19,10 +19,11 @@ def _restart_savepoint(session, transaction):
 def app():
     """Create a Flask application object."""
 
+    server_name = 'example.com'
     app = create_app({
         'TESTING': True,
-        'SERVER_NAME': 'example.com',
-        'SWPT_SERVER_NAME': 'example.com',
+        'SERVER_NAME': server_name,
+        'SWPT_SERVER_NAME': server_name,
     })
     with app.app_context():
         flask_migrate.upgrade()
