@@ -50,6 +50,7 @@ class Configuration(metaclass=MetaFlaskEnv):
     OPENAPI_REDOC_VERSION = 'next'
     OPENAPI_SWAGGER_UI_PATH = 'swagger-ui'
     OPENAPI_SWAGGER_UI_VERSION = '3.18.3'
+    APP_MAX_LIMITS_COUNT = 10
 
 
 def create_app(config_dict={}):

@@ -24,6 +24,7 @@ def app():
         'TESTING': True,
         'SERVER_NAME': server_name,
         'SWPT_SERVER_NAME': server_name,
+        'APP_MAX_LIMITS_COUNT': 10,
     })
     with app.app_context():
         flask_migrate.upgrade()

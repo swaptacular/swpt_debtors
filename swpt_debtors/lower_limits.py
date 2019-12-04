@@ -1,8 +1,13 @@
 from __future__ import annotations
 from numbers import Real
-from typing import NamedTuple, List, Tuple, Optional, Iterable
+from typing import NamedTuple, List, Tuple, Optional, Iterable, Sequence
 from datetime import date
 from collections import abc
+from flask import current_app
+
+
+class TooLongLimitSequenceError(Exception):
+    """Exceeded the maximum allowed length for limit sequences."""
 
 
 class LowerLimit(NamedTuple):
@@ -26,13 +31,21 @@ class LowerLimitSequence(abc.Sequence):
     def __len__(self):
         return len(self._limits)
 
+    def __repr__(self):
+        return f'LowerLimitSequence({self._limits})'
+
     def sort(self) -> None:
         """Sort the sequence by cutoff date."""
 
         self._limits.sort(key=lambda l: l.cutoff)
 
-    def add_limit(self, new_limit: LowerLimit) -> None:
-        """Add a limit, eliminate redundant limits, sort the sequence by cutoff date."""
+    def add_limit(self, new_limit: LowerLimit, check_limits_count: bool = True) -> None:
+        """Add a limit, eliminate redundant limits, sort the sequence by cutoff date.
+
+        Raises `TooLongLimitSequenceError` if `check_limits_count` is
+        `True` and the resulting sequence is too long.
+
+        """
 
         def find_eliminator_in_sorted_limit_sequence(sorted_limits: LowerLimitSequence) -> Optional[LowerLimit]:
             # Try to find a limit in the sequence that makes redundant
@@ -50,6 +63,32 @@ class LowerLimitSequence(abc.Sequence):
             self._apply_eliminator(eliminator)
             self.sort()
             eliminator = find_eliminator_in_sorted_limit_sequence(self)
+        if check_limits_count and len(self) > self._get_max_limits_count():
+            raise TooLongLimitSequenceError()
+
+    def add_limits(self, limits: Sequence[LowerLimit]) -> None:
+        """Safely add several limits at once.
+
+        Raises `TooLongLimitSequenceError` if the resulting number of
+        limits is too big.
+
+        """
+
+        max_limits_count = self._get_max_limits_count()
+
+        # If we presume that the passed `limits` do not eliminate each
+        # other, we can be certain that the resulting number of limits
+        # will be no less than `len(limits)`.
+        if len(limits) > max_limits_count:
+            raise TooLongLimitSequenceError()
+
+        # We check the number of limits only at the end (not on each
+        # added limit) because each added limit can eliminate any
+        # number of already existing limits.
+        for limit in limits:
+            self.add_limit(limit, check_limits_count=False)
+        if len(self) > max_limits_count:
+            raise TooLongLimitSequenceError()
 
     def current_limits(self, current_date: date) -> LowerLimitSequence:
         """Return a new sequence containing only the limits effectual to the `current_date`."""
@@ -70,6 +109,9 @@ class LowerLimitSequence(abc.Sequence):
         cutoff = eliminator.cutoff
         self._limits = [l for l in self._limits if l.value > value or l.cutoff > cutoff]
         self._limits.append(eliminator)
+
+    def _get_max_limits_count(self) -> int:
+        return current_app.config['APP_MAX_LIMITS_COUNT']
 
 
 def lower_limits_property(values_attrname: str, cutoffs_attrname: str):
