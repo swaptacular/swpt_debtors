@@ -84,26 +84,22 @@ def update_debtor_policy(
     if debtor is None:
         raise DebtorDoesNotExistError()
 
-    # Change the interest rate target.
-    if interest_rate_target is not None:
-        debtor.interest_rate_target = interest_rate_target
-
-    # Add the new interest rate limits.
     interest_rate_lower_limits = debtor.interest_rate_lower_limits
     try:
         interest_rate_lower_limits.add_limits(new_interest_rate_limits)
     except TooLongLimitSequenceError:
         raise ConflictingPolicyError('There are too many interest rate limits.')
-    debtor.interest_rate_lower_limits = interest_rate_lower_limits
 
-    # Add the new balance limits.
     balance_lower_limits = debtor.balance_lower_limits
     try:
         balance_lower_limits.add_limits(new_balance_limits)
     except TooLongLimitSequenceError:
         raise ConflictingPolicyError('There are too many balance limits.')
-    debtor.balance_lower_limits = balance_lower_limits
 
+    if interest_rate_target is not None:
+        debtor.interest_rate_target = interest_rate_target
+    debtor.interest_rate_lower_limits = interest_rate_lower_limits
+    debtor.balance_lower_limits = balance_lower_limits
     return debtor
 
 
