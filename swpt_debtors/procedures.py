@@ -3,7 +3,7 @@ from uuid import UUID
 from typing import TypeVar, Optional, Callable, Tuple, List
 from sqlalchemy.exc import IntegrityError
 from .extensions import db
-from .lower_limits import LowerLimitSequence
+from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
 from .models import Debtor, Account, ChangeInterestRateSignal, \
     InitiatedTransfer, RunningTransfer, PrepareTransferSignal, increment_seqnum, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
@@ -42,6 +42,9 @@ class TooManyTransfersError(Exception):
 class ConflictingPolicyError(Exception):
     """The new debtor policy conflicts with the old one."""
 
+    def __init__(self, message: str):
+        self.message = message
+
 
 @atomic
 def get_debtor(debtor_id: int) -> Optional[Debtor]:
@@ -74,26 +77,33 @@ def get_or_create_debtor(debtor_id: int) -> Debtor:
 @atomic
 def update_debtor_policy(
         debtor_id: int,
-        interest_rate_target: float,
+        interest_rate_target: Optional[float],
         new_interest_rate_limits: LowerLimitSequence,
         new_balance_limits: LowerLimitSequence) -> Debtor:
-    # TODO: This is probably not at all the function we need.
-
-    # TODO: Raise `ConflictingPolicyError` if necessary.
-
-    debtor = Debtor.get_instance(debtor_id)
+    debtor = Debtor.lock_instance(debtor_id)
     if debtor is None:
         raise DebtorDoesNotExistError()
 
+    # Change the interest rate target.
+    if interest_rate_target is not None:
+        debtor.interest_rate_target = interest_rate_target
+
+    # Add the new interest rate limits.
     interest_rate_lower_limits = debtor.interest_rate_lower_limits
-    for l in new_interest_rate_limits:
-        interest_rate_lower_limits.add_limit(l)
-    balance_lower_limits = debtor.balance_lower_limits
-    for l in new_balance_limits:
-        balance_lower_limits.add_limit(l)
-    debtor.interest_rate_target = interest_rate_target
+    try:
+        interest_rate_lower_limits.add_limits(new_interest_rate_limits)
+    except TooLongLimitSequenceError:
+        raise ConflictingPolicyError('There are too many interest rate limits.')
     debtor.interest_rate_lower_limits = interest_rate_lower_limits
+
+    # Add the new balance limits.
+    balance_lower_limits = debtor.balance_lower_limits
+    try:
+        balance_lower_limits.add_limits(new_balance_limits)
+    except TooLongLimitSequenceError:
+        raise ConflictingPolicyError('There are too many balance limits.')
     debtor.balance_lower_limits = balance_lower_limits
+
     return debtor
 
 

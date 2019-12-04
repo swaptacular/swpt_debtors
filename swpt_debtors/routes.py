@@ -89,8 +89,8 @@ class DebtorPolicyEndpoint(MethodView):
             )
         except procedures.DebtorDoesNotExistError:
             abort(404)
-        except procedures.ConflictingPolicyError:
-            abort(409)
+        except procedures.ConflictingPolicyError as e:
+            abort(409, message=e.message)
         return debtor
 
 
