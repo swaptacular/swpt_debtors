@@ -83,14 +83,18 @@ def update_debtor_policy(
     debtor = Debtor.lock_instance(debtor_id)
     if debtor is None:
         raise DebtorDoesNotExistError()
+    current_ts = datetime.now(tz=timezone.utc)
+    date_week_ago = (current_ts - timedelta(days=7)).date()
 
     interest_rate_lower_limits = debtor.interest_rate_lower_limits
+    interest_rate_lower_limits = interest_rate_lower_limits.current_limits(date_week_ago)
     try:
         interest_rate_lower_limits.add_limits(new_interest_rate_limits)
     except TooLongLimitSequenceError:
         raise ConflictingPolicyError('There are too many interest rate limits.')
 
     balance_lower_limits = debtor.balance_lower_limits
+    balance_lower_limits = balance_lower_limits.current_limits(date_week_ago)
     try:
         balance_lower_limits.add_limits(new_balance_limits)
     except TooLongLimitSequenceError:

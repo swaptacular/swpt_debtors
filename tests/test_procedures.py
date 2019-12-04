@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
 from swpt_debtors.models import Account, ChangeInterestRateSignal, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 from swpt_debtors import procedures as p
+from swpt_debtors.lower_limits import LowerLimit
 
 D_ID = -1
 C_ID = 1
@@ -105,3 +106,28 @@ def test_interest_rate_absolute_limits(db_session, debtor):
     assert debtor.interest_rate == INTEREST_RATE_FLOOR
     debtor.interest_rate_target = 1e100
     assert debtor.interest_rate == INTEREST_RATE_CEIL
+
+
+def test_update_debtor_policy(db_session, debtor, current_ts):
+    date_years_ago = (current_ts - timedelta(days=5000)).date()
+    with pytest.raises(p.DebtorDoesNotExistError):
+        p.update_debtor_policy(1234567890, 6.66, [], [])
+
+    p.update_debtor_policy(D_ID, 6.66, [LowerLimit(0.0, date_years_ago)], [LowerLimit(-1000, date_years_ago)])
+    debtor = p.get_debtor(D_ID)
+    assert debtor.interest_rate_target == 6.66
+    assert len(debtor.interest_rate_lower_limits) == 1
+    assert debtor.interest_rate_lower_limits[0] == LowerLimit(0.0, date_years_ago)
+    assert len(debtor.balance_lower_limits) == 1
+    assert debtor.balance_lower_limits[0] == LowerLimit(-1000, date_years_ago)
+
+    p.update_debtor_policy(D_ID, None, [], [])
+    debtor = p.get_debtor(D_ID)
+    assert debtor.interest_rate_target == 6.66
+    assert len(debtor.interest_rate_lower_limits) == 0
+    assert len(debtor.balance_lower_limits) == 0
+
+    with pytest.raises(p.ConflictingPolicyError):
+        p.update_debtor_policy(D_ID, None, 11 * [LowerLimit(0.0, current_ts.date())], [])
+    with pytest.raises(p.ConflictingPolicyError):
+        p.update_debtor_policy(D_ID, None, [], 11 * [LowerLimit(-1000, current_ts.date())])
