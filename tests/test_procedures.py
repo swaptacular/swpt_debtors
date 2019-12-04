@@ -1,7 +1,9 @@
 import pytest
+from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
-from swpt_debtors.models import Account, ChangeInterestRateSignal, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
+from swpt_debtors.models import Account, ChangeInterestRateSignal, InitiatedTransfer, \
+    INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
 
@@ -131,3 +133,35 @@ def test_update_debtor_policy(db_session, debtor, current_ts):
         p.update_debtor_policy(D_ID, None, 11 * [LowerLimit(0.0, current_ts.date())], [])
     with pytest.raises(p.ConflictingPolicyError):
         p.update_debtor_policy(D_ID, None, [], 11 * [LowerLimit(-1000, current_ts.date())])
+
+
+def test_initiated_transfers(db_session, debtor):
+    test_uuid = UUID('123e4567-e89b-12d3-a456-426655440000')
+    db_session.add(InitiatedTransfer(
+        debtor_id=D_ID,
+        transfer_uuid=test_uuid,
+        recipient_uri='https://example.com/creditors/1111',
+        amount=1001,
+    ))
+    db_session.commit()
+    with pytest.raises(p.DebtorDoesNotExistError):
+        p.get_debtor_transfer_uuids(1234567890)
+    uuids = p.get_debtor_transfer_uuids(D_ID)
+    assert uuids == [test_uuid]
+
+    assert p.get_initiated_transfer(1234567890, test_uuid) is None
+    t = p.get_initiated_transfer(D_ID, test_uuid)
+    assert t.debtor_id == D_ID
+    assert t.transfer_uuid == test_uuid
+    assert t.amount == 1001
+    assert t.recipient_uri == 'https://example.com/creditors/1111'
+
+    p.delete_initiated_transfer(D_ID, test_uuid)
+    assert p.get_initiated_transfer(D_ID, test_uuid) is None
+
+
+def test_create_new_debtor(db_session, debtor):
+    with pytest.raises(p.DebtorExistsError):
+        p.create_new_debtor(D_ID)
+    debtor = p.create_new_debtor(1234567890)
+    assert debtor.debtor_id == 1234567890
