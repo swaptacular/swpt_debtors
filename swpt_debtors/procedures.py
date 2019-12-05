@@ -251,6 +251,7 @@ def _initiate_transfer(debtor: Debtor,
         finalized_at_ts = datetime.now(tz=timezone.utc)
         error_code = 'DEB001'
         error_message = 'Unrecognized recipient URI.'
+    existing_transfer = InitiatedTransfer.get_instance((debtor.debtor_id, transfer_uuid))
     new_transfer = InitiatedTransfer(
         debtor=debtor,
         transfer_uuid=transfer_uuid,
@@ -262,7 +263,6 @@ def _initiate_transfer(debtor: Debtor,
         error_message=error_message,
     )
 
-    existing_transfer = InitiatedTransfer.get_instance((debtor.debtor_id, transfer_uuid))
     if existing_transfer is None:
         with db.retry_on_integrity_error():
             db.session.add(new_transfer)

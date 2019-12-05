@@ -2,13 +2,16 @@ import pytest
 from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
-from swpt_debtors.models import Account, ChangeInterestRateSignal, InitiatedTransfer, \
+from swpt_debtors.models import Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
     INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
 
 D_ID = -1
 C_ID = 1
+TEST_UUID = UUID('123e4567-e89b-12d3-a456-426655440000')
+TEST_UUID2 = UUID('123e4567-e89b-12d3-a456-426655440001')
+RECIPIENT_URI = 'https://example.com/creditors/1'
 
 
 @pytest.fixture
@@ -136,28 +139,27 @@ def test_update_debtor_policy(db_session, debtor, current_ts):
 
 
 def test_initiated_transfers(db_session, debtor):
-    test_uuid = UUID('123e4567-e89b-12d3-a456-426655440000')
     db_session.add(InitiatedTransfer(
         debtor_id=D_ID,
-        transfer_uuid=test_uuid,
-        recipient_uri='https://example.com/creditors/1111',
+        transfer_uuid=TEST_UUID,
+        recipient_uri=RECIPIENT_URI,
         amount=1001,
     ))
     db_session.commit()
     with pytest.raises(p.DebtorDoesNotExistError):
         p.get_debtor_transfer_uuids(1234567890)
     uuids = p.get_debtor_transfer_uuids(D_ID)
-    assert uuids == [test_uuid]
+    assert uuids == [TEST_UUID]
 
-    assert p.get_initiated_transfer(1234567890, test_uuid) is None
-    t = p.get_initiated_transfer(D_ID, test_uuid)
+    assert p.get_initiated_transfer(1234567890, TEST_UUID) is None
+    t = p.get_initiated_transfer(D_ID, TEST_UUID)
     assert t.debtor_id == D_ID
-    assert t.transfer_uuid == test_uuid
+    assert t.transfer_uuid == TEST_UUID
     assert t.amount == 1001
-    assert t.recipient_uri == 'https://example.com/creditors/1111'
+    assert t.recipient_uri == RECIPIENT_URI
 
-    p.delete_initiated_transfer(D_ID, test_uuid)
-    assert p.get_initiated_transfer(D_ID, test_uuid) is None
+    p.delete_initiated_transfer(D_ID, TEST_UUID)
+    assert p.get_initiated_transfer(D_ID, TEST_UUID) is None
 
 
 def test_create_new_debtor(db_session, debtor):
@@ -165,3 +167,38 @@ def test_create_new_debtor(db_session, debtor):
         p.create_new_debtor(D_ID)
     debtor = p.create_new_debtor(1234567890)
     assert debtor.debtor_id == 1234567890
+
+
+def test_initiate_transfer(db_session, debtor):
+    assert p.get_debtor_transfer_uuids(D_ID) == []
+    t = p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
+    assert t.debtor_id == D_ID
+    assert t.transfer_uuid == TEST_UUID
+    assert t.recipient_uri == RECIPIENT_URI
+    assert t.amount == 1000
+    assert t.transfer_info == {'note': 'test'}
+    assert not t.is_finalized
+    running_transfers = RunningTransfer.query.all()
+    assert len(running_transfers) == 1
+    rt = running_transfers[0]
+    assert rt.debtor_id == D_ID
+    assert rt.transfer_uuid == TEST_UUID
+    assert rt.recipient_creditor_id == C_ID
+    assert rt.amount == 1000
+    assert rt.transfer_info == {'note': 'test'}
+    assert not t.is_finalized
+    with pytest.raises(p.TransferExistsError):
+        p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
+    with pytest.raises(p.TransfersConflictError):
+        p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1001, {'note': 'test'})
+    with pytest.raises(p.DebtorDoesNotExistError):
+        p.initiate_transfer(1234567890, TEST_UUID, C_ID, RECIPIENT_URI, 1001, {'note': 'test'})
+    assert len(p.get_debtor_transfer_uuids(D_ID)) == 1
+    t2 = p.initiate_transfer(D_ID, TEST_UUID2, None, RECIPIENT_URI, 50, {})
+    assert t2.is_finalized
+    assert len(RunningTransfer.query.all()) == 1
+
+    p.delete_initiated_transfer(D_ID, TEST_UUID)
+    assert len(RunningTransfer.query.all()) == 1
+    with pytest.raises(p.TransfersConflictError):
+        p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
