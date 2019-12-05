@@ -82,10 +82,10 @@ class DebtorPolicyEndpoint(MethodView):
 
         try:
             debtor = procedures.update_debtor_policy(
-                debtorId,
-                policy_update_request['interest_rate_target'],
-                policy_update_request['interest_rate_lower_limits'],
-                policy_update_request['balance_lower_limits'],
+                debtor_id=debtorId,
+                interest_rate_target=policy_update_request['interest_rate_target'],
+                new_interest_rate_limits=policy_update_request['interest_rate_lower_limits'],
+                new_balance_limits=policy_update_request['balance_lower_limits'],
             )
         except procedures.DebtorDoesNotExistError:
             abort(404)
@@ -133,12 +133,12 @@ class TransfersCollectionEndpoint(MethodView):
             recipient_creditor_id = None
         try:
             transfer = procedures.initiate_transfer(
-                debtorId,
-                transfer_uuid,
-                recipient_creditor_id,
-                recipient_uri,
-                transfer_creation_request['amount'],
-                transfer_creation_request['transfer_info'],
+                debtor_id=debtorId,
+                transfer_uuid=transfer_uuid,
+                recipient_creditor_id=recipient_creditor_id,
+                recipient_uri=recipient_uri,
+                amount=transfer_creation_request['amount'],
+                transfer_info=transfer_creation_request['transfer_info'],
             )
         except procedures.TooManyTransfersError:
             abort(403)
