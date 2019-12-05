@@ -143,7 +143,29 @@ def initiate_transfer(debtor_id: int,
 
     # TODO: Raise `TooManyTransfersError` if the debtor has initiated too many transfers.
 
-    return _initiate_transfer(debtor, transfer_uuid, recipient_creditor_id, recipient_uri, amount, transfer_info)
+    existing_transfer = InitiatedTransfer.get_instance((debtor.debtor_id, transfer_uuid))
+    if existing_transfer:
+        if (existing_transfer.debtor_id == debtor.debtor_id
+                and existing_transfer.transfer_uuid == transfer_uuid
+                and existing_transfer.recipient_uri == recipient_uri
+                and existing_transfer.amount == amount
+                and existing_transfer.transfer_info == transfer_info):
+            raise TransferExistsError(existing_transfer)
+        raise TransfersConflictError()
+
+    new_transfer = _create_initiated_transfer(
+        debtor_id=debtor.debtor_id,
+        transfer_uuid=transfer_uuid,
+        recipient_creditor_id=recipient_creditor_id,
+        recipient_uri=recipient_uri,
+        amount=amount,
+        transfer_info=transfer_info,
+    )
+    with db.retry_on_integrity_error():
+        db.session.add(new_transfer)
+    if not new_transfer.is_finalized and recipient_creditor_id is not None:
+        _insert_running_transfer(new_transfer, recipient_creditor_id)
+    return new_transfer
 
 
 @atomic
@@ -228,22 +250,12 @@ def _insert_change_interest_rate_signal(account: Account, interest_rate: Optiona
         ))
 
 
-def _are_same_transfers(first: InitiatedTransfer, second: InitiatedTransfer) -> bool:
-    return all([
-        first.debtor == second.debtor,
-        first.transfer_uuid == second.transfer_uuid,
-        first.recipient_uri == second.recipient_uri,
-        first.amount == second.amount,
-        first.transfer_info == second.transfer_info,
-    ])
-
-
-def _initiate_transfer(debtor: Debtor,
-                       transfer_uuid: UUID,
-                       recipient_creditor_id: Optional[int],
-                       recipient_uri: str,
-                       amount: int,
-                       transfer_info: dict) -> InitiatedTransfer:
+def _create_initiated_transfer(debtor_id: int,
+                               transfer_uuid: UUID,
+                               recipient_creditor_id: Optional[int],
+                               recipient_uri: str,
+                               amount: int,
+                               transfer_info: dict) -> InitiatedTransfer:
     finalized_at_ts: Optional[datetime] = None
     error_code: Optional[str] = None
     error_message: Optional[str] = None
@@ -251,9 +263,8 @@ def _initiate_transfer(debtor: Debtor,
         finalized_at_ts = datetime.now(tz=timezone.utc)
         error_code = 'DEB001'
         error_message = 'Unrecognized recipient URI.'
-    existing_transfer = InitiatedTransfer.get_instance((debtor.debtor_id, transfer_uuid))
-    new_transfer = InitiatedTransfer(
-        debtor=debtor,
+    return InitiatedTransfer(
+        debtor_id=debtor_id,
         transfer_uuid=transfer_uuid,
         recipient_uri=recipient_uri,
         amount=amount,
@@ -262,18 +273,6 @@ def _initiate_transfer(debtor: Debtor,
         error_code=error_code,
         error_message=error_message,
     )
-
-    if existing_transfer is None:
-        with db.retry_on_integrity_error():
-            db.session.add(new_transfer)
-    elif _are_same_transfers(new_transfer, existing_transfer):
-        raise TransferExistsError(existing_transfer)
-    else:
-        raise TransfersConflictError()
-
-    if not new_transfer.is_finalized and recipient_creditor_id is not None:
-        _insert_running_transfer(new_transfer, recipient_creditor_id)
-    return new_transfer
 
 
 def _insert_running_transfer(t: InitiatedTransfer, recipient_creditor_id: int) -> RunningTransfer:
