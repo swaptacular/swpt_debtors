@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime
 from sqlalchemy.exc import IntegrityError
 from swpt_debtors.lower_limits import LowerLimit, LowerLimitSequence
-from swpt_debtors.models import Debtor, InitiatedTransfer, RunningTransfer
+from swpt_debtors.models import Debtor, InitiatedTransfer, RunningTransfer, MIN_INT64
 
 D_ID = -1
 C_ID = 1
@@ -86,11 +86,14 @@ def test_running_transfer_attrs(debtor, db_session, current_ts):
 
 def test_debtor_attrs(debtor, db_session, current_ts):
     assert debtor.interest_rate == 0.0
+    assert debtor.minimum_account_balance == MIN_INT64
     assert not debtor.is_active
     debtor.interest_rate_target = 6.66
     debtor.status = Debtor.STATUS_IS_ACTIVE_FLAG
+    debtor.balance_lower_limits = [LowerLimit(-1000, date(2100, 1, 1))]
     assert debtor.is_active
     assert debtor.interest_rate == 6.66
+    assert debtor.minimum_account_balance == -1000
     debtor.deactivated_at_date = current_ts
     with pytest.raises(IntegrityError):
         db_session.commit()
