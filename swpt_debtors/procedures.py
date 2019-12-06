@@ -143,9 +143,9 @@ def initiate_transfer(debtor_id: int,
 
     # TODO: Raise `TooManyTransfersError` if the debtor has initiated too many transfers.
 
-    existing_transfer = InitiatedTransfer.get_instance((debtor.debtor_id, transfer_uuid))
+    existing_transfer = InitiatedTransfer.get_instance((debtor_id, transfer_uuid))
     if existing_transfer:
-        if (existing_transfer.debtor_id == debtor.debtor_id
+        if (existing_transfer.debtor_id == debtor_id
                 and existing_transfer.transfer_uuid == transfer_uuid
                 and existing_transfer.recipient_uri == recipient_uri
                 and existing_transfer.amount == amount
@@ -154,7 +154,7 @@ def initiate_transfer(debtor_id: int,
         raise TransfersConflictError()
 
     new_transfer = _create_initiated_transfer(
-        debtor_id=debtor.debtor_id,
+        debtor_id=debtor_id,
         transfer_uuid=transfer_uuid,
         recipient_creditor_id=recipient_creditor_id,
         recipient_uri=recipient_uri,
@@ -163,7 +163,8 @@ def initiate_transfer(debtor_id: int,
     )
     with db.retry_on_integrity_error():
         db.session.add(new_transfer)
-    if not new_transfer.is_finalized and recipient_creditor_id is not None:
+    if recipient_creditor_id is not None:
+        assert not new_transfer.is_finalized
         _insert_running_transfer(new_transfer, recipient_creditor_id)
     return new_transfer
 
