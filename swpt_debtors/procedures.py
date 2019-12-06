@@ -299,7 +299,7 @@ def _raise_error_if_transfer_exists(debtor_id: int,
                                     recipient_uri: str,
                                     amount: int,
                                     transfer_info: dict):
-    t = InitiatedTransfer.get_instance((debtor_id, transfer_uuid))
+    t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one_or_none()
     if t:
         if t.recipient_uri == recipient_uri and t.amount == amount and t.transfer_info == transfer_info:
             raise TransferExistsError(t)
