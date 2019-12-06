@@ -116,6 +116,9 @@ def test_initiate_transfer(client, debtor):
     r = client.get('/debtors/123/transfers/')
     assert r.status_code == 200
     data = r.get_json()
+    assert data['debtorUri'] == 'http://example.com/debtors/123'
+    assert data['type'] == 'TransfersCollection'
+    assert data['uri'] == 'http://example.com/debtors/123/transfers/'
     assert data['totalItems'] == 0
     assert data['members'] == []
 
@@ -175,5 +178,22 @@ def test_initiate_transfer(client, debtor):
     assert data['isSuccessful'] is False
     assert r.headers['Location'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001'
 
+    r = client.get('/debtors/123/transfers/')
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['totalItems'] == 2
+    assert sorted(data['members']) == [
+        '123e4567-e89b-12d3-a456-426655440000',
+        '123e4567-e89b-12d3-a456-426655440001'
+    ]
+
     r = client.delete('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001')
     assert r.status_code == 204
+
+    r = client.get('/debtors/123/transfers/')
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['totalItems'] == 1
+    assert sorted(data['members']) == [
+        '123e4567-e89b-12d3-a456-426655440000',
+    ]
