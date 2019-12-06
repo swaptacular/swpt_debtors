@@ -163,7 +163,7 @@ def initiate_transfer(debtor_id: int,
             error_message='Unrecognized recipient URI.',
         )
     else:
-        _insert_running_transfer(
+        _insert_running_transfer_or_raise_conflict_error(
             debtor=debtor,
             transfer_uuid=transfer_uuid,
             recipient_creditor_id=recipient_creditor_id,
@@ -264,11 +264,11 @@ def _insert_change_interest_rate_signal(account: Account, interest_rate: Optiona
         ))
 
 
-def _insert_running_transfer(debtor: Debtor,
-                             transfer_uuid: UUID,
-                             recipient_creditor_id: int,
-                             amount: int,
-                             transfer_info: dict) -> RunningTransfer:
+def _insert_running_transfer_or_raise_conflict_error(debtor: Debtor,
+                                                     transfer_uuid: UUID,
+                                                     recipient_creditor_id: int,
+                                                     amount: int,
+                                                     transfer_info: dict) -> RunningTransfer:
     running_transfer = RunningTransfer(
         debtor_id=debtor.debtor_id,
         transfer_uuid=transfer_uuid,
