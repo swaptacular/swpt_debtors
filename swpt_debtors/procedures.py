@@ -143,29 +143,42 @@ def initiate_transfer(debtor_id: int,
 
     # TODO: Raise `TooManyTransfersError` if the debtor has initiated too many transfers.
 
-    existing_transfer = InitiatedTransfer.get_instance((debtor_id, transfer_uuid))
-    if existing_transfer:
-        if (existing_transfer.debtor_id == debtor_id
-                and existing_transfer.transfer_uuid == transfer_uuid
-                and existing_transfer.recipient_uri == recipient_uri
-                and existing_transfer.amount == amount
-                and existing_transfer.transfer_info == transfer_info):
-            raise TransferExistsError(existing_transfer)
-        raise TransfersConflictError()
-
-    new_transfer = _create_initiated_transfer(
+    _raise_error_if_transfer_exists(
         debtor_id=debtor_id,
         transfer_uuid=transfer_uuid,
-        recipient_creditor_id=recipient_creditor_id,
         recipient_uri=recipient_uri,
         amount=amount,
         transfer_info=transfer_info,
     )
+
+    if recipient_creditor_id is None:
+        new_transfer = InitiatedTransfer(
+            debtor_id=debtor_id,
+            transfer_uuid=transfer_uuid,
+            recipient_uri=recipient_uri,
+            amount=amount,
+            transfer_info=transfer_info,
+            finalized_at_ts=datetime.now(tz=timezone.utc),
+            error_code='DEB001',
+            error_message='Unrecognized recipient URI.',
+        )
+    else:
+        _insert_running_transfer(
+            debtor=debtor,
+            transfer_uuid=transfer_uuid,
+            recipient_creditor_id=recipient_creditor_id,
+            amount=amount,
+            transfer_info=transfer_info,
+        )
+        new_transfer = InitiatedTransfer(
+            debtor_id=debtor_id,
+            transfer_uuid=transfer_uuid,
+            recipient_uri=recipient_uri,
+            amount=amount,
+            transfer_info=transfer_info,
+        )
     with db.retry_on_integrity_error():
         db.session.add(new_transfer)
-    if recipient_creditor_id is not None:
-        assert not new_transfer.is_finalized
-        _insert_running_transfer(new_transfer, recipient_creditor_id)
     return new_transfer
 
 
@@ -251,38 +264,17 @@ def _insert_change_interest_rate_signal(account: Account, interest_rate: Optiona
         ))
 
 
-def _create_initiated_transfer(debtor_id: int,
-                               transfer_uuid: UUID,
-                               recipient_creditor_id: Optional[int],
-                               recipient_uri: str,
-                               amount: int,
-                               transfer_info: dict) -> InitiatedTransfer:
-    finalized_at_ts: Optional[datetime] = None
-    error_code: Optional[str] = None
-    error_message: Optional[str] = None
-    if recipient_creditor_id is None:
-        finalized_at_ts = datetime.now(tz=timezone.utc)
-        error_code = 'DEB001'
-        error_message = 'Unrecognized recipient URI.'
-    return InitiatedTransfer(
-        debtor_id=debtor_id,
+def _insert_running_transfer(debtor: Debtor,
+                             transfer_uuid: UUID,
+                             recipient_creditor_id: int,
+                             amount: int,
+                             transfer_info: dict) -> RunningTransfer:
+    running_transfer = RunningTransfer(
+        debtor_id=debtor.debtor_id,
         transfer_uuid=transfer_uuid,
-        recipient_uri=recipient_uri,
+        recipient_creditor_id=recipient_creditor_id,
         amount=amount,
         transfer_info=transfer_info,
-        finalized_at_ts=finalized_at_ts,
-        error_code=error_code,
-        error_message=error_message,
-    )
-
-
-def _insert_running_transfer(t: InitiatedTransfer, recipient_creditor_id: int) -> RunningTransfer:
-    running_transfer = RunningTransfer(
-        debtor_id=t.debtor_id,
-        transfer_uuid=t.transfer_uuid,
-        recipient_creditor_id=recipient_creditor_id,
-        amount=t.amount,
-        transfer_info=t.transfer_info,
     )
     db.session.add(running_transfer)
     try:
@@ -291,12 +283,24 @@ def _insert_running_transfer(t: InitiatedTransfer, recipient_creditor_id: int) -
         raise TransfersConflictError()
 
     db.session.add(PrepareTransferSignal(
-        debtor_id=t.debtor_id,
+        debtor_id=debtor.debtor_id,
         coordinator_request_id=running_transfer.issuing_coordinator_request_id,
-        min_amount=t.amount,
-        max_amount=t.amount,
+        min_amount=amount,
+        max_amount=amount,
         sender_creditor_id=ROOT_CREDITOR_ID,
         recipient_creditor_id=recipient_creditor_id,
-        minimum_account_balance=t.debtor.minimum_account_balance,
+        minimum_account_balance=debtor.minimum_account_balance,
     ))
     return running_transfer
+
+
+def _raise_error_if_transfer_exists(debtor_id: int,
+                                    transfer_uuid: UUID,
+                                    recipient_uri: str,
+                                    amount: int,
+                                    transfer_info: dict):
+    t = InitiatedTransfer.get_instance((debtor_id, transfer_uuid))
+    if t:
+        if t.recipient_uri == recipient_uri and t.amount == amount and t.transfer_info == transfer_info:
+            raise TransferExistsError(t)
+        raise TransfersConflictError()
