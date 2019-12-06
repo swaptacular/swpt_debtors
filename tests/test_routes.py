@@ -133,6 +133,7 @@ def test_initiate_transfer(client, debtor):
     data = r.get_json()
     assert data['amount'] == 1000
     assert iso8601.parse_date(data['initiatedAt'])
+    assert iso8601.parse_date(data['finalizedAt'])
     assert data['isFinalized'] is False
     assert data['errors'] == []
     assert data['recipientUri'] == 'http://example.com/creditors/1111'
@@ -169,6 +170,7 @@ def test_initiate_transfer(client, debtor):
     assert r.status_code == 201
     data = r.get_json()
     assert data['isFinalized'] is True
+    assert iso8601.parse_date(data['finalizedAt'])
     errors = data['errors']
     assert len(errors) == 1
     assert isinstance(errors[0]['code'], str)

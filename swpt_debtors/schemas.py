@@ -1,5 +1,6 @@
+from datetime import datetime, timezone
 from typing import NamedTuple, List
-from marshmallow import Schema, fields, validate, missing, post_load
+from marshmallow import Schema, fields, validate, post_load
 from flask import url_for
 from .lower_limits import LowerLimit
 from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
@@ -310,12 +311,14 @@ class TransferSchema(Schema):
         description='Whether the transfer has been finalized or not.',
         example=True,
     )
-    finalizedAt = fields.Function(
-        lambda obj: obj.finalized_at_ts or missing,
+    finalizedAt = fields.Method(
+        'get_finalized_at_string',
+        required=True,
         type='string',
         format='date-time',
         description='The moment at which the transfer has been finalized. If the transfer '
-                    'has not been finalized yet, this field will not be present.',
+                    'has not been finalized yet, this field contains an estimation of when '
+                    'the transfer should be finalized.',
     )
     is_successful = fields.Boolean(
         required=True,
@@ -333,6 +336,14 @@ class TransferSchema(Schema):
 
     def get_uri(self, obj):
         return url_for(self.context['Transfer'], _external=True, debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
+
+    def get_finalized_at_string(self, obj):
+        if obj.is_finalized:
+            return obj.finalized_at_ts.isoformat()
+
+        # TODO: fix the estimation.
+        current_ts = datetime.now(tz=timezone.utc)
+        return current_ts.isoformat()
 
 
 class TransfersCollectionSchema(Schema):
