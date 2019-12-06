@@ -25,6 +25,7 @@ def app():
         'SERVER_NAME': server_name,
         'SWPT_SERVER_NAME': server_name,
         'APP_MAX_LIMITS_COUNT': 10,
+        'APP_TRANSFERS_FINALIZATION_AVG_SECONDS': 10.0,
     })
     with app.app_context():
         flask_migrate.upgrade()

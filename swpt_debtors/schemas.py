@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import NamedTuple, List
 from marshmallow import Schema, fields, validate, post_load
-from flask import url_for
+from flask import url_for, current_app
 from .lower_limits import LowerLimit
 from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
     Debtor, InitiatedTransfer
@@ -339,11 +339,13 @@ class TransferSchema(Schema):
 
     def get_finalized_at_string(self, obj):
         if obj.is_finalized:
-            return obj.finalized_at_ts.isoformat()
-
-        # TODO: fix the estimation.
-        current_ts = datetime.now(tz=timezone.utc)
-        return current_ts.isoformat()
+            finalized_at_ts = obj.finalized_at_ts
+        else:
+            current_ts = datetime.now(tz=timezone.utc)
+            current_delay = current_ts - obj.initiated_at_ts
+            average_delay = timedelta(seconds=current_app.config['APP_TRANSFERS_FINALIZATION_AVG_SECONDS'])
+            finalized_at_ts = current_ts + max(2 * current_delay, average_delay)
+        return finalized_at_ts.isoformat()
 
 
 class TransfersCollectionSchema(Schema):
