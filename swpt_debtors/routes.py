@@ -113,7 +113,7 @@ class TransfersCollectionEndpoint(MethodView):
             transfer_uuids = procedures.get_debtor_transfer_uuids(debtorId)
         except procedures.DebtorDoesNotExistError:
             abort(404)
-        return TransfersCollection(debtor_id=debtorId, members=transfer_uuids)
+        return TransfersCollection(debtor_id=debtorId, items=transfer_uuids)
 
     @transfers_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=CONTEXT), code=201, headers=specs.LOCATION_HEADER)

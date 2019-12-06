@@ -120,7 +120,7 @@ def test_initiate_transfer(client, debtor):
     assert data['type'] == 'TransfersCollection'
     assert data['uri'] == 'http://example.com/debtors/123/transfers/'
     assert data['totalItems'] == 0
-    assert data['members'] == []
+    assert data['items'] == []
 
     json_request_body = {
         'amount': 1000,
@@ -182,7 +182,7 @@ def test_initiate_transfer(client, debtor):
     assert r.status_code == 200
     data = r.get_json()
     assert data['totalItems'] == 2
-    assert sorted(data['members']) == [
+    assert sorted(data['items']) == [
         '123e4567-e89b-12d3-a456-426655440000',
         '123e4567-e89b-12d3-a456-426655440001'
     ]
@@ -194,6 +194,6 @@ def test_initiate_transfer(client, debtor):
     assert r.status_code == 200
     data = r.get_json()
     assert data['totalItems'] == 1
-    assert sorted(data['members']) == [
+    assert sorted(data['items']) == [
         '123e4567-e89b-12d3-a456-426655440000',
     ]

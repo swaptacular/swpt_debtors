@@ -9,7 +9,7 @@ from swpt_lib import endpoints
 
 class TransfersCollection(NamedTuple):
     debtor_id: int
-    members: List[str]
+    items: List[str]
 
 
 class InterestRateLowerLimitSchema(Schema):
@@ -361,13 +361,13 @@ class TransfersCollectionSchema(Schema):
         example='https://example.com/debtors/1',
     )
     totalItems = fields.Function(
-        lambda obj: len(obj.members),
+        lambda obj: len(obj.items),
         required=True,
         type='integer',
-        description="The number of items in the `members` array.",
+        description="The number of items in the `items` array.",
         example=2,
     )
-    members = fields.List(
+    items = fields.List(
         fields.Str(format='uri-reference'),
         required=True,
         dump_only=True,
