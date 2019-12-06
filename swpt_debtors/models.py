@@ -311,6 +311,7 @@ class RunningTransfer(db.Model):
         comment="This value, along with `debtor_id` uniquely identifies the successfully prepared "
                 "transfer. (The sender is always the debtor's account.)",
     )
+    __mapper_args__ = {'eager_defaults': True}
     __table_args__ = (
         db.Index(
             'idx_issuing_coordinator_request_id',
