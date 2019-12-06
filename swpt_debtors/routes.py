@@ -126,7 +126,7 @@ class TransfersCollectionEndpoint(MethodView):
 
         transfer_uuid = transfer_creation_request['transfer_uuid']
         recipient_uri = urljoin(request.base_url, transfer_creation_request['recipient_uri'])
-        location = url_for('transfers.Transfer', _external=True, debtorId=debtorId, transferUuid=transfer_uuid)
+        location = url_for('transfers.TransferEndpoint', _external=True, debtorId=debtorId, transferUuid=transfer_uuid)
         try:
             recipient_creditor_id = endpoints.match_url('creditor', recipient_uri)['creditorId']
         except endpoints.MatchError:
@@ -140,7 +140,7 @@ class TransfersCollectionEndpoint(MethodView):
                 amount=transfer_creation_request['amount'],
                 transfer_info=transfer_creation_request['transfer_info'],
             )
-        except procedures.TooManyTransfersError:
+        except procedures.TooManyTransfersError:  # pragma: no cover
             abort(403)
         except procedures.DebtorDoesNotExistError:
             abort(404)
