@@ -31,6 +31,7 @@ def test_create_debtor(client):
 
     r = client.get('/debtors/123')
     assert r.status_code == 200
+    assert 'max-age' in r.headers['Cache-Control']
     data = r.get_json()
     assert data['balance'] == 0
     assert data['isActive'] is False

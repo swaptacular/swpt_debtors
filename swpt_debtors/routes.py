@@ -32,7 +32,10 @@ class DebtorEndpoint(MethodView):
     def get(self, debtorId):
         """Return public information about a debtor."""
 
-        return procedures.get_debtor(debtorId) or abort(404)
+        debtor = procedures.get_debtor(debtorId)
+        if not debtor:
+            abort(404)
+        return debtor, {'Cache-Control': 'max-age=86400'}
 
     @debtors_api.arguments(DebtorCreationOptionsSchema)
     @debtors_api.response(DebtorSchema(context=CONTEXT), code=201, headers=specs.LOCATION_HEADER)
