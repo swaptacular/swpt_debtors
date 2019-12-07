@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
 from swpt_debtors.models import Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
-    INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL
+    PrepareTransferSignal, FinalizePreparedTransferSignal, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
 
@@ -170,8 +170,11 @@ def test_create_new_debtor(db_session, debtor):
 
 
 def test_initiate_transfer(db_session, debtor):
+    assert len(RunningTransfer.query.all()) == 0
+    assert len(InitiatedTransfer.query.all()) == 0
     assert p.get_debtor_transfer_uuids(D_ID) == []
     t = p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
+    assert len(InitiatedTransfer.query.all()) == 1
     assert t.debtor_id == D_ID
     assert t.transfer_uuid == TEST_UUID
     assert t.recipient_uri == RECIPIENT_URI
@@ -202,3 +205,92 @@ def test_initiate_transfer(db_session, debtor):
     assert len(RunningTransfer.query.all()) == 1
     with pytest.raises(p.TransfersConflictError):
         p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
+
+
+def test_successful_transfer(db_session, debtor):
+    assert len(PrepareTransferSignal.query.all()) == 0
+    p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
+    pts_list = PrepareTransferSignal.query.all()
+    assert len(pts_list) == 1
+    pts = pts_list[0]
+    assert pts.debtor_id == D_ID
+    assert pts.coordinator_request_id is not None
+    assert pts.min_amount == pts.max_amount == 1000
+    assert pts.sender_creditor_id == ROOT_CREDITOR_ID
+    assert pts.recipient_creditor_id == C_ID
+    assert pts.minimum_account_balance == debtor.minimum_account_balance
+
+    p.process_prepared_payment_transfer_signal(
+        debtor_id=D_ID,
+        sender_creditor_id=ROOT_CREDITOR_ID,
+        transfer_id=777,
+        recipient_creditor_id=C_ID,
+        sender_locked_amount=1000,
+        coordinator_id=D_ID,
+        coordinator_request_id=pts.coordinator_request_id,
+    )
+    assert len(PrepareTransferSignal.query.all()) == 1
+    fpts_list = FinalizePreparedTransferSignal.query.all()
+    assert len(fpts_list) == 1
+    fpts = fpts_list[0]
+    assert fpts.debtor_id == D_ID
+    assert fpts.sender_creditor_id == ROOT_CREDITOR_ID
+    assert fpts.transfer_id is not None
+    assert fpts.committed_amount == 1000
+    assert fpts.transfer_info == {'note': 'test'}
+
+    rt_list = RunningTransfer.query.all()
+    assert len(rt_list) == 1
+    rt = rt_list[0]
+    assert rt.is_finalized
+    assert rt.issuing_transfer_id is not None
+    it_list = InitiatedTransfer.query.all()
+    assert len(it_list) == 1
+    it = it_list[0]
+    assert it.is_finalized
+    assert it.is_successful
+
+    p.process_prepared_payment_transfer_signal(
+        debtor_id=D_ID,
+        sender_creditor_id=ROOT_CREDITOR_ID,
+        transfer_id=777,
+        recipient_creditor_id=C_ID,
+        sender_locked_amount=1000,
+        coordinator_id=D_ID,
+        coordinator_request_id=pts.coordinator_request_id,
+    )
+
+    rt_list == RunningTransfer.query.all()
+    assert len(rt_list) == 1 and rt_list[0].is_finalized
+    it_list == InitiatedTransfer.query.all()
+    assert len(it_list) == 1 and it_list[0].is_finalized
+
+
+def test_failed_transfer(db_session, debtor):
+    p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
+    pts = PrepareTransferSignal.query.all()[0]
+    p.process_rejected_payment_transfer_signal(D_ID, pts.coordinator_request_id, details={
+        'error_code': 'TEST',
+        'message': 'A testing error.',
+    })
+    assert len(FinalizePreparedTransferSignal.query.all()) == 0
+
+    rt_list = RunningTransfer.query.all()
+    assert len(rt_list) == 1
+    rt = rt_list[0]
+    assert rt.is_finalized
+    assert rt.issuing_transfer_id is None
+    it_list = InitiatedTransfer.query.all()
+    assert len(it_list) == 1
+    it = it_list[0]
+    assert it.is_finalized
+    assert not it.is_successful
+
+    p.process_rejected_payment_transfer_signal(D_ID, pts.coordinator_request_id, details={
+        'error_code': 'TEST',
+        'message': 'A testing error.',
+    })
+    rt_list == RunningTransfer.query.all()
+    assert len(rt_list) == 1 and rt_list[0].is_finalized
+    it_list == InitiatedTransfer.query.all()
+    assert len(it_list) == 1 and it_list[0].is_finalized
