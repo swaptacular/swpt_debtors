@@ -49,7 +49,7 @@ def on_account_change_signal(
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
-def on_prepared_payment_transfer_signal(
+def on_prepared_issuing_transfer_signal(
         debtor_id: int,
         sender_creditor_id: int,
         transfer_id: int,
@@ -72,7 +72,7 @@ def on_prepared_payment_transfer_signal(
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
-def on_rejected_payment_transfer_signal(
+def on_rejected_issuing_transfer_signal(
         coordinator_type: str,
         coordinator_id: int,
         coordinator_request_id: int,

@@ -39,8 +39,8 @@ def test_on_account_change_signal(db_session):
     )
 
 
-def test_on_prepared_payment_transfer_signal(db_session):
-    a.on_prepared_payment_transfer_signal(
+def test_on_prepared_issuing_transfer_signal(db_session):
+    a.on_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
         sender_creditor_id=2,
         transfer_id=1,
@@ -53,8 +53,8 @@ def test_on_prepared_payment_transfer_signal(db_session):
     )
 
 
-def test_on_rejected_payment_transfer_signal(db_session):
-    a.on_rejected_payment_transfer_signal(
+def test_on_rejected_issuing_transfer_signal(db_session):
+    a.on_rejected_issuing_transfer_signal(
         coordinator_type='issuing',
         coordinator_id=C_ID,
         coordinator_request_id=1,
