@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 2fff1bd84c34
+Revision ID: e8596677a262
 Revises: 8d09bea9c7d1
-Create Date: 2019-12-07 15:14:30.038275
+Create Date: 2019-12-07 17:29:46.092827
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '2fff1bd84c34'
+revision = 'e8596677a262'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -68,6 +68,16 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id'),
     comment="Represents debtor's principal information."
     )
+    op.create_table('finalize_prepared_transfer_signal',
+    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
+    sa.Column('sender_creditor_id', sa.BigInteger(), nullable=False),
+    sa.Column('transfer_id', sa.BigInteger(), nullable=False),
+    sa.Column('committed_amount', sa.BigInteger(), nullable=False),
+    sa.Column('transfer_info', postgresql.JSON(astext_type=sa.Text()), nullable=False),
+    sa.CheckConstraint('committed_amount >= 0'),
+    sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
+    )
     op.create_table('prepare_transfer_signal',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
@@ -90,6 +100,7 @@ def upgrade():
     sa.Column('issuing_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('issuing_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
     sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
     sa.CheckConstraint('amount > 0'),
+    sa.CheckConstraint('issuing_transfer_id IS NULL OR finalized_at_ts IS NOT NULL'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
     comment='Represents a running issuing transfer. Important note: The records for the finalized issuing transfers (failed or successful) must not be deleted right away. Instead, after they have been finalized, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
     )
@@ -122,6 +133,7 @@ def downgrade():
     op.drop_index('idx_issuing_coordinator_request_id', table_name='running_transfer')
     op.drop_table('running_transfer')
     op.drop_table('prepare_transfer_signal')
+    op.drop_table('finalize_prepared_transfer_signal')
     op.drop_table('debtor')
     op.drop_table('change_interest_rate_signal')
     op.drop_table('account')

@@ -37,3 +37,26 @@ def test_on_account_change_signal(db_session):
         last_outgoing_transfer_date='2018-10-01',
         status=0,
     )
+
+
+def test_on_prepared_payment_transfer_signal(db_session):
+    a.on_prepared_payment_transfer_signal(
+        debtor_id=D_ID,
+        sender_creditor_id=2,
+        transfer_id=1,
+        coordinator_type='payment',
+        recipient_creditor_id=C_ID,
+        sender_locked_amount=1000,
+        prepared_at_ts='2019-10-01T00:00:00Z',
+        coordinator_id=C_ID,
+        coordinator_request_id=1,
+    )
+
+
+def test_on_rejected_payment_transfer_signal(db_session):
+    a.on_rejected_payment_transfer_signal(
+        coordinator_type='issuing',
+        coordinator_id=C_ID,
+        coordinator_request_id=1,
+        details={'error_code': '123456', 'message': 'Oops!'},
+    )

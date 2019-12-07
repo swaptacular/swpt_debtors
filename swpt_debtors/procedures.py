@@ -5,7 +5,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
-from .models import Debtor, Account, ChangeInterestRateSignal, \
+from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedTransferSignal, \
     InitiatedTransfer, RunningTransfer, PrepareTransferSignal, increment_seqnum, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
 
@@ -180,6 +180,60 @@ def initiate_transfer(debtor_id: int,
 
 
 @atomic
+def process_rejected_payment_transfer_signal(
+        coordinator_id: int,
+        coordinator_request_id: int,
+        details: dict) -> None:
+    rt = _find_running_transfer(coordinator_id, coordinator_request_id)
+    if rt and rt.finalized_at_ts is None:
+        current_ts = datetime.now(tz=timezone.utc)
+        rt.finalized_at_ts = current_ts
+
+        # TODO: Finalize the `InitiatedTransfer` record as well. Use the
+        # abort_reason (example: {'error_code': 'PAY005', 'message': 'Can
+        # not make a reciprocal payment.'}) to populate the error code and
+        # message.
+
+
+@atomic
+def process_prepared_payment_transfer_signal(
+        debtor_id: int,
+        sender_creditor_id: int,
+        transfer_id: int,
+        recipient_creditor_id: int,
+        sender_locked_amount: int,
+        coordinator_id: int,
+        coordinator_request_id: int) -> None:
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
+    assert MIN_INT64 <= transfer_id <= MAX_INT64
+
+    rt = _find_running_transfer(coordinator_id, coordinator_request_id)
+    if rt:
+        assert rt.debtor_id == debtor_id
+        assert rt.amount == sender_locked_amount
+        assert ROOT_CREDITOR_ID == sender_creditor_id
+        assert rt.recipient_creditor_id == recipient_creditor_id
+        if rt.issuing_transfer_id is None and rt.finalized_at_ts is None:
+            rt.issuing_transfer_id = transfer_id
+            _finalize_running_transfer(rt)
+            return
+        if rt.issuing_transfer_id == transfer_id:
+            # Normally, this can happen only when the prepared
+            # transfer message has been re-delivered. Therefore, no
+            # action should be taken.
+            return
+
+    db.session.add(FinalizePreparedTransferSignal(
+        debtor_id=debtor_id,
+        sender_creditor_id=sender_creditor_id,
+        transfer_id=transfer_id,
+        committed_amount=0,
+        transfer_info={},
+    ))
+
+
+@atomic
 def process_account_change_signal(debtor_id: int,
                                   creditor_id: int,
                                   change_seqnum: int,
@@ -317,3 +371,29 @@ def _throttle_debtor_transfers(debtor_id: int) -> Debtor:
         raise TooManyTransfersError()
     debtor.transfers_throttle_count += 1
     return debtor
+
+
+def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> Optional[RunningTransfer]:
+    assert MIN_INT64 <= coordinator_id <= MAX_INT64
+    assert MIN_INT64 < coordinator_request_id <= MAX_INT64
+
+    return RunningTransfer.query.filter_by(
+        debtor_id=coordinator_id,
+        issuing_coordinator_request_id=coordinator_request_id,
+    ).with_for_update().one_or_none()
+
+
+def _finalize_running_transfer(rt: RunningTransfer) -> None:
+    assert rt.issuing_transfer_id is not None
+
+    current_ts = datetime.now(tz=timezone.utc)
+    rt.finalized_at_ts = current_ts
+    db.session.add(FinalizePreparedTransferSignal(
+        debtor_id=rt.debtor_id,
+        sender_creditor_id=ROOT_CREDITOR_ID,
+        transfer_id=rt.issuing_transfer_id,
+        committed_amount=rt.amount,
+        transfer_info=rt.transfer_info,
+    ))
+
+    # TODO: Finalize the `InitiatedTransfer` record as well.

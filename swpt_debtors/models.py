@@ -337,6 +337,7 @@ class RunningTransfer(db.Model):
             issuing_coordinator_request_id,
             unique=True,
         ),
+        db.CheckConstraint(or_(issuing_transfer_id == null(), finalized_at_ts != null())),
         db.CheckConstraint(amount > 0),
         {
             'comment': 'Represents a running issuing transfer. Important note: The records for the '
@@ -464,4 +465,26 @@ class PrepareTransferSignal(Signal):
     __table_args__ = (
         db.CheckConstraint(min_amount > 0),
         db.CheckConstraint(max_amount >= min_amount),
+    )
+
+
+class FinalizePreparedTransferSignal(Signal):
+    queue_name = 'swpt_accounts'
+    actor_name = 'finalize_prepared_transfer'
+
+    class __marshmallow__(Schema):
+        debtor_id = fields.Integer()
+        sender_creditor_id = fields.Integer()
+        transfer_id = fields.Integer()
+        committed_amount = fields.Integer()
+        transfer_info = fields.Raw()
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    sender_creditor_id = db.Column(db.BigInteger, nullable=False)
+    transfer_id = db.Column(db.BigInteger, nullable=False)
+    committed_amount = db.Column(db.BigInteger, nullable=False)
+    transfer_info = db.Column(pg.JSON, nullable=False)
+    __table_args__ = (
+        db.CheckConstraint(committed_amount >= 0),
     )

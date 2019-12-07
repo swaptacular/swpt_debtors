@@ -46,3 +46,40 @@ def on_account_change_signal(
         iso8601.parse_date(last_outgoing_transfer_date).date(),
         status,
     )
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_prepared_payment_transfer_signal(
+        debtor_id: int,
+        sender_creditor_id: int,
+        transfer_id: int,
+        coordinator_type: str,
+        recipient_creditor_id: int,
+        sender_locked_amount: int,
+        prepared_at_ts: str,
+        coordinator_id: int,
+        coordinator_request_id: int) -> None:
+    assert coordinator_type == 'payment'
+    procedures.process_prepared_payment_transfer_signal(
+        debtor_id,
+        sender_creditor_id,
+        transfer_id,
+        recipient_creditor_id,
+        sender_locked_amount,
+        coordinator_id,
+        coordinator_request_id,
+    )
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_rejected_payment_transfer_signal(
+        coordinator_type: str,
+        coordinator_id: int,
+        coordinator_request_id: int,
+        details: dict) -> None:
+    assert coordinator_type == 'issuing'
+    procedures.process_rejected_payment_transfer_signal(
+        coordinator_id,
+        coordinator_request_id,
+        details,
+    )
