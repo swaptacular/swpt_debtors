@@ -186,8 +186,9 @@ def process_rejected_payment_transfer_signal(
         details: dict) -> None:
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and rt.finalized_at_ts is None:
+        assert rt.issuing_transfer_id is None
         rt.finalized_at_ts = datetime.now(tz=timezone.utc)
-        _finalize_initiated_transfer(rt, error=details)
+        _finalize_corresponding_initiated_transfer(rt, error=details)
 
 
 @atomic
@@ -212,7 +213,14 @@ def process_prepared_payment_transfer_signal(
         if rt.issuing_transfer_id is None and rt.finalized_at_ts is None:
             rt.issuing_transfer_id = transfer_id
             rt.finalized_at_ts = datetime.now(tz=timezone.utc)
-            _finalize_initiated_transfer(rt)
+            db.session.add(FinalizePreparedTransferSignal(
+                debtor_id=rt.debtor_id,
+                sender_creditor_id=ROOT_CREDITOR_ID,
+                transfer_id=rt.issuing_transfer_id,
+                committed_amount=rt.amount,
+                transfer_info=rt.transfer_info,
+            ))
+            _finalize_corresponding_initiated_transfer(rt)
             return
         if rt.issuing_transfer_id == transfer_id:
             # Normally, this can happen only when the prepared
@@ -379,18 +387,10 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
     ).with_for_update().one_or_none()
 
 
-def _finalize_initiated_transfer(rt: RunningTransfer, error: dict = None) -> None:
+def _finalize_corresponding_initiated_transfer(rt: RunningTransfer, error: dict = None) -> Optional[InitiatedTransfer]:
     # TODO: Finalize the `InitiatedTransfer` record as well. If
     # `rt.issuing_transfer_id is None`, use the `error` dict (example:
     # {'error_code': 'PAY005', 'message': 'Can not make a reciprocal
     # payment.'}) to populate the error code and error message.
 
-    current_ts = datetime.now(tz=timezone.utc)
-    rt.finalized_at_ts = current_ts
-    db.session.add(FinalizePreparedTransferSignal(
-        debtor_id=rt.debtor_id,
-        sender_creditor_id=ROOT_CREDITOR_ID,
-        transfer_id=rt.issuing_transfer_id,
-        committed_amount=rt.amount,
-        transfer_info=rt.transfer_info,
-    ))
+    pass
