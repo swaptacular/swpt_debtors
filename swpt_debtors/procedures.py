@@ -387,10 +387,13 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
     ).with_for_update().one_or_none()
 
 
-def _finalize_corresponding_initiated_transfer(rt: RunningTransfer, error: dict = None) -> Optional[InitiatedTransfer]:
-    # TODO: Finalize the `InitiatedTransfer` record as well. If
-    # `rt.issuing_transfer_id is None`, use the `error` dict (example:
-    # {'error_code': 'PAY005', 'message': 'Can not make a reciprocal
-    # payment.'}) to populate the error code and error message.
-
-    pass
+def _finalize_corresponding_initiated_transfer(rt: RunningTransfer, error: dict = {}) -> None:
+    initiated_transfer = InitiatedTransfer.lock_instance((rt.debtor_id, rt.transfer_uuid))
+    if initiated_transfer and initiated_transfer.finalized_at_ts is None:
+        initiated_transfer.finalized_at_ts = rt.finalized_at_ts
+        if rt.issuing_transfer_id is None:
+            initiated_transfer.is_successful = False
+            initiated_transfer.error_code = str(error.get('error_code', ''))
+            initiated_transfer.error_message = str(error.get('message', ''))
+        else:
+            initiated_transfer.is_successful = True
