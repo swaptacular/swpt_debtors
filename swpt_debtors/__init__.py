@@ -52,6 +52,7 @@ class Configuration(metaclass=MetaFlaskEnv):
     OPENAPI_SWAGGER_UI_VERSION = '3.18.3'
     APP_MAX_LIMITS_COUNT = 10
     APP_TRANSFERS_FINALIZATION_AVG_SECONDS = 5.0
+    APP_MAX_TRANSFERS_PER_MONTH = 3000
 
 
 def create_app(config_dict={}):

@@ -1,6 +1,7 @@
 from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, Tuple, List
+from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
@@ -137,11 +138,7 @@ def initiate_transfer(debtor_id: int,
     assert recipient_creditor_id is None or MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
 
-    debtor = Debtor.get_instance(debtor_id)
-    if debtor is None:
-        raise DebtorDoesNotExistError()
-
-    # TODO: Raise `TooManyTransfersError` if the debtor has initiated too many transfers.
+    debtor = _throttle_debtor_transfers(debtor_id)
 
     _raise_error_if_transfer_exists(
         debtor_id=debtor_id,
@@ -298,9 +295,25 @@ def _raise_error_if_transfer_exists(debtor_id: int,
                                     transfer_uuid: UUID,
                                     recipient_uri: str,
                                     amount: int,
-                                    transfer_info: dict):
+                                    transfer_info: dict) -> None:
     t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one_or_none()
     if t:
         if t.recipient_uri == recipient_uri and t.amount == amount and t.transfer_info == transfer_info:
             raise TransferExistsError(t)
         raise TransfersConflictError()
+
+
+def _throttle_debtor_transfers(debtor_id: int) -> Debtor:
+    debtor = Debtor.lock_instance(debtor_id)
+    if debtor is None:
+        raise DebtorDoesNotExistError()
+
+    current_date = datetime.now(tz=timezone.utc).date()
+    number_of_elapsed_days = (current_date - debtor.transfers_throttle_date).days
+    if number_of_elapsed_days > 30:  # pragma: no cover
+        debtor.transfers_throttle_count = 0
+        debtor.transfers_throttle_date = current_date
+    if debtor.transfers_throttle_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
+        raise TooManyTransfersError()
+    debtor.transfers_throttle_count += 1
+    return debtor

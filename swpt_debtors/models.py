@@ -110,6 +110,23 @@ class Debtor(db.Model):
                 "to accumulate on creditors' accounts. The actual interest rate may be "
                 "different if interest rate limits are enforced.",
     )
+    transfers_throttle_date = db.Column(
+        db.DATE,
+        nullable=False,
+        default=get_now_utc,
+        comment="The date at which `transfers_throttle_count` was zeroed out for the last "
+                "time. This field is used to limit the number of issuing transfers per "
+                "month that a debtor is allowed to make.",
+    )
+    transfers_throttle_count = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0,
+        comment="The number of issuing transfers that have been initiated after "
+                "`transfers_throttle_date`. This field is used to limit the number of "
+                "issuing transfers per month that a debtor is allowed to make. It gets "
+                "zeroed out once a month.",
+    )
 
     # Ballance Lower Limits
     bll_values = db.Column(
@@ -143,6 +160,7 @@ class Debtor(db.Model):
             interest_rate_target >= INTEREST_RATE_FLOOR,
             interest_rate_target <= INTEREST_RATE_CEIL,
         )),
+        db.CheckConstraint(transfers_throttle_count >= 0),
         db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
         db.CheckConstraint(or_(bll_cutoffs == null(), func.array_ndims(bll_cutoffs) == 1)),
         db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),

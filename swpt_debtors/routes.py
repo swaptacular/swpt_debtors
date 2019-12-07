@@ -143,7 +143,7 @@ class TransfersCollectionEndpoint(MethodView):
                 amount=transfer_creation_request['amount'],
                 transfer_info=transfer_creation_request['transfer_info'],
             )
-        except procedures.TooManyTransfersError:  # pragma: no cover
+        except procedures.TooManyTransfersError:
             abort(403)
         except procedures.DebtorDoesNotExistError:
             abort(404)

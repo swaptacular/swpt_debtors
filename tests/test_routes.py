@@ -200,3 +200,16 @@ def test_initiate_transfer(client, debtor):
     assert sorted(data['items']) == [
         '123e4567-e89b-12d3-a456-426655440000',
     ]
+
+    for i in range(2, 11):
+        suffix = '{:0>4}'.format(i)
+        json_request_body = {
+            'amount': 1,
+            'recipientUri': 'http://example.com/creditors/1111',
+            'transferUuid': f'123e4567-e89b-12d3-a456-42665544{suffix}',
+        }
+        r = client.post('/debtors/123/transfers/', json=json_request_body)
+        if i == 10:
+            assert r.status_code == 403
+        else:
+            assert r.status_code == 201
