@@ -186,13 +186,8 @@ def process_rejected_payment_transfer_signal(
         details: dict) -> None:
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and rt.finalized_at_ts is None:
-        current_ts = datetime.now(tz=timezone.utc)
-        rt.finalized_at_ts = current_ts
-
-        # TODO: Finalize the `InitiatedTransfer` record as well. Use the
-        # abort_reason (example: {'error_code': 'PAY005', 'message': 'Can
-        # not make a reciprocal payment.'}) to populate the error code and
-        # message.
+        rt.finalized_at_ts = datetime.now(tz=timezone.utc)
+        _finalize_initiated_transfer(rt, error=details)
 
 
 @atomic
@@ -216,7 +211,8 @@ def process_prepared_payment_transfer_signal(
         assert rt.recipient_creditor_id == recipient_creditor_id
         if rt.issuing_transfer_id is None and rt.finalized_at_ts is None:
             rt.issuing_transfer_id = transfer_id
-            _finalize_running_transfer(rt)
+            rt.finalized_at_ts = datetime.now(tz=timezone.utc)
+            _finalize_initiated_transfer(rt)
             return
         if rt.issuing_transfer_id == transfer_id:
             # Normally, this can happen only when the prepared
@@ -383,8 +379,11 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
     ).with_for_update().one_or_none()
 
 
-def _finalize_running_transfer(rt: RunningTransfer) -> None:
-    assert rt.issuing_transfer_id is not None
+def _finalize_initiated_transfer(rt: RunningTransfer, error: dict = None) -> None:
+    # TODO: Finalize the `InitiatedTransfer` record as well. If
+    # `rt.issuing_transfer_id is None`, use the `error` dict (example:
+    # {'error_code': 'PAY005', 'message': 'Can not make a reciprocal
+    # payment.'}) to populate the error code and error message.
 
     current_ts = datetime.now(tz=timezone.utc)
     rt.finalized_at_ts = current_ts
@@ -395,5 +394,3 @@ def _finalize_running_transfer(rt: RunningTransfer) -> None:
         committed_amount=rt.amount,
         transfer_info=rt.transfer_info,
     ))
-
-    # TODO: Finalize the `InitiatedTransfer` record as well.
