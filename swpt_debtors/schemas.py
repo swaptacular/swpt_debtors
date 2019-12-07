@@ -344,7 +344,7 @@ class TransferSchema(Schema):
             current_ts = datetime.now(tz=timezone.utc)
             current_delay = current_ts - obj.initiated_at_ts
             average_delay = timedelta(seconds=current_app.config['APP_TRANSFERS_FINALIZATION_AVG_SECONDS'])
-            finalized_at_ts = current_ts + max(2 * current_delay, average_delay)
+            finalized_at_ts = current_ts + max(current_delay, average_delay)
         return finalized_at_ts.isoformat()
 
 
