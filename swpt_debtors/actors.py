@@ -13,17 +13,6 @@ def terminate_debtor(debtor_id: int) -> None:
     """Permanently terminates a debtor."""
 
 
-@broker.actor(queue_name=APP_QUEUE_NAME)
-def update_debtor_balance(
-        debtor_id: int,
-        balance: int,
-        update_seqnum: int,
-        update_ts: str) -> None:
-    """Updates the balance of the debtor's account."""
-
-    update_ts = iso8601.parse_date(update_ts)
-
-
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_account_change_signal(
         debtor_id: int,
