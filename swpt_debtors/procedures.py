@@ -290,6 +290,14 @@ def process_account_change_signal(debtor_id: int,
         if debtor:
             _insert_change_interest_rate_signal(account, debtor.interest_rate)
 
+    # If this is a debtors's account, we must update debtor's
+    # `balance` and `balance_ts` columns.
+    if account.creditor_id == ROOT_CREDITOR_ID:
+        Debtor.query.filter_by(debtor_id=debtor_id).update({
+            Debtor.balance: account.principal,
+            Debtor.balance_ts: account.change_ts,
+        })
+
 
 def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:
     seqnum, ts = event

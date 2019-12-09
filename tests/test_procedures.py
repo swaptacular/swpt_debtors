@@ -106,6 +106,26 @@ def test_process_account_change_signal(db_session, debtor):
     assert len(cirs) == 1
 
 
+def test_process_root_account_change_signal(db_session, debtor):
+    change_seqnum = 1
+    change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
+    last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
+    p.process_account_change_signal(
+        debtor_id=D_ID,
+        creditor_id=ROOT_CREDITOR_ID,
+        change_seqnum=change_seqnum,
+        change_ts=change_ts,
+        principal=-9999,
+        interest=0,
+        interest_rate=0.0,
+        last_outgoing_transfer_date=last_outgoing_transfer_date,
+        status=0,
+    )
+    d = p.get_debtor(D_ID)
+    assert d.balance == -9999
+    assert d.balance_ts == change_ts
+
+
 def test_interest_rate_absolute_limits(db_session, debtor):
     debtor.interest_rate_target = -100.0
     assert debtor.interest_rate == INTEREST_RATE_FLOOR
