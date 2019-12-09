@@ -306,17 +306,17 @@ def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int
 
 
 def _insert_change_interest_rate_signal(account: Account, interest_rate: Optional[float]) -> None:
-    if interest_rate is not None:
-        current_ts = datetime.now(tz=timezone.utc)
-        account.interest_rate_last_change_seqnum = increment_seqnum(account.interest_rate_last_change_seqnum)
-        account.interest_rate_last_change_ts = max(account.interest_rate_last_change_ts, current_ts)
-        db.session.add(ChangeInterestRateSignal(
-            debtor_id=account.debtor_id,
-            creditor_id=account.creditor_id,
-            change_seqnum=account.interest_rate_last_change_seqnum,
-            change_ts=account.interest_rate_last_change_ts,
-            interest_rate=interest_rate,
-        ))
+    assert interest_rate is not None
+    current_ts = datetime.now(tz=timezone.utc)
+    account.interest_rate_last_change_seqnum = increment_seqnum(account.interest_rate_last_change_seqnum)
+    account.interest_rate_last_change_ts = max(account.interest_rate_last_change_ts, current_ts)
+    db.session.add(ChangeInterestRateSignal(
+        debtor_id=account.debtor_id,
+        creditor_id=account.creditor_id,
+        change_seqnum=account.interest_rate_last_change_seqnum,
+        change_ts=account.interest_rate_last_change_ts,
+        interest_rate=interest_rate,
+    ))
 
 
 def _insert_running_transfer_or_raise_conflict_error(debtor: Debtor,
