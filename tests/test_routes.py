@@ -109,6 +109,12 @@ def test_change_debtor_policy(client, debtor):
     })
     assert r.status_code == 409
 
+    for _ in range(7):
+        r = client.patch('/debtors/123/policy', json={})
+        assert r.status_code == 200
+    r = client.patch('/debtors/123/policy', json={})
+    assert r.status_code == 403
+
 
 def test_initiate_transfer(client, debtor):
     r = client.get('/debtors/666/transfers/')

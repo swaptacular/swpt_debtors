@@ -75,6 +75,7 @@ class DebtorPolicyEndpoint(MethodView):
     @policies_api.arguments(DebtorPolicyUpdateRequestSchema)
     @policies_api.response(DebtorPolicySchema(context=CONTEXT))
     @policies_api.doc(responses={404: specs.DEBTOR_DOES_NOT_EXIST,
+                                 403: specs.TOO_MANY_POLICY_CHANGES,
                                  409: specs.CONFLICTING_POLICY})
     def patch(self, policy_update_request, debtorId):
         """Update debtor's policy.
@@ -90,6 +91,8 @@ class DebtorPolicyEndpoint(MethodView):
                 new_interest_rate_limits=policy_update_request['interest_rate_lower_limits'],
                 new_balance_limits=policy_update_request['balance_lower_limits'],
             )
+        except procedures.TooManyManagementActionsError:
+            abort(403)
         except procedures.DebtorDoesNotExistError:
             abort(404)
         except procedures.ConflictingPolicyError as e:
@@ -143,7 +146,7 @@ class TransfersCollectionEndpoint(MethodView):
                 amount=transfer_creation_request['amount'],
                 transfer_info=transfer_creation_request['transfer_info'],
             )
-        except procedures.TooManyTransfersError:
+        except procedures.TooManyManagementActionsError:
             abort(403)
         except procedures.DebtorDoesNotExistError:
             abort(404)

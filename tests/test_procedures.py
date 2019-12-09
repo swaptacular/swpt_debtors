@@ -2,7 +2,7 @@ import pytest
 from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
-from swpt_debtors.models import Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
+from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
     PrepareTransferSignal, FinalizePreparedTransferSignal, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
@@ -30,8 +30,10 @@ def test_is_later_event(current_ts):
 def test_get_or_create_debtor(db_session):
     debtor = p.get_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
+    assert not debtor.is_active
     debtor = p.get_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
+    assert not debtor.is_active
 
 
 def test_process_account_change_signal(db_session, debtor):
@@ -140,6 +142,7 @@ def test_update_debtor_policy(db_session, debtor, current_ts):
 
     p.update_debtor_policy(D_ID, 6.66, [LowerLimit(0.0, date_years_ago)], [LowerLimit(-1000, date_years_ago)])
     debtor = p.get_debtor(D_ID)
+    assert debtor.is_active
     assert debtor.interest_rate_target == 6.66
     assert len(debtor.interest_rate_lower_limits) == 1
     assert debtor.interest_rate_lower_limits[0] == LowerLimit(0.0, date_years_ago)
@@ -194,6 +197,8 @@ def test_initiate_transfer(db_session, debtor):
     assert len(InitiatedTransfer.query.all()) == 0
     assert p.get_debtor_transfer_uuids(D_ID) == []
     t = p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
+    debtor = p.get_debtor(D_ID)
+    assert debtor.is_active
     assert len(InitiatedTransfer.query.all()) == 1
     assert t.debtor_id == D_ID
     assert t.transfer_uuid == TEST_UUID

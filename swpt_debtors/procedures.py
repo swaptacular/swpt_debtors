@@ -36,8 +36,8 @@ class TransfersConflictError(Exception):
     """A different transfer with the same UUID already exists."""
 
 
-class TooManyTransfersError(Exception):
-    """Too many simultaneous transfers."""
+class TooManyManagementActionsError(Exception):
+    """Too many management actions per month by a debtor."""
 
 
 class ConflictingPolicyError(Exception):
@@ -80,9 +80,7 @@ def update_debtor_policy(debtor_id: int,
                          interest_rate_target: Optional[float],
                          new_interest_rate_limits: LowerLimitSequence,
                          new_balance_limits: LowerLimitSequence) -> Debtor:
-    debtor = Debtor.lock_instance(debtor_id)
-    if debtor is None:
-        raise DebtorDoesNotExistError()
+    debtor = _throttle_debtor_actions(debtor_id)
     current_ts = datetime.now(tz=timezone.utc)
     date_week_ago = (current_ts - timedelta(days=7)).date()
 
@@ -138,7 +136,7 @@ def initiate_transfer(debtor_id: int,
     assert recipient_creditor_id is None or MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
 
-    debtor = _throttle_debtor_transfers(debtor_id)
+    debtor = _throttle_debtor_actions(debtor_id)
 
     _raise_error_if_transfer_exists(
         debtor_id=debtor_id,
@@ -369,19 +367,23 @@ def _raise_error_if_transfer_exists(debtor_id: int,
         raise TransfersConflictError()
 
 
-def _throttle_debtor_transfers(debtor_id: int) -> Debtor:
-    debtor = Debtor.lock_instance(debtor_id)
+def _throttle_debtor_actions(debtor_id: int) -> Debtor:
+    debtor = Debtor.query.filter_by(
+        debtor_id=debtor_id,
+        deactivated_at_date=None,
+    ).with_for_update().one_or_none()
     if debtor is None:
         raise DebtorDoesNotExistError()
 
     current_date = datetime.now(tz=timezone.utc).date()
-    number_of_elapsed_days = (current_date - debtor.transfers_throttle_date).days
+    number_of_elapsed_days = (current_date - debtor.actions_throttle_date).days
     if number_of_elapsed_days > 30:  # pragma: no cover
-        debtor.transfers_throttle_count = 0
-        debtor.transfers_throttle_date = current_date
-    if debtor.transfers_throttle_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
-        raise TooManyTransfersError()
-    debtor.transfers_throttle_count += 1
+        debtor.actions_throttle_count = 0
+        debtor.actions_throttle_date = current_date
+    if debtor.actions_throttle_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
+        raise TooManyManagementActionsError()
+    debtor.actions_throttle_count += 1
+    debtor.status |= Debtor.STATUS_IS_ACTIVE_FLAG
     return debtor
 
 

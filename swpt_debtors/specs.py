@@ -58,6 +58,10 @@ TOO_MANY_TRANSFERS = {
     'description': 'Too many issuing transfers.',
 }
 
+TOO_MANY_POLICY_CHANGES = {
+    'description': 'Too many policy changes.',
+}
+
 TRANSFER_EXISTS = {
     'description': 'The same transfer entry already exists.',
     'headers': LOCATION_HEADER,
