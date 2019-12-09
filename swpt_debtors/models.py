@@ -173,13 +173,6 @@ class Debtor(db.Model):
     balance_lower_limits = lower_limits_property('bll_values', 'bll_cutoffs')
     interest_rate_lower_limits = lower_limits_property('irll_values', 'irll_cutoffs')
 
-    # TODO: Consider adding fields that prevent one debtor to make an
-    #       enormous amount of issuing transfers for a short period of
-    #       time. There is no good reason why a debtor would want to
-    #       make more than say 1000 issuing transfers per week. The
-    #       same is true for the number of policy updates that a
-    #       debtor does.
-
     def calc_interest_rate(self, on_day: date) -> float:
         # Apply debtor's enforced interest rate limits.
         interest_rate = self.interest_rate_target
