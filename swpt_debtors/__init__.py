@@ -53,6 +53,7 @@ class Configuration(metaclass=MetaFlaskEnv):
     APP_MAX_LIMITS_COUNT = 10
     APP_TRANSFERS_FINALIZATION_AVG_SECONDS = 5.0
     APP_MAX_TRANSFERS_PER_MONTH = 3000
+    APP_FLUSH_RUNNING_TRANSFERS_DAYS = 14
 
 
 def create_app(config_dict={}):

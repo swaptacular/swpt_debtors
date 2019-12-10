@@ -306,6 +306,11 @@ def process_account_change_signal(debtor_id: int,
         })
 
 
+@atomic
+def flush_running_transfers(cutoff_ts: datetime) -> int:
+    return RunningTransfer.query.filter(RunningTransfer.finalized_at_ts <= cutoff_ts).delete()
+
+
 def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:
     seqnum, ts = event
     other_seqnum, other_ts = other_event
