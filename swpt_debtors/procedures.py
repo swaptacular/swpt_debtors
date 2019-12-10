@@ -137,7 +137,7 @@ def delete_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> int:
 @atomic
 def initiate_transfer(debtor_id: int,
                       transfer_uuid: UUID,
-                      recipient_creditor_id: int,
+                      recipient_creditor_id: Optional[int],
                       recipient_uri: str,
                       amount: int,
                       transfer_info: dict) -> InitiatedTransfer:
