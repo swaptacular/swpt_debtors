@@ -52,8 +52,8 @@ def on_prepared_issuing_transfer_signal(
         prepared_at_ts: str,
         coordinator_id: int,
         coordinator_request_id: int) -> None:
-    assert coordinator_type == 'payment'
-    procedures.process_prepared_payment_transfer_signal(
+    assert coordinator_type == 'issuing'
+    procedures.process_prepared_issuing_transfer_signal(
         debtor_id,
         sender_creditor_id,
         transfer_id,
@@ -71,7 +71,7 @@ def on_rejected_issuing_transfer_signal(
         coordinator_request_id: int,
         details: dict) -> None:
     assert coordinator_type == 'issuing'
-    procedures.process_rejected_payment_transfer_signal(
+    procedures.process_rejected_issuing_transfer_signal(
         coordinator_id,
         coordinator_request_id,
         details,

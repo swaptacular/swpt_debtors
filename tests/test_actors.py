@@ -35,7 +35,7 @@ def test_on_prepared_issuing_transfer_signal(db_session):
         debtor_id=D_ID,
         sender_creditor_id=2,
         transfer_id=1,
-        coordinator_type='payment',
+        coordinator_type='issuing',
         recipient_creditor_id=C_ID,
         sender_locked_amount=1000,
         prepared_at_ts='2019-10-01T00:00:00Z',

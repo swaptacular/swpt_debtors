@@ -187,10 +187,7 @@ def initiate_transfer(debtor_id: int,
 
 
 @atomic
-def process_rejected_payment_transfer_signal(
-        coordinator_id: int,
-        coordinator_request_id: int,
-        details: dict) -> None:
+def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_request_id: int, details: dict) -> None:
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and rt.finalized_at_ts is None:
         assert rt.issuing_transfer_id is None
@@ -199,14 +196,13 @@ def process_rejected_payment_transfer_signal(
 
 
 @atomic
-def process_prepared_payment_transfer_signal(
-        debtor_id: int,
-        sender_creditor_id: int,
-        transfer_id: int,
-        recipient_creditor_id: int,
-        sender_locked_amount: int,
-        coordinator_id: int,
-        coordinator_request_id: int) -> None:
+def process_prepared_issuing_transfer_signal(debtor_id: int,
+                                             sender_creditor_id: int,
+                                             transfer_id: int,
+                                             recipient_creditor_id: int,
+                                             sender_locked_amount: int,
+                                             coordinator_id: int,
+                                             coordinator_request_id: int) -> None:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64

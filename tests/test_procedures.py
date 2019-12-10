@@ -262,7 +262,7 @@ def test_successful_transfer(db_session, debtor):
     assert pts.recipient_creditor_id == C_ID
     assert pts.minimum_account_balance == debtor.minimum_account_balance
 
-    p.process_prepared_payment_transfer_signal(
+    p.process_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
         sender_creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
@@ -292,7 +292,7 @@ def test_successful_transfer(db_session, debtor):
     assert it.is_finalized
     assert it.is_successful
 
-    p.process_prepared_payment_transfer_signal(
+    p.process_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
         sender_creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
@@ -311,7 +311,7 @@ def test_successful_transfer(db_session, debtor):
 def test_failed_transfer(db_session, debtor):
     p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
     pts = PrepareTransferSignal.query.all()[0]
-    p.process_rejected_payment_transfer_signal(D_ID, pts.coordinator_request_id, details={
+    p.process_rejected_issuing_transfer_signal(D_ID, pts.coordinator_request_id, details={
         'error_code': 'TEST',
         'message': 'A testing error.',
     })
@@ -328,7 +328,7 @@ def test_failed_transfer(db_session, debtor):
     assert it.is_finalized
     assert not it.is_successful
 
-    p.process_rejected_payment_transfer_signal(D_ID, pts.coordinator_request_id, details={
+    p.process_rejected_issuing_transfer_signal(D_ID, pts.coordinator_request_id, details={
         'error_code': 'TEST',
         'message': 'A testing error.',
     })
