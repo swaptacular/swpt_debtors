@@ -76,6 +76,15 @@ def get_or_create_debtor(debtor_id: int) -> Debtor:
 
 
 @atomic
+def terminate_debtor(debtor_id: int) -> Optional[Debtor]:
+    debtor = Debtor.lock_instance(debtor_id)
+    if debtor:
+        current_ts = datetime.now(tz=timezone.utc)
+        debtor.is_active = False
+        debtor.deactivated_at_date = current_ts.date()
+
+
+@atomic
 def update_debtor_policy(debtor_id: int,
                          interest_rate_target: Optional[float],
                          new_interest_rate_limits: LowerLimitSequence,
@@ -383,7 +392,7 @@ def _throttle_debtor_actions(debtor_id: int) -> Debtor:
     if debtor.actions_throttle_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
         raise TooManyManagementActionsError()
     debtor.actions_throttle_count += 1
-    debtor.status |= Debtor.STATUS_IS_ACTIVE_FLAG
+    debtor.is_active = True
     return debtor
 
 

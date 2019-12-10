@@ -208,6 +208,13 @@ class Debtor(db.Model):
     def is_active(self):
         return bool(self.status & Debtor.STATUS_IS_ACTIVE_FLAG)
 
+    @is_active.setter
+    def is_active(self, value):
+        if value:
+            self.status |= Debtor.STATUS_IS_ACTIVE_FLAG
+        else:
+            self.status &= ~Debtor.STATUS_IS_ACTIVE_FLAG
+
 
 class InitiatedTransfer(db.Model):
     debtor_id = db.Column(db.BigInteger, primary_key=True)

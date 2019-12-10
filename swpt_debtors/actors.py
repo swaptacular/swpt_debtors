@@ -7,10 +7,14 @@ from . import procedures
 def create_debtor(debtor_id: int) -> None:
     """Creates a new debtor."""
 
+    procedures.get_or_create_debtor(debtor_id)
+
 
 @broker.actor(queue_name=APP_QUEUE_NAME)
 def terminate_debtor(debtor_id: int) -> None:
     """Permanently terminates a debtor."""
+
+    procedures.terminate_debtor(debtor_id)
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)

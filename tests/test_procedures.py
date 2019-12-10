@@ -2,7 +2,7 @@ import pytest
 from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
-from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
+from swpt_debtors.models import Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
     PrepareTransferSignal, FinalizePreparedTransferSignal, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
@@ -31,9 +31,26 @@ def test_get_or_create_debtor(db_session):
     debtor = p.get_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
     assert not debtor.is_active
+    assert debtor.deactivated_at_date is None
     debtor = p.get_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
     assert not debtor.is_active
+    assert debtor.deactivated_at_date is None
+
+
+def test_terminate_debtor(db_session, debtor):
+    p.terminate_debtor(D_ID)
+    debtor = p.get_debtor(D_ID)
+    assert not debtor.is_active
+    assert debtor.deactivated_at_date is not None
+
+    p.terminate_debtor(D_ID)
+    debtor = p.get_debtor(D_ID)
+    assert not debtor.is_active
+    assert debtor.deactivated_at_date is not None
+
+    p.terminate_debtor(1234567890)
+    assert p.get_debtor(1234567890) is None
 
 
 def test_process_account_change_signal(db_session, debtor):
