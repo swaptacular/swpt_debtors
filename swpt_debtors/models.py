@@ -420,6 +420,10 @@ class Account(db.Model):
         }
     )
 
+    @property
+    def is_overflown(self):
+        return bool(self.status & Account.STATUS_OVERFLOWN_FLAG)
+
 
 class ChangeInterestRateSignal(Signal):
     queue_name = 'swpt_accounts'

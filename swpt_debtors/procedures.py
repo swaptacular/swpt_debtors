@@ -296,8 +296,9 @@ def process_account_change_signal(debtor_id: int,
     # If this is a debtors's account, we must update debtor's
     # `balance` and `balance_ts` columns.
     if account.creditor_id == ROOT_CREDITOR_ID:
+        balance = MIN_INT64 if account.is_overflown else account.principal
         Debtor.query.filter_by(debtor_id=debtor_id).update({
-            Debtor.balance: account.principal,
+            Debtor.balance: balance,
             Debtor.balance_ts: account.change_ts,
         })
 
