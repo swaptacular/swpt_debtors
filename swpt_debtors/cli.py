@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 import click
 from os import environ
 from flask import current_app
 from flask.cli import with_appcontext
-from . import procedures
+from .extensions import db
+from .table_scanners import RunningTransferCollector
 
 
 @click.group('swpt_debtors')
@@ -48,27 +49,22 @@ def subscribe(queue_name):  # pragma: no cover
                 click.echo(f'Unsubscribed "{queue_name}" from "{MAIN_EXCHANGE_NAME}.{routing_key}".')
 
 
-@swpt_debtors.command('flush_running_transfers')
+@swpt_debtors.command('collect_running_transfers')
 @with_appcontext
 @click.option('-d', '--days', type=float, help='The number of days.')
-def flush_running_transfers(days):
-    """Delete finalized running transfers older than a given number of days.
+@click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
+def collect_running_transfers(days, quit_early):
+    """Start a daemon that garbage-collects finalized running transfers.
 
-    If the number of days is not specified, the value of the
-    environment variable APP_FLUSH_RUNNING_TRANSFERS_DAYS is taken. If
-    it is not set, the default number of days is 14.
+    Only finalized running transfers older than a given number of days
+    are deleted. If the number of days is not specified, the value of
+    the environment variable APP_RUNNING_TRANSFERS_GC_DAYS is
+    taken. If it is not set, the default number of days is 14.
 
     """
 
-    # TODO: Make sure running transfers are flushed periodically. Note
-    # that the current method of flushing may consume considerable
-    # amount of database resources for quite some time. This could
-    # potentially be a problem.
-
-    days = days or current_app.config['APP_FLUSH_RUNNING_TRANSFERS_DAYS']
-    cutoff_ts = datetime.now(tz=timezone.utc) - timedelta(days=days)
-    n = procedures.flush_running_transfers(cutoff_ts)
-    if n == 1:
-        click.echo(f'1 running transfer has been deleted.')
-    elif n > 1:  # pragma: nocover
-        click.echo(f'{n} running transfers have been deleted.')
+    click.echo('Collecting running transfers...')
+    days = days or current_app.config['APP_RUNNING_TRANSFERS_GC_DAYS']
+    assert days > 0.0
+    scanner = RunningTransferCollector(days)
+    scanner.run(db.engine, timedelta(days=days / 2), quit_early=quit_early)

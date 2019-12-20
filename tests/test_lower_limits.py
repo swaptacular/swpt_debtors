@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from swpt_debtors.lower_limits import LowerLimit, LowerLimitSequence, TooLongLimitSequenceError
 
 
-def test_add_limit_to_list():
+def test_add_limit_to_list(app):
     limits = LowerLimitSequence()
     limits.add_limit(LowerLimit(30, date(2000, 1, 1)))
     limits.add_limit(LowerLimit(20, date(2000, 1, 2)))
@@ -21,7 +21,7 @@ def test_add_limit_to_list():
     assert [l.value for l in limits] == [30, 25]
 
 
-def test_add_limit_max_count():
+def test_add_limit_max_count(app):
     today = date(2000, 1, 1)
     limits = LowerLimitSequence()
     to_add = [LowerLimit(-i, today + timedelta(days=i)) for i in range(11)]
@@ -31,7 +31,7 @@ def test_add_limit_max_count():
         limits.add_limit(to_add[10])
 
 
-def test_add_limit_to_list_eliminator():
+def test_add_limit_to_list_eliminator(app):
     limits = LowerLimitSequence([
         LowerLimit(10, date(2000, 1, 1)),
         LowerLimit(20, date(2000, 1, 2)),
@@ -42,12 +42,12 @@ def test_add_limit_to_list_eliminator():
     assert [l.value for l in limits] == [30]
 
 
-def test_repr():
+def test_repr(app):
     limits = LowerLimitSequence()
     assert str(limits) == 'LowerLimitSequence([])'
 
 
-def test_add_limits():
+def test_add_limits(app):
     limits = LowerLimitSequence()
     today = date(2000, 1, 1)
     to_add = [LowerLimit(-i, today + timedelta(days=i)) for i in range(11)]

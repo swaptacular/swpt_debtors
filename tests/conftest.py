@@ -8,6 +8,16 @@ from swpt_debtors.extensions import db
 
 DB_SESSION = 'swpt_debtors.extensions.db.session'
 
+server_name = 'example.com'
+config_dict = {
+    'TESTING': True,
+    'SERVER_NAME': server_name,
+    'SWPT_SERVER_NAME': server_name,
+    'APP_MAX_LIMITS_COUNT': 10,
+    'APP_TRANSFERS_FINALIZATION_AVG_SECONDS': 10.0,
+    'APP_MAX_TRANSFERS_PER_MONTH': 10,
+}
+
 
 def _restart_savepoint(session, transaction):
     if transaction.nested and not transaction._parent.nested:
@@ -15,19 +25,19 @@ def _restart_savepoint(session, transaction):
         session.begin_nested()
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
+def app_unsafe_session():
+    app = create_app(config_dict)
+    with app.app_context():
+        flask_migrate.upgrade()
+        yield app
+
+
+@pytest.fixture(scope='module')
 def app():
     """Create a Flask application object."""
 
-    server_name = 'example.com'
-    app = create_app({
-        'TESTING': True,
-        'SERVER_NAME': server_name,
-        'SWPT_SERVER_NAME': server_name,
-        'APP_MAX_LIMITS_COUNT': 10,
-        'APP_TRANSFERS_FINALIZATION_AVG_SECONDS': 10.0,
-        'APP_MAX_TRANSFERS_PER_MONTH': 10,
-    })
+    app = create_app(config_dict)
     with app.app_context():
         flask_migrate.upgrade()
         forbidden = mock.Mock()
