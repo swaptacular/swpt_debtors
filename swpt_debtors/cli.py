@@ -66,5 +66,5 @@ def collect_running_transfers(days, quit_early):
     click.echo('Collecting running transfers...')
     days = days or current_app.config['APP_RUNNING_TRANSFERS_GC_DAYS']
     assert days > 0.0
-    scanner = RunningTransferCollector(days)
-    scanner.run(db.engine, timedelta(days=days / 2), quit_early=quit_early)
+    collector = RunningTransferCollector(days)
+    collector.run(db.engine, timedelta(days=days / 2), quit_early=quit_early)
