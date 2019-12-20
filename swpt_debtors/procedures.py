@@ -2,6 +2,7 @@ from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, Tuple, List
 from flask import current_app
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
@@ -146,14 +147,8 @@ def initiate_transfer(debtor_id: int,
     assert 0 < amount <= MAX_INT64
 
     debtor = _throttle_debtor_actions(debtor_id)
-
-    _raise_error_if_transfer_exists(
-        debtor_id=debtor_id,
-        transfer_uuid=transfer_uuid,
-        recipient_uri=recipient_uri,
-        amount=amount,
-        transfer_info=transfer_info,
-    )
+    _raise_error_if_too_many_transfers(debtor_id)
+    _raise_error_if_transfer_exists(debtor_id, transfer_uuid, recipient_uri, amount, transfer_info)
 
     if recipient_creditor_id is None:
         new_transfer = InitiatedTransfer(
@@ -370,6 +365,12 @@ def _raise_error_if_transfer_exists(debtor_id: int,
     if t:
         if t.recipient_uri == recipient_uri and t.amount == amount and t.transfer_info == transfer_info:
             raise TransferExistsError(t)
+        raise TransfersConflictError()
+
+
+def _raise_error_if_too_many_transfers(debtor_id: int) -> None:
+    n = db.session.query(func.count(InitiatedTransfer.transfer_uuid)).filter_by(debtor_id=debtor_id).scalar()
+    if n >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
         raise TransfersConflictError()
 
 

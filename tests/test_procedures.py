@@ -249,6 +249,23 @@ def test_initiate_transfer(db_session, debtor):
         p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
 
 
+def test_too_many_initiated_transfers(db_session, debtor):
+    db_session.add(InitiatedTransfer(
+        debtor_id=D_ID,
+        transfer_uuid=TEST_UUID,
+        recipient_uri=RECIPIENT_URI,
+        amount=1000,
+    ))
+    db_session.commit()
+    assert len(InitiatedTransfer.query.all()) == 1
+    for i in range(1, 10):
+        suffix = '{:0>4}'.format(i)
+        uuid = f'123e4567-e89b-12d3-a456-42665544{suffix}',
+        p.initiate_transfer(D_ID, uuid, C_ID, RECIPIENT_URI, 1000, {})
+    with pytest.raises(p.TransfersConflictError):
+        p.initiate_transfer(D_ID, f'123e4567-e89b-12d3-a456-426655440010', C_ID, RECIPIENT_URI, 1000, {})
+
+
 def test_successful_transfer(db_session, debtor):
     assert len(PrepareTransferSignal.query.all()) == 0
     p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
