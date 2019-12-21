@@ -46,6 +46,20 @@ class AccountsScanner(TableScanner):
                 rates[debtor.debtor_id] = CachedInterestRate(debtor.interest_rate, current_ts)
         return [rates.get(x, old_rate).interest_rate for x in debtor_ids]
 
-    def process_rows(self, rows):
-        # TODO: Put a real implementation.
+    def _check_interest_rate(rows):
         pass
+
+    def _check_accumulated_interest(rows):
+        pass
+
+    def _check_negative_balance(rows):
+        pass
+
+    def _check_if_deleted(rows):
+        pass
+
+    def process_rows(self, rows):
+        self._check_interest_rate(rows)
+        self._check_accumulated_interest(rows)
+        self._check_negative_balance(rows)
+        self._check_if_deleted(rows)
