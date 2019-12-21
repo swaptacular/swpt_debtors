@@ -23,7 +23,9 @@ class RunningTransfersCollector(TableScanner):
     def process_rows(self, rows):
         cutoff_ts = datetime.now(tz=timezone.utc) - timedelta(days=self.days)
         pks_to_delete = [(row[0], row[1]) for row in rows if row[2] < cutoff_ts]
-        db.engine.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
+        if pks_to_delete:
+            db.engine.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
+
 
 
 class AccountsScanner(TableScanner):
@@ -46,13 +48,13 @@ class AccountsScanner(TableScanner):
                 rates[debtor.debtor_id] = CachedInterestRate(debtor.interest_rate, current_ts)
         return [rates.get(x, old_rate).interest_rate for x in debtor_ids]
 
-    def _check_interest_rate(rows):
+    def _check_interest_rate(self, rows):
         pass
 
-    def _check_accumulated_interest(rows):
+    def _check_accumulated_interest(self, rows):
         pass
 
-    def _check_negative_balance(rows):
+    def _check_negative_balance(self, rows):
         pass
 
     def _check_if_deleted(rows):
