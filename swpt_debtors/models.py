@@ -480,3 +480,48 @@ class FinalizePreparedTransferSignal(Signal):
     __table_args__ = (
         db.CheckConstraint(committed_amount >= 0),
     )
+
+
+class CapitalizeInterestSignal(Signal):
+    queue_name = 'swpt_accounts'
+    actor_name = 'capitalize_interest'
+
+    class __marshmallow__(Schema):
+        debtor_id = fields.Integer()
+        creditor_id = fields.Integer()
+        accumulated_interest_threshold = fields.Integer()
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    creditor_id = db.Column(db.BigInteger, nullable=False)
+    accumulated_interest_threshold = db.Column(db.BigInteger, nullable=False)
+
+
+class ZeroOutNegativeBalanceSignal(Signal):
+    queue_name = 'swpt_accounts'
+    actor_name = 'zero_out_negative_balance'
+
+    class __marshmallow__(Schema):
+        debtor_id = fields.Integer()
+        creditor_id = fields.Integer()
+        last_outgoing_transfer_date = fields.Date()
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    creditor_id = db.Column(db.BigInteger, nullable=False)
+    last_outgoing_transfer_date = db.Column(db.DATE, nullable=False)
+
+
+class PurgeDeletedAccountSignal(Signal):
+    queue_name = 'swpt_accounts'
+    actor_name = 'purge_deleted_account'
+
+    class __marshmallow__(Schema):
+        debtor_id = fields.Integer()
+        creditor_id = fields.Integer()
+        if_deleted_before = fields.DateTime()
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    creditor_id = db.Column(db.BigInteger, nullable=False)
+    if_deleted_before = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
