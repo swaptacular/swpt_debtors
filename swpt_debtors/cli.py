@@ -54,7 +54,7 @@ def subscribe(queue_name):  # pragma: no cover
 @click.option('-d', '--days', type=float, help='The number of days.')
 @click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
 def collect_running_transfers(days, quit_early):
-    """Start a daemon that garbage-collects finalized running transfers.
+    """Start a process that garbage-collects finalized running transfers.
 
     Only finalized running transfers older than a given number of days
     are deleted. If the number of days is not specified, the value of
