@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_
 from .extensions import db
-from .models import Debtor, RunningTransfer, Account
+from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal
 
 
 class CachedInterestRate(NamedTuple):
@@ -27,10 +27,14 @@ class RunningTransfersCollector(TableScanner):
             db.engine.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
 
 
-
 class AccountsScanner(TableScanner):
     table = Account.__table__
+    c_debtor_id = table.c.debtor_id
+    c_creditor_id = table.c.creditor_id
+    c_change_ts = table.c.change_ts
+    c_status = table.c.status
     old_interest_rate = CachedInterestRate(0.0, datetime(1900, 1, 1))
+    pk = tuple_(Account.debtor_id, Account.creditor_id)
 
     def __init__(self, days: float):
         super().__init__()
@@ -57,8 +61,23 @@ class AccountsScanner(TableScanner):
     def _check_negative_balance(self, rows):
         pass
 
-    def _check_if_deleted(rows):
-        pass
+    def _check_if_deleted(self, rows):
+        current_ts = datetime.now(tz=timezone.utc)
+        cutoff_ts = current_ts  # TODO: Subtract something.
+        pks_to_delete = []
+        for row in rows:
+            is_deleted = row[self.c_status] & Account.STATUS_DELETED_FLAG
+            if is_deleted & row[self.c_change_ts] < cutoff_ts:
+                debtor_id = row[self.c_debtor_id]
+                creditor_id = row[self.c_creditor_id]
+                db.session.add(PurgeDeletedAccountSignal(
+                    debtor_id=debtor_id,
+                    creditor_id=creditor_id,
+                    if_deleted_before=cutoff_ts,
+                ))
+                pks_to_delete.append((debtor_id, creditor_id))
+        if pks_to_delete:
+            Account.query.filter(self.pk.in_(pks_to_delete)).delete(synchronize_session=False)
 
     def process_rows(self, rows):
         self._check_interest_rate(rows)
