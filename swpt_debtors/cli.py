@@ -51,22 +51,14 @@ def subscribe(queue_name):  # pragma: no cover
 
 @swpt_debtors.command('collect_running_transfers')
 @with_appcontext
-@click.option('-d', '--days', type=float, help='The number of days.')
 @click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
-def collect_running_transfers(days, quit_early):
-    """Start a process that garbage-collects finalized running transfers.
-
-    Only finalized running transfers older than a given number of days
-    are deleted. If the number of days is not specified, the value of
-    the environment variable APP_RUNNING_TRANSFERS_GC_DAYS is
-    taken. If it is not set, the default number of days is 14.
-
-    """
+def collect_running_transfers(quit_early):
+    """Start a process that garbage-collects finalized running transfers."""
 
     click.echo('Collecting running transfers...')
-    days = days or current_app.config['APP_RUNNING_TRANSFERS_GC_DAYS']
+    days = current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS']
     assert days > 0.0
-    collector = RunningTransfersCollector(days)
+    collector = RunningTransfersCollector()
     collector.run(db.engine, timedelta(days=days / 2), quit_early=quit_early)
 
 

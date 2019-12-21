@@ -2,6 +2,7 @@ from typing import NamedTuple, Dict, List
 from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_
+from flask import current_app
 from .extensions import db
 from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal
 
@@ -15,14 +16,13 @@ class RunningTransfersCollector(TableScanner):
     table = RunningTransfer.__table__
     columns = [RunningTransfer.debtor_id, RunningTransfer.transfer_uuid, RunningTransfer.finalized_at_ts]
 
-    def __init__(self, days):
+    def __init__(self):
         super().__init__()
-        self.days = days
-        self.interval = timedelta(days=days)
+        self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
         self.pk = tuple_(self.table.c.debtor_id, self.table.c.transfer_uuid)
 
     def process_rows(self, rows):
-        cutoff_ts = datetime.now(tz=timezone.utc) - self.interval
+        cutoff_ts = datetime.now(tz=timezone.utc) - self.signalbus_max_delay
         pks_to_delete = [(row[0], row[1]) for row in rows if row[2] < cutoff_ts]
         if pks_to_delete:
             db.engine.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
@@ -35,8 +35,8 @@ class AccountsScanner(TableScanner):
 
     def __init__(self, days: float):
         super().__init__()
-        self.days = days
         self.interval = timedelta(days=days)
+        self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
     def _get_debtor_interest_rates(self, debtor_ids: List[int], current_ts) -> List[float]:
@@ -59,7 +59,7 @@ class AccountsScanner(TableScanner):
         pass
 
     def _check_if_deleted(self, rows, current_ts):
-        cutoff_ts = current_ts  # TODO: Subtract something.
+        cutoff_ts = current_ts - self.signalbus_max_delay
         c = self.table.c
         deleted_flag = Account.STATUS_DELETED_FLAG
         pks_to_purge = [(row[c.debtor_id], row[c.creditor_id])

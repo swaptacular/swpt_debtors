@@ -20,6 +20,6 @@ def test_collect_running_transfers(app_unsafe_session):
     db.engine.execute('ANALYZE running_transfer')
     assert len(RunningTransfer.query.all()) == 1
     runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'collect_running_transfers', '--days', '0.000001', '--quit-early'])
+    result = runner.invoke(args=['swpt_debtors', 'collect_running_transfers', '--quit-early'])
     assert result.exit_code == 0
     assert len(RunningTransfer.query.all()) == 0
