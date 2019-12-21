@@ -23,6 +23,10 @@ class RunningTransfersCollector(TableScanner):
 class AccountsScanner(TableScanner):
     table = Account.__table__
 
+    def __init__(self, days):
+        super().__init__()
+        self.days = days
+
     def process_rows(self, rows):
         # TODO: Put a real implementation.
         pass
