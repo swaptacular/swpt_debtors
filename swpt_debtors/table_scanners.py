@@ -21,10 +21,9 @@ class RunningTransfersCollector(TableScanner):
         self.pk = tuple_(self.table.c.debtor_id, self.table.c.transfer_uuid)
 
     def process_rows(self, rows):
-        if rows:
-            cutoff_ts = datetime.now(tz=timezone.utc) - timedelta(days=self.days)
-            pks_to_delete = [(row[0], row[1]) for row in rows if row[2] < cutoff_ts]
-            db.engine.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
+        cutoff_ts = datetime.now(tz=timezone.utc) - timedelta(days=self.days)
+        pks_to_delete = [(row[0], row[1]) for row in rows if row[2] < cutoff_ts]
+        db.engine.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
 
 
 class AccountsScanner(TableScanner):
