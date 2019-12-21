@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedTransferSignal, \
-    InitiatedTransfer, RunningTransfer, PrepareTransferSignal, increment_seqnum, \
+    InitiatedTransfer, RunningTransfer, PrepareTransferSignal, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
 
 T = TypeVar('T')
@@ -314,14 +314,11 @@ def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int
 
 def _insert_change_interest_rate_signal(account: Account, interest_rate: Optional[float]) -> None:
     assert interest_rate is not None
-    current_ts = datetime.now(tz=timezone.utc)
-    account.interest_rate_last_change_seqnum = increment_seqnum(account.interest_rate_last_change_seqnum)
-    account.interest_rate_last_change_ts = max(account.interest_rate_last_change_ts, current_ts)
     db.session.add(ChangeInterestRateSignal(
         debtor_id=account.debtor_id,
         creditor_id=account.creditor_id,
-        change_seqnum=account.interest_rate_last_change_seqnum,
-        change_ts=account.interest_rate_last_change_ts,
+        change_seqnum=0,
+        change_ts=datetime.now(tz=timezone.utc),
         interest_rate=interest_rate,
     ))
 

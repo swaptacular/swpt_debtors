@@ -19,7 +19,7 @@ INTEREST_RATE_CEIL = 100.0
 ROOT_CREDITOR_ID = 0
 
 
-def increment_seqnum(n):
+def increment_seqnum(n):  # pragma: no cover
     return MIN_INT32 if n == MAX_INT32 else n + 1
 
 
@@ -397,18 +397,6 @@ class Account(db.Model):
         db.SmallInteger,
         nullable=False,
         comment='Additional account status flags.',
-    )
-    interest_rate_last_change_seqnum = db.Column(
-        db.Integer,
-        nullable=False,
-        default=1,
-        comment='Incremented (with wrapping) on each invocation of the `change_interest_rate` actor.',
-    )
-    interest_rate_last_change_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=get_now_utc,
-        comment='Updated on every increment of `interest_rate_last_change_seqnum`. Must never decrease.',
     )
     __table_args__ = (
         db.CheckConstraint((interest_rate >= INTEREST_RATE_FLOOR) & (interest_rate <= INTEREST_RATE_CEIL)),

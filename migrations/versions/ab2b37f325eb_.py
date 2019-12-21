@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: f1f2dfeeae6c
+Revision ID: ab2b37f325eb
 Revises: 8d09bea9c7d1
-Create Date: 2019-12-10 01:09:32.547764
+Create Date: 2019-12-21 16:03:48.525270
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'f1f2dfeeae6c'
+revision = 'ab2b37f325eb'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -28,8 +28,6 @@ def upgrade():
     sa.Column('interest_rate', sa.REAL(), nullable=False, comment='Annual rate (in percents) at which interest accumulates on the account.'),
     sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=True, comment='Updated on each transfer for which this account is the sender. This field is not updated on demurrage payments.'),
     sa.Column('status', sa.SmallInteger(), nullable=False, comment='Additional account status flags.'),
-    sa.Column('interest_rate_last_change_seqnum', sa.Integer(), nullable=False, comment='Incremented (with wrapping) on each invocation of the `change_interest_rate` actor.'),
-    sa.Column('interest_rate_last_change_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on every increment of `interest_rate_last_change_seqnum`. Must never decrease.'),
     sa.CheckConstraint('interest_rate >= -50.0 AND interest_rate <= 100.0'),
     sa.CheckConstraint('principal > -9223372036854775808'),
     sa.PrimaryKeyConstraint('debtor_id', 'creditor_id'),
