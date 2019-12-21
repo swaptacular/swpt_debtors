@@ -4,7 +4,7 @@ from os import environ
 from flask import current_app
 from flask.cli import with_appcontext
 from .extensions import db
-from .table_scanners import RunningTransferCollector
+from .table_scanners import RunningTransfersCollector, AccountsScanner
 
 
 @click.group('swpt_debtors')
@@ -66,5 +66,27 @@ def collect_running_transfers(days, quit_early):
     click.echo('Collecting running transfers...')
     days = days or current_app.config['APP_RUNNING_TRANSFERS_GC_DAYS']
     assert days > 0.0
-    collector = RunningTransferCollector(days)
+    collector = RunningTransfersCollector(days)
     collector.run(db.engine, timedelta(days=days / 2), quit_early=quit_early)
+
+
+@swpt_debtors.command('scan_accounts')
+@with_appcontext
+@click.option('-d', '--days', type=float, help='The number of days.')
+@click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
+def scan_accounts(days, quit_early):
+    """Start a process that execute accounts maintenance operations.
+
+    The specified number of days determines the intended duration of a
+    single pass through the accounts table. If the number of days is
+    not specified, the value of the environment variable
+    APP_ACCOUNTS_SCAN_DAYS is taken. If it is not set, the default
+    number of days is 1.
+
+    """
+
+    click.echo('Scanning accounts...')
+    days = days or current_app.config['APP_ACCOUNTS_SCAN_DAYS']
+    assert days > 0.0
+    scanner = AccountsScanner(days)
+    scanner.run(db.engine, timedelta(days=days), quit_early=quit_early)

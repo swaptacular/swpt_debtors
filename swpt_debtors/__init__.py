@@ -54,6 +54,7 @@ class Configuration(metaclass=MetaFlaskEnv):
     APP_TRANSFERS_FINALIZATION_AVG_SECONDS = 5.0
     APP_MAX_TRANSFERS_PER_MONTH = 300
     APP_RUNNING_TRANSFERS_GC_DAYS = 14
+    APP_ACCOUNTS_SCAN_DAYS = 1
 
 
 def create_app(config_dict={}):
