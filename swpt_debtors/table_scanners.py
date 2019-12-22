@@ -83,7 +83,8 @@ class AccountsScanner(TableScanner):
         c = self.table.c
         for row in rows:
             accumulated_interest = self._calc_accumulated_interest(row, current_ts)
-            if abs(accumulated_interest) / (abs(row[c.principal]) + 1) > 0.05:
+            ratio = abs(accumulated_interest) / (1 + abs(row[c.principal]))
+            if ratio > 0.02:
                 db.session.add(CapitalizeInterestSignal(
                     debtor_id=row[c.debtor_id],
                     creditor_id=row[c.creditor_id],
