@@ -5,6 +5,7 @@ from sqlalchemy.sql.expression import tuple_
 from flask import current_app
 from .extensions import db
 from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal
+from .procedures import insert_change_interest_rate_signal
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -33,7 +34,7 @@ class RunningTransfersCollector(TableScanner):
 
 class AccountsScanner(TableScanner):
     table = Account.__table__
-    old_interest_rate = CachedInterestRate(0.0, datetime(1900, 1, 1))
+    old_interest_rate = CachedInterestRate(0.0, datetime(1900, 1, 1, tzinfo=timezone.utc))
     pk = tuple_(Account.debtor_id, Account.creditor_id)
 
     def __init__(self, days: float):
@@ -42,7 +43,7 @@ class AccountsScanner(TableScanner):
         self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
-    def _get_debtor_interest_rates(self, debtor_ids: List[int], current_ts) -> List[float]:
+    def _get_debtor_interest_rates(self, debtor_ids: List[int], current_ts: datetime) -> List[float]:
         cutoff_ts = current_ts - self.interval
         rates = self.debtor_interest_rates
         old_rate = self.old_interest_rate
@@ -54,7 +55,12 @@ class AccountsScanner(TableScanner):
 
     @atomic
     def check_interest_rate(self, rows, current_ts):
-        pass
+        c = self.table.c
+        debtor_ids = [row[c.debtor_id] for row in rows]
+        interest_rates = self._get_debtor_interest_rates(debtor_ids, current_ts)
+        for row, interest_rate in zip(rows, interest_rates):
+            if row[c.interest_rate] != interest_rate:
+                insert_change_interest_rate_signal(row[c.debtor_id], row[c.creditor_id], interest_rate)
 
     @atomic
     def check_accumulated_interest(self, rows, current_ts):

@@ -286,7 +286,7 @@ def process_account_change_signal(debtor_id: int,
     if not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         debtor = Debtor.get_instance(debtor_id)
         if debtor:
-            _insert_change_interest_rate_signal(account, debtor.interest_rate)
+            insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate)
 
     # If this is a debtors's account, we must update debtor's
     # `balance` and `balance_ts` columns.
@@ -296,6 +296,17 @@ def process_account_change_signal(debtor_id: int,
             Debtor.balance: balance,
             Debtor.balance_ts: account.change_ts,
         })
+
+
+@atomic
+def insert_change_interest_rate_signal(debtor_id: int, creditor_id: int, interest_rate: float) -> None:
+    db.session.add(ChangeInterestRateSignal(
+        debtor_id=debtor_id,
+        creditor_id=creditor_id,
+        change_seqnum=0,
+        change_ts=datetime.now(tz=timezone.utc),
+        interest_rate=interest_rate,
+    ))
 
 
 def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:
@@ -310,17 +321,6 @@ def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int
         or other_seqnum is None
         or 0 < (seqnum - other_seqnum) % 0x100000000 < 0x80000000
     )
-
-
-def _insert_change_interest_rate_signal(account: Account, interest_rate: Optional[float]) -> None:
-    assert interest_rate is not None
-    db.session.add(ChangeInterestRateSignal(
-        debtor_id=account.debtor_id,
-        creditor_id=account.creditor_id,
-        change_seqnum=0,
-        change_ts=datetime.now(tz=timezone.utc),
-        interest_rate=interest_rate,
-    ))
 
 
 def _insert_running_transfer_or_raise_conflict_error(debtor: Debtor,

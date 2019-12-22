@@ -25,15 +25,18 @@ def test_collect_running_transfers(app_unsafe_session):
     assert len(RunningTransfer.query.all()) == 0
 
 
-def test_purge_deleted_account(app_unsafe_session):
-    from swpt_debtors.models import PurgeDeletedAccountSignal
+def test_scan_accounts(app_unsafe_session):
+    from swpt_debtors.models import Debtor, PurgeDeletedAccountSignal, ChangeInterestRateSignal
 
     past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
     future_ts = datetime(2100, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
+    Debtor.query.delete()
     Account.query.delete()
     PurgeDeletedAccountSignal.query.delete()
+    ChangeInterestRateSignal.query.delete()
     db.session.commit()
+    db.session.add(Debtor(debtor_id=111, interest_rate_target=5.55))
     db.session.add(Account(
         debtor_id=1,
         creditor_id=2,
@@ -63,7 +66,7 @@ def test_purge_deleted_account(app_unsafe_session):
         change_ts=past_ts,
         principal=0,
         interest=0.0,
-        interest_rate=0.0,
+        interest_rate=10.0,
         last_outgoing_transfer_date=past_ts,
         status=0,
     ))
@@ -71,15 +74,28 @@ def test_purge_deleted_account(app_unsafe_session):
     db.engine.execute('ANALYZE account')
     assert len(Account.query.all()) == 3
     assert len(PurgeDeletedAccountSignal.query.all()) == 0
+    assert len(ChangeInterestRateSignal.query.all()) == 0
     runner = app.test_cli_runner()
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
     assert len(Account.query.all()) == 2
+
     purge_signals = PurgeDeletedAccountSignal.query.all()
     assert len(purge_signals) == 1
     ps = purge_signals[0]
     assert ps.debtor_id == 1
     assert ps.creditor_id == 2
     assert ps.if_deleted_before > past_ts
+
+    change_interest_rate_signals = ChangeInterestRateSignal.query.all()
+    assert len(change_interest_rate_signals) >= 1
+    cirs = change_interest_rate_signals[0]
+    assert cirs.debtor_id == 111
+    assert cirs.creditor_id == 222
+    assert cirs.interest_rate == 5.55
+
+    Debtor.query.delete()
     Account.query.delete()
+    PurgeDeletedAccountSignal.query.delete()
+    ChangeInterestRateSignal.query.delete()
     db.session.commit()
