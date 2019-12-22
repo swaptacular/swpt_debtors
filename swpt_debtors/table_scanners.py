@@ -59,14 +59,21 @@ class AccountsScanner(TableScanner):
         pass
 
     def _check_if_deleted(self, rows, current_ts):
-        cutoff_ts = current_ts - self.signalbus_max_delay
         c = self.table.c
+        cutoff_ts = current_ts - self.signalbus_max_delay
         deleted_flag = Account.STATUS_DELETED_FLAG
-        pks_to_purge = [(row[c.debtor_id], row[c.creditor_id])
-                        for row in rows if row[c.status] & deleted_flag and row[c.change_ts] < cutoff_ts]
-        for pk in pks_to_purge:
-            db.session.add(PurgeDeletedAccountSignal(debtor_id=pk[0], creditor_id=pk[1], if_deleted_before=cutoff_ts))
+        pks_to_purge = [
+            (row[c.debtor_id], row[c.creditor_id])
+            for row in rows
+            if row[c.status] & deleted_flag and row[c.change_ts] < cutoff_ts
+        ]
         if pks_to_purge:
+            for pk in pks_to_purge:
+                db.session.add(PurgeDeletedAccountSignal(
+                    debtor_id=pk[0],
+                    creditor_id=pk[1],
+                    if_deleted_before=cutoff_ts,
+                ))
             Account.query.filter(self.pk.in_(pks_to_purge)).delete(synchronize_session=False)
 
     def process_rows(self, rows):
