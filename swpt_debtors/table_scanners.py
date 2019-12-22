@@ -60,11 +60,7 @@ class AccountsScanner(TableScanner):
 
     def _calc_accumulated_interest(self, row, current_ts) -> int:
         c = self.table.c
-        current_balance = row[c.principal] + Decimal.from_float(row[c.interest])
-        if current_balance > 0:
-            k = math.log(1.0 + row[c.interest_rate] / 100.0) / SECONDS_IN_YEAR
-            passed_seconds = max(0.0, (current_ts - row[c.change_ts]).total_seconds())
-            current_balance *= Decimal.from_float(math.exp(k * passed_seconds))
+        current_balance = self._calc_current_balance(row, current_ts)
         accumulated_interest = math.floor(current_balance - row[c.principal])
         accumulated_interest = min(accumulated_interest, MAX_INT64)
         accumulated_interest = max(-MAX_INT64, accumulated_interest)
@@ -92,7 +88,8 @@ class AccountsScanner(TableScanner):
     @atomic
     def check_accumulated_interest(self, rows, current_ts):
         c = self.table.c
-        for row in rows:
+        regular_account_rows = (row for row in rows if row[c.creditor_id] != ROOT_CREDITOR_ID)
+        for row in regular_account_rows:
             accumulated_interest = self._calc_accumulated_interest(row, current_ts)
             ratio = abs(accumulated_interest) / (1 + abs(row[c.principal]))
             if ratio > 0.02:
@@ -108,7 +105,7 @@ class AccountsScanner(TableScanner):
         cutoff_date = (current_ts - timedelta(days=356)).date()  # TODO: read it from config.
         regular_account_rows = (row for row in rows if row[c.creditor_id] != ROOT_CREDITOR_ID)
         for row in regular_account_rows:
-            current_balance = -math.floor(self._calc_current_balance(row, current_ts))
+            current_balance = math.floor(self._calc_current_balance(row, current_ts))
             transfer_date = row[c.last_outgoing_transfer_date]
             if current_balance < 0 and (transfer_date is None or transfer_date <= cutoff_date):
                 db.session.add(ZeroOutNegativeBalanceSignal(
