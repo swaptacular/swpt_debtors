@@ -46,6 +46,7 @@ class AccountsScanner(TableScanner):
         super().__init__()
         self.interval = timedelta(days=days)
         self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
+        self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
     def _get_debtor_interest_rates(self, debtor_ids: List[int], current_ts: datetime) -> List[float]:
@@ -102,7 +103,7 @@ class AccountsScanner(TableScanner):
     @atomic
     def check_negative_balance(self, rows, current_ts):
         c = self.table.c
-        cutoff_date = (current_ts - timedelta(days=356)).date()  # TODO: read it from config.
+        cutoff_date = (current_ts - self.zero_out_negative_balance_delay).date()
         regular_account_rows = (row for row in rows if row[c.creditor_id] != ROOT_CREDITOR_ID)
         for row in regular_account_rows:
             current_balance = math.floor(self._calc_current_balance(row, current_ts))

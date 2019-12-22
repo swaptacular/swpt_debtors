@@ -55,6 +55,7 @@ class Configuration(metaclass=MetaFlaskEnv):
     APP_MAX_TRANSFERS_PER_MONTH = 300
     APP_SIGNALBUS_MAX_DELAY_DAYS = 14
     APP_ACCOUNTS_SCAN_DAYS = 1
+    APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS = 365
 
 
 def create_app(config_dict={}):
