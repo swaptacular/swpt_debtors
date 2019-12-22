@@ -300,13 +300,14 @@ def process_account_change_signal(debtor_id: int,
 
 @atomic
 def insert_change_interest_rate_signal(debtor_id: int, creditor_id: int, interest_rate: float) -> None:
-    db.session.add(ChangeInterestRateSignal(
-        debtor_id=debtor_id,
-        creditor_id=creditor_id,
-        change_seqnum=0,
-        change_ts=datetime.now(tz=timezone.utc),
-        interest_rate=interest_rate,
-    ))
+    if creditor_id != ROOT_CREDITOR_ID:
+        db.session.add(ChangeInterestRateSignal(
+            debtor_id=debtor_id,
+            creditor_id=creditor_id,
+            change_seqnum=0,
+            change_ts=datetime.now(tz=timezone.utc),
+            interest_rate=interest_rate,
+        ))
 
 
 def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:

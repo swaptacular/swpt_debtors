@@ -6,7 +6,8 @@ from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_
 from flask import current_app
 from .extensions import db
-from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal, CapitalizeInterestSignal, MAX_INT64
+from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal, CapitalizeInterestSignal, \
+    ZeroOutNegativeBalanceSignal, MAX_INT64, ROOT_CREDITOR_ID
 from .procedures import insert_change_interest_rate_signal
 
 T = TypeVar('T')
@@ -57,7 +58,7 @@ class AccountsScanner(TableScanner):
                 rates[debtor.debtor_id] = CachedInterestRate(debtor.interest_rate, current_ts)
         return [rates.get(x, old_rate).interest_rate for x in debtor_ids]
 
-    def _calc_accumulated_interest(self, row, current_ts):
+    def _calc_accumulated_interest(self, row, current_ts) -> int:
         c = self.table.c
         current_balance = row[c.principal] + Decimal.from_float(row[c.interest])
         if current_balance > 0:
@@ -68,6 +69,16 @@ class AccountsScanner(TableScanner):
         accumulated_interest = min(accumulated_interest, MAX_INT64)
         accumulated_interest = max(-MAX_INT64, accumulated_interest)
         return accumulated_interest
+
+    def _calc_current_balance(self, row, current_ts) -> Decimal:
+        c = self.table.c
+        assert row[c.creditor_id] != ROOT_CREDITOR_ID
+        current_balance = row[c.principal] + Decimal.from_float(row[c.interest])
+        if current_balance > 0:
+            k = math.log(1.0 + row[c.interest_rate] / 100.0) / SECONDS_IN_YEAR
+            passed_seconds = max(0.0, (current_ts - row[c.change_ts]).total_seconds())
+            current_balance *= Decimal.from_float(math.exp(k * passed_seconds))
+        return current_balance
 
     @atomic
     def check_interest_rate(self, rows, current_ts):
@@ -93,7 +104,18 @@ class AccountsScanner(TableScanner):
 
     @atomic
     def check_negative_balance(self, rows, current_ts):
-        pass
+        c = self.table.c
+        cutoff_date = (current_ts - timedelta(days=356)).date()  # TODO: read it from config.
+        regular_account_rows = (row for row in rows if row[c.creditor_id] != ROOT_CREDITOR_ID)
+        for row in regular_account_rows:
+            current_balance = -math.floor(self._calc_current_balance(row, current_ts))
+            transfer_date = row[c.last_outgoing_transfer_date]
+            if current_balance < 0 and (transfer_date is None or transfer_date <= cutoff_date):
+                db.session.add(ZeroOutNegativeBalanceSignal(
+                    debtor_id=row[c.debtor_id],
+                    creditor_id=row[c.creditor_id],
+                    last_outgoing_transfer_date=cutoff_date,
+                ))
 
     @atomic
     def check_if_deleted(self, rows, current_ts):
