@@ -43,7 +43,7 @@ def test_purge_deleted_account(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
-        status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG
+        status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG,
     ))
     db.session.add(Account(
         debtor_id=11,
@@ -54,16 +54,27 @@ def test_purge_deleted_account(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
-        status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG
+        status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG,
+    ))
+    db.session.add(Account(
+        debtor_id=111,
+        creditor_id=222,
+        change_seqnum=0,
+        change_ts=past_ts,
+        principal=0,
+        interest=0.0,
+        interest_rate=0.0,
+        last_outgoing_transfer_date=past_ts,
+        status=0,
     ))
     db.session.commit()
     db.engine.execute('ANALYZE account')
-    assert len(Account.query.all()) == 2
+    assert len(Account.query.all()) == 3
     assert len(PurgeDeletedAccountSignal.query.all()) == 0
     runner = app.test_cli_runner()
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
-    assert len(Account.query.all()) == 1
+    assert len(Account.query.all()) == 2
     purge_signals = PurgeDeletedAccountSignal.query.all()
     assert len(purge_signals) == 1
     ps = purge_signals[0]
