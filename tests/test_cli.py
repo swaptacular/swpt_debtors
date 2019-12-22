@@ -1,5 +1,5 @@
 from uuid import UUID
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from swpt_debtors.models import RunningTransfer, Account
 from swpt_debtors.extensions import db
 
@@ -26,8 +26,10 @@ def test_collect_running_transfers(app_unsafe_session):
 
 
 def test_scan_accounts(app_unsafe_session):
-    from swpt_debtors.models import Debtor, PurgeDeletedAccountSignal, ChangeInterestRateSignal
+    from swpt_debtors.models import Debtor, PurgeDeletedAccountSignal, ChangeInterestRateSignal, \
+        CapitalizeInterestSignal
 
+    current_ts = datetime.now(tz=timezone.utc)
     past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
     future_ts = datetime(2100, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
@@ -35,6 +37,7 @@ def test_scan_accounts(app_unsafe_session):
     Account.query.delete()
     PurgeDeletedAccountSignal.query.delete()
     ChangeInterestRateSignal.query.delete()
+    CapitalizeInterestSignal.query.delete()
     db.session.commit()
     db.session.add(Debtor(debtor_id=111, interest_rate_target=5.55))
     db.session.add(Account(
@@ -63,9 +66,9 @@ def test_scan_accounts(app_unsafe_session):
         debtor_id=111,
         creditor_id=222,
         change_seqnum=0,
-        change_ts=past_ts,
+        change_ts=current_ts - timedelta(days=3653),
         principal=0,
-        interest=0.0,
+        interest=100.0,
         interest_rate=10.0,
         last_outgoing_transfer_date=past_ts,
         status=0,
@@ -94,8 +97,16 @@ def test_scan_accounts(app_unsafe_session):
     assert cirs.creditor_id == 222
     assert cirs.interest_rate == 5.55
 
+    capitalize_interest_signals = CapitalizeInterestSignal.query.all()
+    assert len(capitalize_interest_signals) >= 1
+    cis = capitalize_interest_signals[0]
+    assert cis.debtor_id == 111
+    assert cis.creditor_id == 222
+    assert 300 > cis.accumulated_interest_threshold > 50
+
     Debtor.query.delete()
     Account.query.delete()
     PurgeDeletedAccountSignal.query.delete()
     ChangeInterestRateSignal.query.delete()
+    CapitalizeInterestSignal.query.delete()
     db.session.commit()

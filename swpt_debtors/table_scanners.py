@@ -1,14 +1,18 @@
+import math
+from decimal import Decimal
 from typing import NamedTuple, Dict, List, TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_
 from flask import current_app
 from .extensions import db
-from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal
+from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal, CapitalizeInterestSignal, MAX_INT64
 from .procedures import insert_change_interest_rate_signal
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
+
+SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
 
 
 class CachedInterestRate(NamedTuple):
@@ -53,6 +57,18 @@ class AccountsScanner(TableScanner):
                 rates[debtor.debtor_id] = CachedInterestRate(debtor.interest_rate, current_ts)
         return [rates.get(x, old_rate).interest_rate for x in debtor_ids]
 
+    def _calc_accumulated_interest(self, row, current_ts):
+        c = self.table.c
+        current_balance = row[c.principal] + Decimal.from_float(row[c.interest])
+        if current_balance > 0:
+            k = math.log(1.0 + row[c.interest_rate] / 100.0) / SECONDS_IN_YEAR
+            passed_seconds = max(0.0, (current_ts - row[c.change_ts]).total_seconds())
+            current_balance *= Decimal.from_float(math.exp(k * passed_seconds))
+        accumulated_interest = math.floor(current_balance - row[c.principal])
+        accumulated_interest = min(accumulated_interest, MAX_INT64)
+        accumulated_interest = max(-MAX_INT64, accumulated_interest)
+        return accumulated_interest
+
     @atomic
     def check_interest_rate(self, rows, current_ts):
         c = self.table.c
@@ -64,7 +80,15 @@ class AccountsScanner(TableScanner):
 
     @atomic
     def check_accumulated_interest(self, rows, current_ts):
-        pass
+        c = self.table.c
+        for row in rows:
+            accumulated_interest = self._calc_accumulated_interest(row, current_ts)
+            if abs(accumulated_interest) / (abs(row[c.principal]) + 1) > 0.05:
+                db.session.add(CapitalizeInterestSignal(
+                    debtor_id=row[c.debtor_id],
+                    creditor_id=row[c.creditor_id],
+                    accumulated_interest_threshold=accumulated_interest // 2,
+                ))
 
     @atomic
     def check_negative_balance(self, rows, current_ts):
