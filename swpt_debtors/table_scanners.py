@@ -1,10 +1,13 @@
-from typing import NamedTuple, Dict, List
+from typing import NamedTuple, Dict, List, TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_
 from flask import current_app
 from .extensions import db
 from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal
+
+T = TypeVar('T')
+atomic: Callable[[T], T] = db.atomic
 
 
 class CachedInterestRate(NamedTuple):
@@ -49,16 +52,20 @@ class AccountsScanner(TableScanner):
                 rates[debtor.debtor_id] = CachedInterestRate(debtor.interest_rate, current_ts)
         return [rates.get(x, old_rate).interest_rate for x in debtor_ids]
 
-    def _check_interest_rate(self, rows, current_ts):
+    @atomic
+    def check_interest_rate(self, rows, current_ts):
         pass
 
-    def _check_accumulated_interest(self, rows, current_ts):
+    @atomic
+    def check_accumulated_interest(self, rows, current_ts):
         pass
 
-    def _check_negative_balance(self, rows, current_ts):
+    @atomic
+    def check_negative_balance(self, rows, current_ts):
         pass
 
-    def _check_if_deleted(self, rows, current_ts):
+    @atomic
+    def check_if_deleted(self, rows, current_ts):
         c = self.table.c
         cutoff_ts = current_ts - self.signalbus_max_delay
         deleted_flag = Account.STATUS_DELETED_FLAG
@@ -78,7 +85,7 @@ class AccountsScanner(TableScanner):
 
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
-        self._check_interest_rate(rows, current_ts)
-        self._check_accumulated_interest(rows, current_ts)
-        self._check_negative_balance(rows, current_ts)
-        self._check_if_deleted(rows, current_ts)
+        self.check_interest_rate(rows, current_ts)
+        self.check_accumulated_interest(rows, current_ts)
+        self.check_negative_balance(rows, current_ts)
+        self.check_if_deleted(rows, current_ts)
