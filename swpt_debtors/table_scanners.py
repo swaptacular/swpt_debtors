@@ -48,24 +48,6 @@ class AccountsScanner(TableScanner):
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
-    def _get_debtor_interest_rates(self, debtor_ids: List[int], current_ts: datetime) -> List[float]:
-        cutoff_ts = current_ts - self.interval
-        rates = self.debtor_interest_rates
-        old_rate = self.old_interest_rate
-        old_rate_debtor_ids = [x for x in debtor_ids if rates.get(x, old_rate).timestamp < cutoff_ts]
-        if old_rate_debtor_ids:
-            for debtor in Debtor.query.filter(Debtor.debtor_id.in_(old_rate_debtor_ids)):
-                rates[debtor.debtor_id] = CachedInterestRate(debtor.interest_rate, current_ts)
-        return [rates.get(x, old_rate).interest_rate for x in debtor_ids]
-
-    def _calc_accumulated_interest(self, row, current_ts) -> int:
-        c = self.table.c
-        current_balance = self._calc_current_balance(row, current_ts)
-        accumulated_interest = math.floor(current_balance - row[c.principal])
-        accumulated_interest = min(accumulated_interest, MAX_INT64)
-        accumulated_interest = max(-MAX_INT64, accumulated_interest)
-        return accumulated_interest
-
     def _separate_accounts_by_type(self, rows):
         c = self.table.c
         regular_account_rows = []
@@ -85,6 +67,16 @@ class AccountsScanner(TableScanner):
         muted_until_ts = self.table.c.do_not_send_signals_until_ts
         return [row for row in rows if row[muted_until_ts] is None or row[muted_until_ts] <= current_ts]
 
+    def _get_debtor_interest_rates(self, debtor_ids: List[int], current_ts: datetime) -> List[float]:
+        cutoff_ts = current_ts - self.interval
+        rates = self.debtor_interest_rates
+        old_rate = self.old_interest_rate
+        old_rate_debtor_ids = [x for x in debtor_ids if rates.get(x, old_rate).timestamp < cutoff_ts]
+        if old_rate_debtor_ids:
+            for debtor in Debtor.query.filter(Debtor.debtor_id.in_(old_rate_debtor_ids)):
+                rates[debtor.debtor_id] = CachedInterestRate(debtor.interest_rate, current_ts)
+        return [rates.get(x, old_rate).interest_rate for x in debtor_ids]
+
     def _calc_current_balance(self, row, current_ts) -> Decimal:
         c = self.table.c
         assert row[c.creditor_id] != ROOT_CREDITOR_ID
@@ -94,6 +86,14 @@ class AccountsScanner(TableScanner):
             passed_seconds = max(0.0, (current_ts - row[c.change_ts]).total_seconds())
             current_balance *= Decimal.from_float(math.exp(k * passed_seconds))
         return current_balance
+
+    def _calc_accumulated_interest(self, row, current_ts) -> int:
+        c = self.table.c
+        current_balance = self._calc_current_balance(row, current_ts)
+        accumulated_interest = math.floor(current_balance - row[c.principal])
+        accumulated_interest = min(accumulated_interest, MAX_INT64)
+        accumulated_interest = max(-MAX_INT64, accumulated_interest)
+        return accumulated_interest
 
     def _check_interest_rates(self, rows, current_ts):
         pks = []
@@ -144,6 +144,12 @@ class AccountsScanner(TableScanner):
                 ))
         return pks
 
+    def _mute_accounts(self, pks_to_mute, current_ts):
+        if pks_to_mute:
+            Account.query.filter(self.pk.in_(pks_to_mute)).update({
+                Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
+            }, synchronize_session=False)
+
     def _purge_not_recently_changed(self, rows, current_ts):
         c = self.table.c
         cutoff_ts = current_ts - self.signalbus_max_delay
@@ -156,12 +162,6 @@ class AccountsScanner(TableScanner):
                     if_deleted_before=cutoff_ts,
                 ))
             Account.query.filter(self.pk.in_(pks_to_purge)).delete(synchronize_session=False)
-
-    def _mute_accounts(self, pks_to_mute, current_ts):
-        if pks_to_mute:
-            Account.query.filter(self.pk.in_(pks_to_mute)).update({
-                Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
-            }, synchronize_session=False)
 
     @atomic
     def process_rows(self, rows):
