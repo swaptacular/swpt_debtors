@@ -67,6 +67,18 @@ class AccountsScanner(TableScanner):
         accumulated_interest = max(-MAX_INT64, accumulated_interest)
         return accumulated_interest
 
+    def _filter_rows(self, rows, current_ts):
+        c = self.table.c
+        regular_account_rows = []
+        deleted_account_rows = []
+        deleted_flag = Account.STATUS_DELETED_FLAG
+        for row in rows:
+            if row[c.status] & deleted_flag:
+                deleted_account_rows.append(row)
+            elif row[c.creditor_id] != ROOT_CREDITOR_ID:
+                regular_account_rows.append(row)
+        return regular_account_rows, deleted_account_rows
+
     def _calc_current_balance(self, row, current_ts) -> Decimal:
         c = self.table.c
         assert row[c.creditor_id] != ROOT_CREDITOR_ID
@@ -78,7 +90,7 @@ class AccountsScanner(TableScanner):
         return current_balance
 
     @atomic
-    def check_interest_rate(self, rows, current_ts):
+    def check_interest_rates(self, rows, current_ts):
         c = self.table.c
         debtor_ids = [row[c.debtor_id] for row in rows]
         interest_rates = self._get_debtor_interest_rates(debtor_ids, current_ts)
@@ -87,10 +99,9 @@ class AccountsScanner(TableScanner):
                 insert_change_interest_rate_signal(row[c.debtor_id], row[c.creditor_id], interest_rate)
 
     @atomic
-    def check_accumulated_interest(self, rows, current_ts):
+    def check_accumulated_interests(self, rows, current_ts):
         c = self.table.c
-        regular_account_rows = (row for row in rows if row[c.creditor_id] != ROOT_CREDITOR_ID)
-        for row in regular_account_rows:
+        for row in rows:
             accumulated_interest = self._calc_accumulated_interest(row, current_ts)
             ratio = abs(accumulated_interest) / (1 + abs(row[c.principal]))
             if ratio > 0.02:
@@ -101,11 +112,10 @@ class AccountsScanner(TableScanner):
                 ))
 
     @atomic
-    def check_negative_balance(self, rows, current_ts):
+    def check_negative_balances(self, rows, current_ts):
         c = self.table.c
         cutoff_date = (current_ts - self.zero_out_negative_balance_delay).date()
-        regular_account_rows = (row for row in rows if row[c.creditor_id] != ROOT_CREDITOR_ID)
-        for row in regular_account_rows:
+        for row in rows:
             current_balance = math.floor(self._calc_current_balance(row, current_ts))
             transfer_date = row[c.last_outgoing_transfer_date]
             if current_balance < 0 and (transfer_date is None or transfer_date <= cutoff_date):
@@ -116,15 +126,10 @@ class AccountsScanner(TableScanner):
                 ))
 
     @atomic
-    def check_if_deleted(self, rows, current_ts):
+    def purge_not_recently_changed(self, rows, current_ts):
         c = self.table.c
         cutoff_ts = current_ts - self.signalbus_max_delay
-        deleted_flag = Account.STATUS_DELETED_FLAG
-        pks_to_purge = [
-            (row[c.debtor_id], row[c.creditor_id])
-            for row in rows
-            if row[c.status] & deleted_flag and row[c.change_ts] < cutoff_ts
-        ]
+        pks_to_purge = [(row[c.debtor_id], row[c.creditor_id]) for row in rows if row[c.change_ts] < cutoff_ts]
         if pks_to_purge:
             for pk in pks_to_purge:
                 db.session.add(PurgeDeletedAccountSignal(
@@ -136,7 +141,8 @@ class AccountsScanner(TableScanner):
 
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
-        self.check_interest_rate(rows, current_ts)
-        self.check_accumulated_interest(rows, current_ts)
-        self.check_negative_balance(rows, current_ts)
-        self.check_if_deleted(rows, current_ts)
+        regular_account_rows, deleted_account_rows = self._filter_rows(rows, current_ts)
+        self.check_interest_rates(regular_account_rows, current_ts)
+        self.check_accumulated_interests(regular_account_rows, current_ts)
+        self.check_negative_balances(regular_account_rows, current_ts)
+        self.purge_not_recently_changed(deleted_account_rows, current_ts)
