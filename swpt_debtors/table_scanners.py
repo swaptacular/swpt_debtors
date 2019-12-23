@@ -164,12 +164,12 @@ class AccountsScanner(TableScanner):
         current_ts = datetime.now(tz=timezone.utc)
         regular_account_rows, deleted_account_rows, _ = self._separate_accounts_by_type(rows)
         regular_account_rows = self._remove_muted_accounts(regular_account_rows, current_ts)
-        signaled_account_pks = []
-        signaled_account_pks.extend(self.check_interest_rates(regular_account_rows, current_ts))
-        signaled_account_pks.extend(self.check_accumulated_interests(regular_account_rows, current_ts))
-        signaled_account_pks.extend(self.check_negative_balances(regular_account_rows, current_ts))
-        if signaled_account_pks:
-            Account.query.filter(self.pk.in_(signaled_account_pks)).update({
+        pks_to_mute = []
+        pks_to_mute.extend(self.check_interest_rates(regular_account_rows, current_ts))
+        pks_to_mute.extend(self.check_accumulated_interests(regular_account_rows, current_ts))
+        pks_to_mute.extend(self.check_negative_balances(regular_account_rows, current_ts))
+        if pks_to_mute:
+            Account.query.filter(self.pk.in_(pks_to_mute)).update({
                 Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
             }, synchronize_session=False)
         self.purge_not_recently_changed(deleted_account_rows, current_ts)
