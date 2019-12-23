@@ -12,7 +12,6 @@ from .procedures import insert_change_interest_rate_signal
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
-
 SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
 
 
@@ -67,17 +66,24 @@ class AccountsScanner(TableScanner):
         accumulated_interest = max(-MAX_INT64, accumulated_interest)
         return accumulated_interest
 
-    def _filter_rows(self, rows, current_ts):
+    def _separate_accounts_by_type(self, rows):
         c = self.table.c
         regular_account_rows = []
         deleted_account_rows = []
+        debtor_account_rows = []
         deleted_flag = Account.STATUS_DELETED_FLAG
         for row in rows:
             if row[c.status] & deleted_flag:
                 deleted_account_rows.append(row)
-            elif row[c.creditor_id] != ROOT_CREDITOR_ID:
+            elif row[c.creditor_id] == ROOT_CREDITOR_ID:
+                debtor_account_rows.append(row)
+            else:
                 regular_account_rows.append(row)
-        return regular_account_rows, deleted_account_rows
+        return regular_account_rows, deleted_account_rows, debtor_account_rows
+
+    def _remove_muted_accounts(self, rows, current_ts):
+        muted_until_ts = self.table.c.do_not_send_signals_until_ts
+        return [row for row in rows if row[muted_until_ts] is None or row[muted_until_ts] <= current_ts]
 
     def _calc_current_balance(self, row, current_ts) -> Decimal:
         c = self.table.c
@@ -91,39 +97,54 @@ class AccountsScanner(TableScanner):
 
     @atomic
     def check_interest_rates(self, rows, current_ts):
+        pks = []
         c = self.table.c
         debtor_ids = [row[c.debtor_id] for row in rows]
         interest_rates = self._get_debtor_interest_rates(debtor_ids, current_ts)
+        established_rate_flag = Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
         for row, interest_rate in zip(rows, interest_rates):
-            if row[c.interest_rate] != interest_rate:
-                insert_change_interest_rate_signal(row[c.debtor_id], row[c.creditor_id], interest_rate)
+            has_correct_interest_rate = row[c.status] & established_rate_flag and row[c.interest_rate] == interest_rate
+            if not has_correct_interest_rate:
+                pk = (row[c.debtor_id], row[c.creditor_id])
+                pks.append(pk)
+                insert_change_interest_rate_signal(pk[0], pk[1], interest_rate)
+        return pks
 
     @atomic
     def check_accumulated_interests(self, rows, current_ts):
+        pks = []
         c = self.table.c
         for row in rows:
             accumulated_interest = self._calc_accumulated_interest(row, current_ts)
             ratio = abs(accumulated_interest) / (1 + abs(row[c.principal]))
             if ratio > 0.02:
+                pk = (row[c.debtor_id], row[c.creditor_id])
+                pks.append(pk)
                 db.session.add(CapitalizeInterestSignal(
-                    debtor_id=row[c.debtor_id],
-                    creditor_id=row[c.creditor_id],
+                    debtor_id=pk[0],
+                    creditor_id=pk[1],
                     accumulated_interest_threshold=accumulated_interest // 2,
                 ))
+        return pks
 
     @atomic
     def check_negative_balances(self, rows, current_ts):
+        pks = []
         c = self.table.c
         cutoff_date = (current_ts - self.zero_out_negative_balance_delay).date()
         for row in rows:
-            current_balance = math.floor(self._calc_current_balance(row, current_ts))
+            balance = math.floor(self._calc_current_balance(row, current_ts))
             transfer_date = row[c.last_outgoing_transfer_date]
-            if current_balance < 0 and (transfer_date is None or transfer_date <= cutoff_date):
+            transfer_date_is_old = transfer_date is None or transfer_date <= cutoff_date
+            if balance < 0 and transfer_date_is_old:
+                pk = (row[c.debtor_id], row[c.creditor_id])
+                pks.append(pk)
                 db.session.add(ZeroOutNegativeBalanceSignal(
-                    debtor_id=row[c.debtor_id],
-                    creditor_id=row[c.creditor_id],
+                    debtor_id=pk[0],
+                    creditor_id=pk[1],
                     last_outgoing_transfer_date=cutoff_date,
                 ))
+        return pks
 
     @atomic
     def purge_not_recently_changed(self, rows, current_ts):
@@ -141,8 +162,14 @@ class AccountsScanner(TableScanner):
 
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
-        regular_account_rows, deleted_account_rows = self._filter_rows(rows, current_ts)
-        self.check_interest_rates(regular_account_rows, current_ts)
-        self.check_accumulated_interests(regular_account_rows, current_ts)
-        self.check_negative_balances(regular_account_rows, current_ts)
+        regular_account_rows, deleted_account_rows, _ = self._separate_accounts_by_type(rows)
+        regular_account_rows = self._remove_muted_accounts(regular_account_rows, current_ts)
+        signaled_account_pks = []
+        signaled_account_pks.extend(self.check_interest_rates(regular_account_rows, current_ts))
+        signaled_account_pks.extend(self.check_accumulated_interests(regular_account_rows, current_ts))
+        signaled_account_pks.extend(self.check_negative_balances(regular_account_rows, current_ts))
+        if signaled_account_pks:
+            Account.query.filter(self.pk.in_(signaled_account_pks)).update({
+                Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
+            }, synchronize_session=False)
         self.purge_not_recently_changed(deleted_account_rows, current_ts)

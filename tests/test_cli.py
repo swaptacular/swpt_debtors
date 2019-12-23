@@ -20,7 +20,7 @@ def test_collect_running_transfers(app_unsafe_session):
     db.engine.execute('ANALYZE running_transfer')
     assert len(RunningTransfer.query.all()) == 1
     runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'collect_running_transfers', '--quit-early'])
+    result = runner.invoke(args=['swpt_debtors', 'collect_running_transfers', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
     assert len(RunningTransfer.query.all()) == 0
 
@@ -116,21 +116,18 @@ def test_scan_accounts(app_unsafe_session):
     assert ps.if_deleted_before > past_ts
 
     change_interest_rate_signals = ChangeInterestRateSignal.query.all()
-    assert len(change_interest_rate_signals) >= 1
-    cirs = change_interest_rate_signals[0]
-    assert cirs.debtor_id == 111
-    assert cirs.creditor_id == 222
-    assert cirs.interest_rate == 5.55
+    assert len(change_interest_rate_signals) == 2
+    assert sorted([x.debtor_id for x in change_interest_rate_signals]) == [111, 1111]
+    assert sorted([x.creditor_id for x in change_interest_rate_signals]) == [222, 2222]
+    assert sorted([x.interest_rate for x in change_interest_rate_signals]) == [0.0, 5.55]
 
     capitalize_interest_signals = CapitalizeInterestSignal.query.all()
-    assert len(capitalize_interest_signals) >= 1
-    cis = capitalize_interest_signals[0]
-    assert cis.debtor_id == 111
-    assert cis.creditor_id == 222
-    assert 300 > cis.accumulated_interest_threshold > 50
+    assert len(capitalize_interest_signals) == 2
+    assert sorted([x.debtor_id for x in capitalize_interest_signals]) == [111, 1111]
+    assert sorted([x.creditor_id for x in capitalize_interest_signals]) == [222, 2222]
 
     zero_out_negative_balance_signals = ZeroOutNegativeBalanceSignal.query.all()
-    assert len(zero_out_negative_balance_signals) >= 1
+    assert len(zero_out_negative_balance_signals) == 1
     zonbs = zero_out_negative_balance_signals[0]
     assert zonbs.debtor_id == 1111
     assert zonbs.creditor_id == 2222

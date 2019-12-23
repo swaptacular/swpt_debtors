@@ -265,6 +265,7 @@ def process_account_change_signal(debtor_id: int,
         account.interest_rate = interest_rate
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
         account.status = status
+        account.do_not_send_signals_until_ts = None
     else:
         account = Account(
             debtor_id=debtor_id,
@@ -280,34 +281,33 @@ def process_account_change_signal(debtor_id: int,
         with db.retry_on_integrity_error():
             db.session.add(account)
 
-    # When the account does not have an interest rate set yet, we must
-    # immediately calculate the interest rate currently applied by the
-    # debtor, and send a `ChangeInterestRateSignal`.
-    if not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
-        debtor = Debtor.get_instance(debtor_id)
-        if debtor:
-            insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate)
-
-    # If this is a debtors's account, we must update debtor's
-    # `balance` and `balance_ts` columns.
     if account.creditor_id == ROOT_CREDITOR_ID:
+        # If this is a debtors's account, we must update debtor's
+        # `balance` and `balance_ts` columns.
         balance = MIN_INT64 if account.is_overflown else account.principal
         Debtor.query.filter_by(debtor_id=debtor_id).update({
             Debtor.balance: balance,
             Debtor.balance_ts: account.change_ts,
         })
+    elif not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
+        # When the account does not have an interest rate set yet, we
+        # should immediately send a `ChangeInterestRateSignal`.
+        debtor = Debtor.get_instance(debtor_id)
+        if debtor:
+            signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
+            account.do_not_send_signals_until_ts = datetime.now(tz=timezone.utc) + signalbus_max_delay
+            insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate)
 
 
 @atomic
 def insert_change_interest_rate_signal(debtor_id: int, creditor_id: int, interest_rate: float) -> None:
-    if creditor_id != ROOT_CREDITOR_ID:
-        db.session.add(ChangeInterestRateSignal(
-            debtor_id=debtor_id,
-            creditor_id=creditor_id,
-            change_seqnum=0,
-            change_ts=datetime.now(tz=timezone.utc),
-            interest_rate=interest_rate,
-        ))
+    db.session.add(ChangeInterestRateSignal(
+        debtor_id=debtor_id,
+        creditor_id=creditor_id,
+        change_seqnum=0,
+        change_ts=datetime.now(tz=timezone.utc),
+        interest_rate=interest_rate,
+    ))
 
 
 def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:

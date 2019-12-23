@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 29df4d750f7c
+Revision ID: af4c6559f809
 Revises: 8d09bea9c7d1
-Create Date: 2019-12-21 19:05:05.229389
+Create Date: 2019-12-23 16:14:42.482048
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '29df4d750f7c'
+revision = 'af4c6559f809'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -28,6 +28,7 @@ def upgrade():
     sa.Column('interest_rate', sa.REAL(), nullable=False, comment='Annual rate (in percents) at which interest accumulates on the account.'),
     sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=True, comment='Updated on each transfer for which this account is the sender. This field is not updated on demurrage payments.'),
     sa.Column('status', sa.SmallInteger(), nullable=False, comment='Additional account status flags.'),
+    sa.Column('do_not_send_signals_until_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='If not NULL, no account maintenance signals will be sent to the `accounts` service until that moment. This prevents sending signals too often.'),
     sa.CheckConstraint('interest_rate >= -50.0 AND interest_rate <= 100.0'),
     sa.CheckConstraint('principal > -9223372036854775808'),
     sa.PrimaryKeyConstraint('debtor_id', 'creditor_id'),

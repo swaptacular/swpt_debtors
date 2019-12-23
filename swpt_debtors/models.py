@@ -398,6 +398,11 @@ class Account(db.Model):
         nullable=False,
         comment='Additional account status flags.',
     )
+    do_not_send_signals_until_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        comment='If not NULL, no account maintenance signals will be sent to the `accounts` '
+                'service until that moment. This prevents sending signals too often.',
+    )
     __table_args__ = (
         db.CheckConstraint((interest_rate >= INTEREST_RATE_FLOOR) & (interest_rate <= INTEREST_RATE_CEIL)),
         db.CheckConstraint(principal > MIN_INT64),
