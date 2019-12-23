@@ -112,10 +112,11 @@ class AccountsScanner(TableScanner):
     def _check_accumulated_interests(self, rows, current_ts):
         pks = []
         c = self.table.c
+        max_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
         for row in rows:
             accumulated_interest = self._calc_accumulated_interest(row, current_ts)
             ratio = abs(accumulated_interest) / (1 + abs(row[c.principal]))
-            if ratio > 0.02:  # TODO: use a constant.
+            if ratio > max_ratio:
                 pk = (row[c.debtor_id], row[c.creditor_id])
                 pks.append(pk)
                 db.session.add(CapitalizeInterestSignal(
