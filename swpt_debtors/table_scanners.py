@@ -95,8 +95,7 @@ class AccountsScanner(TableScanner):
             current_balance *= Decimal.from_float(math.exp(k * passed_seconds))
         return current_balance
 
-    @atomic
-    def check_interest_rates(self, rows, current_ts):
+    def _check_interest_rates(self, rows, current_ts):
         pks = []
         c = self.table.c
         debtor_ids = [row[c.debtor_id] for row in rows]
@@ -110,14 +109,13 @@ class AccountsScanner(TableScanner):
                 insert_change_interest_rate_signal(pk[0], pk[1], interest_rate)
         return pks
 
-    @atomic
-    def check_accumulated_interests(self, rows, current_ts):
+    def _check_accumulated_interests(self, rows, current_ts):
         pks = []
         c = self.table.c
         for row in rows:
             accumulated_interest = self._calc_accumulated_interest(row, current_ts)
             ratio = abs(accumulated_interest) / (1 + abs(row[c.principal]))
-            if ratio > 0.02:
+            if ratio > 0.02:  # TODO: use a constant.
                 pk = (row[c.debtor_id], row[c.creditor_id])
                 pks.append(pk)
                 db.session.add(CapitalizeInterestSignal(
@@ -127,8 +125,7 @@ class AccountsScanner(TableScanner):
                 ))
         return pks
 
-    @atomic
-    def check_negative_balances(self, rows, current_ts):
+    def _check_negative_balances(self, rows, current_ts):
         pks = []
         c = self.table.c
         cutoff_date = (current_ts - self.zero_out_negative_balance_delay).date()
@@ -146,8 +143,7 @@ class AccountsScanner(TableScanner):
                 ))
         return pks
 
-    @atomic
-    def purge_not_recently_changed(self, rows, current_ts):
+    def _purge_not_recently_changed(self, rows, current_ts):
         c = self.table.c
         cutoff_ts = current_ts - self.signalbus_max_delay
         pks_to_purge = [(row[c.debtor_id], row[c.creditor_id]) for row in rows if row[c.change_ts] < cutoff_ts]
@@ -160,16 +156,20 @@ class AccountsScanner(TableScanner):
                 ))
             Account.query.filter(self.pk.in_(pks_to_purge)).delete(synchronize_session=False)
 
+    def _mute_accounts(self, pks_to_mute, current_ts):
+        if pks_to_mute:
+            Account.query.filter(self.pk.in_(pks_to_mute)).update({
+                Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
+            }, synchronize_session=False)
+
+    @atomic
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
         regular_account_rows, deleted_account_rows, _ = self._separate_accounts_by_type(rows)
         regular_account_rows = self._remove_muted_accounts(regular_account_rows, current_ts)
         pks_to_mute = []
-        pks_to_mute.extend(self.check_interest_rates(regular_account_rows, current_ts))
-        pks_to_mute.extend(self.check_accumulated_interests(regular_account_rows, current_ts))
-        pks_to_mute.extend(self.check_negative_balances(regular_account_rows, current_ts))
-        if pks_to_mute:
-            Account.query.filter(self.pk.in_(pks_to_mute)).update({
-                Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
-            }, synchronize_session=False)
-        self.purge_not_recently_changed(deleted_account_rows, current_ts)
+        pks_to_mute.extend(self._check_interest_rates(regular_account_rows, current_ts))
+        pks_to_mute.extend(self._check_accumulated_interests(regular_account_rows, current_ts))
+        pks_to_mute.extend(self._check_negative_balances(regular_account_rows, current_ts))
+        self._mute_accounts(pks_to_mute, current_ts)
+        self._purge_not_recently_changed(deleted_account_rows, current_ts)
