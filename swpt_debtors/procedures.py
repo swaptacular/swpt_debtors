@@ -84,6 +84,11 @@ def terminate_debtor(debtor_id: int) -> Optional[Debtor]:
         debtor.is_active = False
         debtor.deactivated_at_date = current_ts.date()
 
+        # After termination, the debtor can not perform any management
+        # operations. Therefore we should delete all unacknowledged
+        # issuing transfers.
+        InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete()
+
 
 @atomic
 def update_debtor_policy(debtor_id: int,
