@@ -293,7 +293,7 @@ def process_account_change_signal(debtor_id: int,
         Debtor.query.filter_by(debtor_id=debtor_id).update({
             Debtor.balance: balance,
             Debtor.balance_ts: account.change_ts,
-        })
+        }, synchronize_session=False)
     elif not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         # When the account does not have an interest rate set yet, we
         # should immediately send a `ChangeInterestRateSignal`.

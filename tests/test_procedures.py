@@ -15,7 +15,7 @@ RECIPIENT_URI = 'https://example.com/creditors/1'
 
 
 @pytest.fixture
-def debtor():
+def debtor(db_session):
     return p.get_or_create_debtor(D_ID)
 
 

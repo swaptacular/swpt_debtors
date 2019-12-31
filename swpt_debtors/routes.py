@@ -170,4 +170,4 @@ class TransferEndpoint(MethodView):
     def delete(self, debtorId, transferUuid):
         """Delete a credit-issuing transfer."""
 
-        return procedures.delete_initiated_transfer(debtorId, transferUuid)
+        procedures.delete_initiated_transfer(debtorId, transferUuid)
