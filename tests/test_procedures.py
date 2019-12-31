@@ -2,7 +2,7 @@ import pytest
 from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
-from swpt_debtors.models import Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
+from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
     PrepareTransferSignal, FinalizePreparedTransferSignal, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
@@ -179,6 +179,7 @@ def test_update_debtor_policy(db_session, debtor, current_ts):
 
 
 def test_initiated_transfers(db_session, debtor):
+    Debtor.get_instance(D_ID).initiated_transfers_count = 1
     db_session.add(InitiatedTransfer(
         debtor_id=D_ID,
         transfer_uuid=TEST_UUID,
@@ -186,6 +187,7 @@ def test_initiated_transfers(db_session, debtor):
         amount=1001,
     ))
     db_session.commit()
+    assert p.get_debtor(D_ID).initiated_transfers_count == 1
     with pytest.raises(p.DebtorDoesNotExistError):
         p.get_debtor_transfer_uuids(1234567890)
     uuids = p.get_debtor_transfer_uuids(D_ID)
@@ -198,8 +200,14 @@ def test_initiated_transfers(db_session, debtor):
     assert t.amount == 1001
     assert t.recipient_uri == RECIPIENT_URI
 
-    p.delete_initiated_transfer(D_ID, TEST_UUID)
+    result = p.delete_initiated_transfer(D_ID, TEST_UUID)
+    assert result is True
+    assert p.get_debtor(D_ID).initiated_transfers_count == 0
     assert p.get_initiated_transfer(D_ID, TEST_UUID) is None
+
+
+def test_delete_non_existing_initiated_transfer(db_session):
+    assert p.delete_initiated_transfer(D_ID, TEST_UUID) is False
 
 
 def test_create_new_debtor(db_session, debtor):
@@ -250,6 +258,7 @@ def test_initiate_transfer(db_session, debtor):
 
 
 def test_too_many_initiated_transfers(db_session, debtor):
+    Debtor.get_instance(D_ID).initiated_transfers_count = 1
     db_session.add(InitiatedTransfer(
         debtor_id=D_ID,
         transfer_uuid=TEST_UUID,
@@ -258,10 +267,13 @@ def test_too_many_initiated_transfers(db_session, debtor):
     ))
     db_session.commit()
     assert len(InitiatedTransfer.query.all()) == 1
+    assert p.get_debtor(D_ID).initiated_transfers_count == 1
     for i in range(1, 10):
         suffix = '{:0>4}'.format(i)
         uuid = f'123e4567-e89b-12d3-a456-42665544{suffix}',
         p.initiate_transfer(D_ID, uuid, C_ID, RECIPIENT_URI, 1000, {})
+    assert len(InitiatedTransfer.query.all()) == 10
+    assert p.get_debtor(D_ID).initiated_transfers_count == 10
     with pytest.raises(p.TransfersConflictError):
         p.initiate_transfer(D_ID, f'123e4567-e89b-12d3-a456-426655440010', C_ID, RECIPIENT_URI, 1000, {})
 

@@ -2,7 +2,6 @@ from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, Tuple, List
 from flask import current_app
-from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
@@ -83,11 +82,9 @@ def terminate_debtor(debtor_id: int) -> Optional[Debtor]:
         current_ts = datetime.now(tz=timezone.utc)
         debtor.is_active = False
         debtor.deactivated_at_date = current_ts.date()
-
-        # After termination, the debtor can not perform any management
-        # operations. Therefore we should delete all unacknowledged
-        # issuing transfers.
-        InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete()
+        debtor.initiated_transfers_count = 0
+        InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
+    return debtor
 
 
 @atomic
@@ -136,8 +133,18 @@ def get_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> Optional[Init
 
 
 @atomic
-def delete_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> int:
-    return InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).delete()
+def delete_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> bool:
+    n = InitiatedTransfer.query.filter_by(
+        debtor_id=debtor_id,
+        transfer_uuid=transfer_uuid,
+    ).delete(synchronize_session=False)
+    if n == 1:
+        Debtor.query.filter_by(debtor_id=debtor_id).update({
+            Debtor.initiated_transfers_count: Debtor.initiated_transfers_count - 1,
+        }, synchronize_session=False)
+        return True
+    assert n == 0
+    return False
 
 
 @atomic
@@ -152,7 +159,7 @@ def initiate_transfer(debtor_id: int,
     assert 0 < amount <= MAX_INT64
 
     debtor = _throttle_debtor_actions(debtor_id)
-    _raise_error_if_too_many_transfers(debtor_id)
+    _raise_error_if_too_many_transfers(debtor)
     _raise_error_if_transfer_exists(debtor_id, transfer_uuid, recipient_uri, amount, transfer_info)
 
     if recipient_creditor_id is None:
@@ -183,6 +190,8 @@ def initiate_transfer(debtor_id: int,
         )
     with db.retry_on_integrity_error():
         db.session.add(new_transfer)
+
+    debtor.initiated_transfers_count += 1
     return new_transfer
 
 
@@ -371,9 +380,8 @@ def _raise_error_if_transfer_exists(debtor_id: int,
         raise TransfersConflictError()
 
 
-def _raise_error_if_too_many_transfers(debtor_id: int) -> None:
-    n = db.session.query(func.count(InitiatedTransfer.transfer_uuid)).filter_by(debtor_id=debtor_id).scalar()
-    if n >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
+def _raise_error_if_too_many_transfers(debtor: Debtor) -> None:
+    if debtor.initiated_transfers_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
         raise TransfersConflictError()
 
 

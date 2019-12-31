@@ -110,6 +110,15 @@ class Debtor(db.Model):
                 "to accumulate on creditors' accounts. The actual interest rate may be "
                 "different if interest rate limits are enforced.",
     )
+    initiated_transfers_count = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0,
+        comment='The number of initiated issuing transfers for this debtor. It is '
+                'incremented when a new row for the debtor is inserted in the '
+                '`initiated_transfer` table, and decremented when a row is deleted. It '
+                'is needed for performance reasons.',
+    )
     actions_throttle_date = db.Column(
         db.DATE,
         nullable=False,

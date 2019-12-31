@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: af4c6559f809
+Revision ID: f6a04a0744ef
 Revises: 8d09bea9c7d1
-Create Date: 2019-12-23 16:14:42.482048
+Create Date: 2019-12-31 21:59:18.833974
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'af4c6559f809'
+revision = 'f6a04a0744ef'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -58,6 +58,7 @@ def upgrade():
     sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
     sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
     sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The annual rate (in percents) at which the debtor wants the interest to accumulate on creditors' accounts. The actual interest rate may be different if interest rate limits are enforced."),
+    sa.Column('initiated_transfers_count', sa.Integer(), nullable=False, comment='The number of initiated issuing transfers for this debtor. It is incremented when a new row for the debtor is inserted in the `initiated_transfer` table, and decremented when a row is deleted. It is needed for performance reasons.'),
     sa.Column('actions_throttle_date', sa.DATE(), nullable=False, comment='The date at which `actions_throttle_count` was zeroed out for the last time. This field is used to limit the number of management actions per month that a debtor is allowed to do.'),
     sa.Column('actions_throttle_count', sa.Integer(), nullable=False, comment='The number of management actions that have been initiated after `actions_throttle_date`. This field is used to limit the number of management actions per month that a debtor is allowed to do. It gets zeroed out once a month.'),
     sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` field. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `null` is the same as an empty array.'),
