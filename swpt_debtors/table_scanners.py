@@ -13,7 +13,6 @@ from .procedures import insert_change_interest_rate_signal
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
 SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
-TD_ONE_WEEK = timedelta(days=7)
 
 
 class CachedInterestRate(NamedTuple):
@@ -46,6 +45,7 @@ class AccountsScanner(TableScanner):
         super().__init__()
         self.interval = timedelta(days=days)
         self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
+        self.account_purge_delay = 2 * self.signalbus_max_delay + timedelta(days=7)
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
@@ -153,7 +153,7 @@ class AccountsScanner(TableScanner):
 
     def _purge_not_recently_changed(self, rows, current_ts):
         c = self.table.c
-        cutoff_ts = current_ts - max(self.signalbus_max_delay, TD_ONE_WEEK)
+        cutoff_ts = current_ts - self.account_purge_delay
         pks_to_purge = [(row[c.debtor_id], row[c.creditor_id]) for row in rows if row[c.change_ts] < cutoff_ts]
         if pks_to_purge:
             for pk in pks_to_purge:
