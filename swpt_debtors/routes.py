@@ -110,6 +110,10 @@ transfers_api = Blueprint(
 
 @transfers_api.route('/<i64:debtorId>/transfers/', parameters=[specs.DEBTOR_ID])
 class TransfersCollectionEndpoint(MethodView):
+    # TODO: Implement pagination. Show no more than 5-10 pending
+    #       transfers at once. This is needed to avoid executing a
+    #       query that is too costly.
+
     @transfers_api.response(TransfersCollectionSchema(context=CONTEXT))
     @transfers_api.doc(responses={404: specs.DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
