@@ -26,6 +26,7 @@ def on_account_change_signal(
         principal: int,
         interest: float,
         interest_rate: float,
+        last_transfer_seqnum: int,
         last_outgoing_transfer_date: str,
         status: int) -> None:
     procedures.process_account_change_signal(
