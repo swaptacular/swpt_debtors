@@ -213,7 +213,7 @@ class TransferErrorSchema(Schema):
     )
 
 
-class TransferCreationRequestSchema(Schema):
+class IssuingTransferCreationRequestSchema(Schema):
     transfer_uuid = fields.UUID(
         required=True,
         data_key='transferUuid',

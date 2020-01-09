@@ -4,7 +4,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib import endpoints
 from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
-    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, TransferCreationRequestSchema, \
+    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, IssuingTransferCreationRequestSchema, \
     TransfersCollection
 from . import specs
 from . import procedures
@@ -125,7 +125,7 @@ class TransfersCollectionEndpoint(MethodView):
             abort(404)
         return TransfersCollection(debtor_id=debtorId, items=transfer_uuids)
 
-    @transfers_api.arguments(TransferCreationRequestSchema)
+    @transfers_api.arguments(IssuingTransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=CONTEXT), code=201, headers=specs.LOCATION_HEADER)
     @transfers_api.doc(responses={303: specs.TRANSFER_EXISTS,
                                   403: specs.TOO_MANY_TRANSFERS,
