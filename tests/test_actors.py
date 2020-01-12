@@ -27,6 +27,7 @@ def test_on_account_change_signal(db_session):
         interest_rate=-0.5,
         last_transfer_seqnum=0,
         last_outgoing_transfer_date='2018-10-01',
+        creation_date='2018-10-1',
         status=0,
     )
 
