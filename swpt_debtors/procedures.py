@@ -208,9 +208,10 @@ def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_re
 def process_prepared_issuing_transfer_signal(debtor_id: int,
                                              sender_creditor_id: int,
                                              transfer_id: int,
+                                             recipient_creditor_id: int,
+                                             sender_locked_amount: int,
                                              coordinator_id: int,
-                                             coordinator_request_id: int,
-                                             sender_locked_amount: int) -> None:
+                                             coordinator_request_id: int) -> None:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
@@ -220,6 +221,7 @@ def process_prepared_issuing_transfer_signal(debtor_id: int,
         assert rt.debtor_id == debtor_id
         assert rt.amount == sender_locked_amount
         assert ROOT_CREDITOR_ID == sender_creditor_id
+        assert rt.recipient_creditor_id == recipient_creditor_id
         if rt.issuing_transfer_id is None and rt.finalized_at_ts is None:
             rt.issuing_transfer_id = transfer_id
             rt.finalized_at_ts = datetime.now(tz=timezone.utc)

@@ -49,17 +49,20 @@ def on_prepared_issuing_transfer_signal(
         sender_creditor_id: int,
         transfer_id: int,
         coordinator_type: str,
+        recipient_creditor_id: int,
+        sender_locked_amount: int,
+        prepared_at_ts: str,
         coordinator_id: int,
-        coordinator_request_id: int,
-        sender_locked_amount: int) -> None:
+        coordinator_request_id: int) -> None:
     assert coordinator_type == 'issuing'
     procedures.process_prepared_issuing_transfer_signal(
         debtor_id,
         sender_creditor_id,
         transfer_id,
+        recipient_creditor_id,
+        sender_locked_amount,
         coordinator_id,
         coordinator_request_id,
-        sender_locked_amount,
     )
 
 
