@@ -200,7 +200,9 @@ def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_re
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and rt.finalized_at_ts is None:
         assert rt.issuing_transfer_id is None
+        assert rt.transfer_info is not None
         rt.finalized_at_ts = datetime.now(tz=timezone.utc)
+        rt.transfer_info = None
         _finalize_corresponding_initiated_transfer(rt, error=details)
 
 
