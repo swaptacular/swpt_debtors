@@ -346,11 +346,7 @@ def test_failed_transfer(db_session, debtor):
     })
     assert len(FinalizePreparedTransferSignal.query.all()) == 0
 
-    rt_list = RunningTransfer.query.all()
-    assert len(rt_list) == 1
-    rt = rt_list[0]
-    assert rt.is_finalized
-    assert rt.issuing_transfer_id is None
+    assert len(RunningTransfer.query.all()) == 0
     it_list = InitiatedTransfer.query.all()
     assert len(it_list) == 1
     it = it_list[0]
@@ -361,7 +357,6 @@ def test_failed_transfer(db_session, debtor):
         'error_code': 'TEST',
         'message': 'A testing error.',
     })
-    rt_list == RunningTransfer.query.all()
-    assert len(rt_list) == 1 and rt_list[0].is_finalized
+    assert len(RunningTransfer.query.all()) == 0
     it_list == InitiatedTransfer.query.all()
     assert len(it_list) == 1 and it_list[0].is_finalized

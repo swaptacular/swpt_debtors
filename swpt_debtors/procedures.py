@@ -201,9 +201,9 @@ def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_re
     if rt and rt.finalized_at_ts is None:
         assert rt.issuing_transfer_id is None
         assert rt.transfer_info is not None
-        rt.finalized_at_ts = datetime.now(tz=timezone.utc)
-        rt.transfer_info = None
-        _finalize_corresponding_initiated_transfer(rt, error=details)
+        assert details is not None
+        _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=details)
+        db.session.delete(rt)
 
 
 @atomic
@@ -225,16 +225,22 @@ def process_prepared_issuing_transfer_signal(debtor_id: int,
         assert ROOT_CREDITOR_ID == sender_creditor_id
         assert rt.recipient_creditor_id == recipient_creditor_id
         if rt.issuing_transfer_id is None and rt.finalized_at_ts is None:
-            rt.issuing_transfer_id = transfer_id
-            rt.finalized_at_ts = datetime.now(tz=timezone.utc)
             db.session.add(FinalizePreparedTransferSignal(
                 debtor_id=rt.debtor_id,
                 sender_creditor_id=ROOT_CREDITOR_ID,
-                transfer_id=rt.issuing_transfer_id,
+                transfer_id=transfer_id,
                 committed_amount=rt.amount,
                 transfer_info=rt.transfer_info,
             ))
-            _finalize_corresponding_initiated_transfer(rt)
+            rt.issuing_transfer_id = transfer_id
+            rt.finalized_at_ts = datetime.now(tz=timezone.utc)
+
+            # Committed running transfers must stay in the database
+            # for some time, but the `transfer_info` will not be
+            # needed anymore, so we can save some disk space.
+            rt.transfer_info = None
+
+            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, finalized_at_ts=rt.finalized_at_ts)
             return
         if rt.issuing_transfer_id == transfer_id:
             # Normally, this can happen only when the prepared
@@ -417,12 +423,15 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
     ).with_for_update().one_or_none()
 
 
-def _finalize_corresponding_initiated_transfer(rt: RunningTransfer, error: dict = None) -> None:
-    assert rt.finalized_at_ts is not None
-    initiated_transfer = InitiatedTransfer.lock_instance((rt.debtor_id, rt.transfer_uuid))
+def _finalize_initiated_transfer(
+        debtor_id: int,
+        transfer_uuid: int,
+        finalized_at_ts: datetime = None,
+        error: dict = None) -> None:
+    initiated_transfer = InitiatedTransfer.lock_instance((debtor_id, transfer_uuid))
     if initiated_transfer and initiated_transfer.finalized_at_ts is None:
-        initiated_transfer.finalized_at_ts = rt.finalized_at_ts
-        initiated_transfer.is_successful = rt.issuing_transfer_id is not None
+        initiated_transfer.finalized_at_ts = finalized_at_ts or datetime.now(tz=timezone.utc)
+        initiated_transfer.is_successful = error is None
         if error is not None:
             initiated_transfer.error_code = str(error.get('error_code', ''))
             initiated_transfer.error_message = str(error.get('message', ''))
