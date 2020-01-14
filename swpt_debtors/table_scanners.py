@@ -45,7 +45,8 @@ class AccountsScanner(TableScanner):
         super().__init__()
         self.interval = timedelta(days=days)
         self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
-        self.account_purge_delay = 2 * self.signalbus_max_delay + timedelta(days=7)
+        self.pending_transfers_max_delay = timedelta(days=current_app.config['APP_PENDING_TRANSFERS_MAX_DELAY_DAYS'])
+        self.account_purge_delay = 2 * self.signalbus_max_delay + self.pending_transfers_max_delay
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
