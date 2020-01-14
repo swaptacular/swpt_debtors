@@ -62,6 +62,12 @@ class Signal(db.Model):
         broker.publish_message(message, exchange=MAIN_EXCHANGE_NAME, routing_key=routing_key)
 
 
+# TODO: Implement a daemon that garbage-collects debtors that have
+#       been created but have not been activated for some time (a
+#       month for example), and debtors that were active once, but
+#       were deactivated a very long time ago (20 years for
+#       example). For such debtors we should remove the row in the
+#       `debtor` table, and send an account deletion request.
 class Debtor(db.Model):
     STATUS_IS_ACTIVE_FLAG = 1
 
