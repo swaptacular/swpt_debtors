@@ -23,10 +23,6 @@ def test_version(db_session):
     assert __version__
 
 
-def test_is_later_event(current_ts):
-    assert p._is_later_event((1, current_ts), (None, None))
-
-
 def test_get_or_create_debtor(db_session):
     debtor = p.get_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID

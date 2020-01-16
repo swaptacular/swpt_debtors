@@ -1,8 +1,9 @@
 from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
-from typing import TypeVar, Optional, Callable, Tuple, List
+from typing import TypeVar, Optional, Callable, List
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
+from swpt_lib.utils import is_later_event
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedTransferSignal, \
@@ -11,10 +12,6 @@ from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedT
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
-
-TD_ZERO = timedelta(seconds=0)
-TD_SECOND = timedelta(seconds=1)
-TD_MINUS_SECOND = -TD_SECOND
 
 
 class DebtorDoesNotExistError(Exception):
@@ -276,9 +273,9 @@ def process_account_change_signal(debtor_id: int,
 
     account = Account.lock_instance((debtor_id, creditor_id))
     if account:
-        this_event = (change_seqnum, change_ts)
-        prev_event = (account.change_seqnum, account.change_ts)
-        if not _is_later_event(this_event, prev_event):
+        this_event = (change_ts, change_seqnum)
+        prev_event = (account.change_ts, account.change_seqnum)
+        if not is_later_event(this_event, prev_event):
             return
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
@@ -330,20 +327,6 @@ def insert_change_interest_rate_signal(debtor_id: int, creditor_id: int, interes
         change_ts=datetime.now(tz=timezone.utc),
         interest_rate=interest_rate,
     ))
-
-
-def _is_later_event(event: Tuple[int, datetime], other_event: Tuple[Optional[int], Optional[datetime]]) -> bool:
-    seqnum, ts = event
-    other_seqnum, other_ts = other_event
-    if other_ts:
-        advance = ts - other_ts
-    else:
-        advance = TD_ZERO
-    return advance >= TD_MINUS_SECOND and (
-        advance > TD_SECOND
-        or other_seqnum is None
-        or 0 < (seqnum - other_seqnum) % 0x100000000 < 0x80000000
-    )
 
 
 def _insert_running_transfer_or_raise_conflict_error(debtor: Debtor,
