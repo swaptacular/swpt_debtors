@@ -442,15 +442,11 @@ class ChangeInterestRateSignal(Signal):
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()
         creditor_id = fields.Integer()
-        change_seqnum = fields.Integer()
-        change_ts = fields.DateTime()
         interest_rate = fields.Float()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     creditor_id = db.Column(db.BigInteger, nullable=False)
-    change_seqnum = db.Column(db.Integer, nullable=False)
-    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
     interest_rate = db.Column(db.REAL, nullable=False)
 
 

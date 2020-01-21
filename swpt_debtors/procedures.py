@@ -323,8 +323,6 @@ def insert_change_interest_rate_signal(debtor_id: int, creditor_id: int, interes
     db.session.add(ChangeInterestRateSignal(
         debtor_id=debtor_id,
         creditor_id=creditor_id,
-        change_seqnum=0,
-        change_ts=datetime.now(tz=timezone.utc),
         interest_rate=interest_rate,
     ))
 
