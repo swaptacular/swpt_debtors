@@ -27,7 +27,7 @@ def test_collect_running_transfers(app_unsafe_session):
 
 def test_scan_accounts(app_unsafe_session):
     from swpt_debtors.models import Debtor, PurgeDeletedAccountSignal, ChangeInterestRateSignal, \
-        CapitalizeInterestSignal, ZeroOutNegativeBalanceSignal
+        CapitalizeInterestSignal, ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
 
     current_ts = datetime.now(tz=timezone.utc)
     past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
@@ -101,9 +101,21 @@ def test_scan_accounts(app_unsafe_session):
         negligible_amount=2.0,
         status=0,
     ))
+    db.session.add(Account(
+        debtor_id=11111,
+        creditor_id=22222,
+        change_seqnum=0,
+        change_ts=current_ts - timedelta(days=3653),
+        principal=50,
+        interest=0.0,
+        interest_rate=0.0,
+        last_outgoing_transfer_date=past_ts,
+        negligible_amount=50.0,
+        status=Account.STATUS_SCHEDULED_FOR_DELETION_FLAG | Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
+    ))
     db.session.commit()
     db.engine.execute('ANALYZE account')
-    assert len(Account.query.all()) == 5
+    assert len(Account.query.all()) == 6
     assert len(PurgeDeletedAccountSignal.query.all()) == 0
     assert len(ChangeInterestRateSignal.query.all()) == 0
     assert len(CapitalizeInterestSignal.query.all()) == 0
@@ -111,7 +123,7 @@ def test_scan_accounts(app_unsafe_session):
     runner = app.test_cli_runner()
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
-    assert len(Account.query.all()) == 4
+    assert len(Account.query.all()) == 5
 
     purge_signals = PurgeDeletedAccountSignal.query.all()
     assert len(purge_signals) == 1
@@ -138,10 +150,17 @@ def test_scan_accounts(app_unsafe_session):
     assert zonbs.creditor_id == 2222
     assert zonbs.last_outgoing_transfer_date < (current_ts - timedelta(days=7)).date()
 
+    try_to_delete_account_signals = TryToDeleteAccountSignal.query.all()
+    assert len(try_to_delete_account_signals) == 1
+    ttdas = try_to_delete_account_signals[0]
+    assert ttdas.debtor_id == 11111
+    assert ttdas.creditor_id == 22222
+
     Debtor.query.delete()
     Account.query.delete()
     PurgeDeletedAccountSignal.query.delete()
     ChangeInterestRateSignal.query.delete()
     CapitalizeInterestSignal.query.delete()
     ZeroOutNegativeBalanceSignal.query.delete()
+    TryToDeleteAccountSignal.query.delete()
     db.session.commit()

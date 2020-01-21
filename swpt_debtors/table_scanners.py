@@ -7,7 +7,7 @@ from sqlalchemy.sql.expression import tuple_
 from flask import current_app
 from .extensions import db
 from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal, CapitalizeInterestSignal, \
-    ZeroOutNegativeBalanceSignal, MAX_INT64, ROOT_CREDITOR_ID
+    ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, MAX_INT64, ROOT_CREDITOR_ID
 from .procedures import insert_change_interest_rate_signal
 
 T = TypeVar('T')
@@ -146,6 +146,21 @@ class AccountsScanner(TableScanner):
                 ))
         return pks
 
+    def _check_scheduled_for_deletion(self, rows, current_ts):
+        pks = []
+        c = self.table.c
+        scheduled_for_deletion_flag = Account.STATUS_SCHEDULED_FOR_DELETION_FLAG
+        for row in rows:
+            if (row[c.status] & scheduled_for_deletion_flag
+                    and 0 <= self._calc_current_balance(row, current_ts) <= row[c.negligible_amount]):
+                pk = (row[c.debtor_id], row[c.creditor_id])
+                pks.append(pk)
+                db.session.add(TryToDeleteAccountSignal(
+                    debtor_id=pk[0],
+                    creditor_id=pk[1],
+                ))
+        return pks
+
     def _mute_accounts(self, pks_to_mute, current_ts):
         if pks_to_mute:
             Account.query.filter(self.pk.in_(pks_to_mute)).update({
@@ -174,5 +189,6 @@ class AccountsScanner(TableScanner):
         pks_to_mute.extend(self._check_interest_rates(regular_account_rows, current_ts))
         pks_to_mute.extend(self._check_accumulated_interests(regular_account_rows, current_ts))
         pks_to_mute.extend(self._check_negative_balances(regular_account_rows, current_ts))
+        pks_to_mute.extend(self._check_scheduled_for_deletion(regular_account_rows, current_ts))
         self._mute_accounts(pks_to_mute, current_ts)
         self._purge_not_recently_changed(deleted_account_rows, current_ts)

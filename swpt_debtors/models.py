@@ -537,6 +537,19 @@ class ZeroOutNegativeBalanceSignal(Signal):
     last_outgoing_transfer_date = db.Column(db.DATE, nullable=False)
 
 
+class TryToDeleteAccountSignal(Signal):
+    queue_name = 'swpt_accounts'
+    actor_name = 'try_to_delete_account'
+
+    class __marshmallow__(Schema):
+        debtor_id = fields.Integer()
+        creditor_id = fields.Integer()
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    creditor_id = db.Column(db.BigInteger, nullable=False)
+
+
 class PurgeDeletedAccountSignal(Signal):
     queue_name = 'swpt_accounts'
     actor_name = 'purge_deleted_account'
