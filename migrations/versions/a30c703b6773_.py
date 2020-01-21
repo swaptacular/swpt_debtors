@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 74a4970aa489
+Revision ID: a30c703b6773
 Revises: 8d09bea9c7d1
-Create Date: 2020-01-21 15:02:23.531060
+Create Date: 2020-01-21 15:18:36.557287
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '74a4970aa489'
+revision = 'a30c703b6773'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -27,9 +27,11 @@ def upgrade():
     sa.Column('interest', sa.FLOAT(), nullable=False, comment='The amount of interest accumulated on the account before `change_ts`, but not added to the `principal` yet. Can be a negative number. `interest`gets zeroed and added to the principal once in a while (like once per week).'),
     sa.Column('interest_rate', sa.REAL(), nullable=False, comment='Annual rate (in percents) at which interest accumulates on the account.'),
     sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=True, comment='Updated on each transfer for which this account is the sender. This field is not updated on demurrage payments.'),
+    sa.Column('negligible_amount', sa.REAL(), nullable=False, comment='An amount that is considered negligible. It is used to decide whether an account can be safely deleted or not.'),
     sa.Column('status', sa.SmallInteger(), nullable=False, comment='Additional account status flags.'),
     sa.Column('do_not_send_signals_until_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='If not NULL, no account maintenance signals will be sent to the `accounts` service until that moment. This prevents sending signals too often.'),
     sa.CheckConstraint('interest_rate >= -50.0 AND interest_rate <= 100.0'),
+    sa.CheckConstraint('negligible_amount >= 2.0'),
     sa.CheckConstraint('principal > -9223372036854775808'),
     sa.PrimaryKeyConstraint('debtor_id', 'creditor_id'),
     comment='Tells who owes what to whom. This table is a replica of the table with the same name in the `swpt_accounts` service. It is used to perform maintenance routines like changing interest rates.'

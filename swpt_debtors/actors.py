@@ -29,6 +29,7 @@ def on_account_change_signal(
         last_transfer_seqnum: int,
         last_outgoing_transfer_date: str,
         creation_date: str,
+        negligible_amount: float,
         status: int) -> None:
     procedures.process_account_change_signal(
         debtor_id,
@@ -39,6 +40,7 @@ def on_account_change_signal(
         interest,
         interest_rate,
         iso8601.parse_date(last_outgoing_transfer_date).date(),
+        negligible_amount,
         status,
     )
 

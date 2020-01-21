@@ -62,6 +62,7 @@ def test_process_account_change_signal(db_session, debtor):
         interest=12.5,
         interest_rate=-0.5,
         last_outgoing_transfer_date=last_outgoing_transfer_date,
+        negligible_amount=5.5,
         status=0,
     )
     assert len(Account.query.all()) == 1
@@ -72,6 +73,7 @@ def test_process_account_change_signal(db_session, debtor):
     assert a.interest == 12.5
     assert a.interest_rate == -0.5
     assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
+    assert a.negligible_amount == 5.5
     assert a.status == 0
     cirs = ChangeInterestRateSignal.query.all()
     assert len(cirs) == 1
@@ -88,6 +90,7 @@ def test_process_account_change_signal(db_session, debtor):
         interest=12.5,
         interest_rate=-0.5,
         last_outgoing_transfer_date=last_outgoing_transfer_date,
+        negligible_amount=5.5,
         status=0,
     )
     assert len(Account.query.all()) == 1
@@ -106,6 +109,7 @@ def test_process_account_change_signal(db_session, debtor):
         interest=12.6,
         interest_rate=-0.6,
         last_outgoing_transfer_date=last_outgoing_transfer_date + timedelta(days=1),
+        negligible_amount=5.5,
         status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
     )
     assert len(Account.query.all()) == 1
@@ -134,6 +138,7 @@ def test_process_root_account_change_signal(db_session, debtor):
         interest=0,
         interest_rate=0.0,
         last_outgoing_transfer_date=last_outgoing_transfer_date,
+        negligible_amount=5.5,
         status=0,
     )
     d = p.get_debtor(D_ID)

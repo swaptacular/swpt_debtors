@@ -263,12 +263,14 @@ def process_account_change_signal(debtor_id: int,
                                   interest: float,
                                   interest_rate: float,
                                   last_outgoing_transfer_date: date,
+                                  negligible_amount: float,
                                   status: int) -> None:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= creditor_id <= MAX_INT64
     assert MIN_INT32 <= change_seqnum <= MAX_INT32
     assert -MAX_INT64 <= principal <= MAX_INT64
     assert -100 < interest_rate <= 100.0
+    assert negligible_amount >= 2.0
     assert MIN_INT16 <= status <= MAX_INT16
 
     account = Account.lock_instance((debtor_id, creditor_id))
@@ -284,6 +286,7 @@ def process_account_change_signal(debtor_id: int,
         account.interest_rate = interest_rate
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
         account.status = status
+        account.negligible_amount = negligible_amount
         account.do_not_send_signals_until_ts = None
     else:
         account = Account(
@@ -295,6 +298,7 @@ def process_account_change_signal(debtor_id: int,
             interest=interest,
             interest_rate=interest_rate,
             last_outgoing_transfer_date=last_outgoing_transfer_date,
+            negligible_amount=negligible_amount,
             status=status,
         )
         with db.retry_on_integrity_error():

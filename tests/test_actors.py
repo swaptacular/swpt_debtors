@@ -28,6 +28,7 @@ def test_on_account_change_signal(db_session):
         last_transfer_seqnum=0,
         last_outgoing_transfer_date='2018-10-01',
         creation_date='2018-10-1',
+        negligible_amount=2.0,
         status=0,
     )
 

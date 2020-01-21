@@ -410,6 +410,12 @@ class Account(db.Model):
         comment='Updated on each transfer for which this account is the sender. This field is '
                 'not updated on demurrage payments.',
     )
+    negligible_amount = db.Column(
+        db.REAL,
+        nullable=False,
+        comment='An amount that is considered negligible. It is used to decide whether '
+                'an account can be safely deleted or not.',
+    )
     status = db.Column(
         db.SmallInteger,
         nullable=False,
@@ -423,6 +429,7 @@ class Account(db.Model):
     __table_args__ = (
         db.CheckConstraint((interest_rate >= INTEREST_RATE_FLOOR) & (interest_rate <= INTEREST_RATE_CEIL)),
         db.CheckConstraint(principal > MIN_INT64),
+        db.CheckConstraint(negligible_amount >= 2.0),
         {
             'comment': 'Tells who owes what to whom. This table is a replica of the table with the '
                        'same name in the `swpt_accounts` service. It is used to perform maintenance '

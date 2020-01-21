@@ -50,6 +50,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
+        negligible_amount=2.0,
         status=0,
     ))
     db.session.add(Account(
@@ -61,6 +62,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
+        negligible_amount=2.0,
         status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG,
     ))
     db.session.add(Account(
@@ -72,6 +74,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
+        negligible_amount=2.0,
         status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG,
     ))
     db.session.add(Account(
@@ -83,6 +86,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=100.0,
         interest_rate=10.0,
         last_outgoing_transfer_date=past_ts,
+        negligible_amount=2.0,
         status=0,
     ))
     db.session.add(Account(
@@ -94,6 +98,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=-20.0,
         interest_rate=10.0,
         last_outgoing_transfer_date=past_ts,
+        negligible_amount=2.0,
         status=0,
     ))
     db.session.commit()
