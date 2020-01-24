@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: d50970fea95c
+Revision ID: e2416aad92f7
 Revises: 8d09bea9c7d1
-Create Date: 2020-01-25 00:12:36.318180
+Create Date: 2020-01-25 01:47:45.582214
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'd50970fea95c'
+revision = 'e2416aad92f7'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -52,8 +52,9 @@ def upgrade():
     )
     op.create_table('configure_account_signal',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('debtor_id', 'change_ts')
+    sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),

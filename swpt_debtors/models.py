@@ -565,4 +565,5 @@ class ConfigureAccountSignal(Signal):
         negligible_amount = fields.Constant(2.0)
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
-    change_ts = db.Column(db.TIMESTAMP(timezone=True), primary_key=True)
+    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
