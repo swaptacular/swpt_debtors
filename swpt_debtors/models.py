@@ -62,21 +62,22 @@ class Signal(db.Model):
         broker.publish_message(message, exchange=MAIN_EXCHANGE_NAME, routing_key=routing_key)
 
 
-# TODO: Implement a daemon that garbage-collects debtors that have
-#       been created but have not been activated for some time (a
-#       month for example), and debtors that were active once, but
+# TODO: Implement a daemon that garbage-collects debtors that were
+#       created some time ago (a month for example), but have not had
+#       any activity; also debtors that had had activity once, but
 #       were deactivated a very long time ago (20 years for
-#       example). For such debtors we should remove the row in the
-#       `debtor` table, and send an account deletion request.
+#       example). Such debtors should be deactivated (if they have not
+#       been already), and an account deletion request should be send
+#       for the debtor's account.
 class Debtor(db.Model):
-    STATUS_IS_ACTIVE_FLAG = 1
+    STATUS_HAS_ACTIVITY_FLAG = 1
 
     debtor_id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
     status = db.Column(
         db.SmallInteger,
         nullable=False,
         default=0,
-        comment=f"Debtor's status bits: {STATUS_IS_ACTIVE_FLAG} - is active.",
+        comment=f"Debtor's status bits: {STATUS_HAS_ACTIVITY_FLAG} - has activity.",
     )
     created_at_date = db.Column(
         db.DATE,
@@ -89,10 +90,7 @@ class Debtor(db.Model):
         comment='The date on which the debtor was deactivated. A `null` means that the '
                 'debtor has not been deactivated yet. Management operations (like policy '
                 'updates and credit issuing) are not allowed on deactivated debtors. Once '
-                'deactivated, a debtor stays deactivated until it is deleted. Important '
-                'note: All debtors are created with their "is active" status bit set to `0`, '
-                'and it gets set to `1` only after the first management operation has been '
-                'performed.',
+                'deactivated, a debtor stays deactivated until it is deleted.',
     )
     balance = db.Column(
         db.BigInteger,
@@ -167,10 +165,6 @@ class Debtor(db.Model):
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     __table_args__ = (
-        db.CheckConstraint(or_(
-            deactivated_at_date == null(),
-            status.op('&')(STATUS_IS_ACTIVE_FLAG) == 0,
-        )),
         db.CheckConstraint(and_(
             interest_rate_target >= INTEREST_RATE_FLOOR,
             interest_rate_target <= INTEREST_RATE_CEIL,
@@ -221,14 +215,7 @@ class Debtor(db.Model):
 
     @property
     def is_active(self):
-        return bool(self.status & Debtor.STATUS_IS_ACTIVE_FLAG)
-
-    @is_active.setter
-    def is_active(self, value):
-        if value:
-            self.status |= Debtor.STATUS_IS_ACTIVE_FLAG
-        else:
-            self.status &= ~Debtor.STATUS_IS_ACTIVE_FLAG
+        return bool(self.status & Debtor.STATUS_HAS_ACTIVITY_FLAG and self.deactivated_at_date is None)
 
 
 class InitiatedTransfer(db.Model):

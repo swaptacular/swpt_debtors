@@ -164,3 +164,52 @@ def test_scan_accounts(app_unsafe_session):
     ZeroOutNegativeBalanceSignal.query.delete()
     TryToDeleteAccountSignal.query.delete()
     db.session.commit()
+
+
+def test_scan_accounts_delete_debtor(app_unsafe_session):
+    from swpt_debtors.models import Debtor, PurgeDeletedAccountSignal
+
+    current_ts = datetime.now(tz=timezone.utc)
+    past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
+    app = app_unsafe_session
+    Debtor.query.delete()
+    Account.query.delete()
+    PurgeDeletedAccountSignal.query.delete()
+    db.session.commit()
+    db.session.add(Debtor(debtor_id=1, deactivated_at_date=current_ts.date()))
+    db.session.add(Debtor(debtor_id=2, deactivated_at_date=current_ts.date()))
+    db.session.add(Account(
+        debtor_id=1,
+        creditor_id=ROOT_CREDITOR_ID,
+        change_seqnum=0,
+        change_ts=past_ts,
+        principal=0,
+        interest=0.0,
+        interest_rate=0.0,
+        last_outgoing_transfer_date=past_ts,
+        negligible_amount=2.0,
+        status=Account.STATUS_DELETED_FLAG,
+    ))
+    db.session.commit()
+    db.engine.execute('ANALYZE account')
+    assert len(Debtor.query.all()) == 2
+    assert len(Account.query.all()) == 1
+    assert len(PurgeDeletedAccountSignal.query.all()) == 0
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    assert result.exit_code == 0
+    assert len(Debtor.query.all()) == 1
+    assert len(Debtor.query.filter_by(debtor_id=2).all()) == 1
+    assert len(Account.query.all()) == 0
+
+    purge_signals = PurgeDeletedAccountSignal.query.all()
+    assert len(purge_signals) == 1
+    ps = purge_signals[0]
+    assert ps.debtor_id == 1
+    assert ps.creditor_id == ROOT_CREDITOR_ID
+    assert ps.if_deleted_before > past_ts
+
+    Debtor.query.delete()
+    Account.query.delete()
+    PurgeDeletedAccountSignal.query.delete()
+    db.session.commit()

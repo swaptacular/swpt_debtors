@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: a51ab8e7084f
+Revision ID: d50970fea95c
 Revises: 8d09bea9c7d1
-Create Date: 2020-01-24 22:05:50.700103
+Create Date: 2020-01-25 00:12:36.318180
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'a51ab8e7084f'
+revision = 'd50970fea95c'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -57,9 +57,9 @@ def upgrade():
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
-    sa.Column('status', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is active."),
+    sa.Column('status', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - has activity."),
     sa.Column('created_at_date', sa.DATE(), nullable=False, comment='The date on which the debtor was created.'),
-    sa.Column('deactivated_at_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet. Management operations (like policy updates and credit issuing) are not allowed on deactivated debtors. Once deactivated, a debtor stays deactivated until it is deleted. Important note: All debtors are created with their "is active" status bit set to `0`, and it gets set to `1` only after the first management operation has been performed.'),
+    sa.Column('deactivated_at_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet. Management operations (like policy updates and credit issuing) are not allowed on deactivated debtors. Once deactivated, a debtor stays deactivated until it is deleted.'),
     sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
     sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
     sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The annual rate (in percents) at which the debtor wants the interest to accumulate on creditors' accounts. The actual interest rate may be different if interest rate limits are enforced."),
@@ -73,7 +73,6 @@ def upgrade():
     sa.CheckConstraint('actions_throttle_count >= 0'),
     sa.CheckConstraint('bll_cutoffs IS NULL OR array_ndims(bll_cutoffs) = 1'),
     sa.CheckConstraint('bll_values IS NULL OR array_ndims(bll_values) = 1'),
-    sa.CheckConstraint('deactivated_at_date IS NULL OR (status & 1) = 0'),
     sa.CheckConstraint('interest_rate_target >= -50.0 AND interest_rate_target <= 100.0'),
     sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
     sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1'),

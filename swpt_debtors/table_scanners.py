@@ -179,6 +179,12 @@ class AccountsScanner(TableScanner):
                     if_deleted_before=cutoff_ts,
                 ))
             Account.query.filter(self.pk.in_(pks_to_purge)).delete(synchronize_session=False)
+            self._delete_debtors_with_purged_debtor_accounts(pks_to_purge)
+
+    def _delete_debtors_with_purged_debtor_accounts(self, purged_account_pks):
+        debtors_ids = [debtor_id for debtor_id, creditor_id in purged_account_pks if creditor_id == ROOT_CREDITOR_ID]
+        if debtors_ids:
+            Debtor.query.filter(Debtor.debtor_id.in_(debtors_ids)).delete(synchronize_session=False)
 
     @atomic
     def process_rows(self, rows):

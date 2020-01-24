@@ -89,11 +89,10 @@ def test_debtor_attrs(debtor, db_session, current_ts):
     assert debtor.minimum_account_balance == MIN_INT64
     assert not debtor.is_active
     debtor.interest_rate_target = 6.66
-    debtor.status = Debtor.STATUS_IS_ACTIVE_FLAG
+    debtor.status = Debtor.STATUS_HAS_ACTIVITY_FLAG
     debtor.balance_lower_limits = [LowerLimit(-1000, date(2100, 1, 1))]
     assert debtor.is_active
     assert debtor.interest_rate == 6.66
     assert debtor.minimum_account_balance == -1000
     debtor.deactivated_at_date = current_ts
-    with pytest.raises(IntegrityError):
-        db_session.commit()
+    assert not debtor.is_active

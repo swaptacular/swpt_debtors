@@ -79,7 +79,6 @@ def terminate_debtor(debtor_id: int) -> Optional[Debtor]:
     debtor = Debtor.lock_instance(debtor_id)
     if debtor:
         current_ts = datetime.now(tz=timezone.utc)
-        debtor.is_active = False
         debtor.deactivated_at_date = current_ts.date()
         debtor.initiated_transfers_count = 0
         InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
@@ -396,7 +395,7 @@ def _throttle_debtor_actions(debtor_id: int) -> Debtor:
     if debtor.actions_throttle_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
         raise TooManyManagementActionsError()
     debtor.actions_throttle_count += 1
-    debtor.is_active = True
+    debtor.status |= Debtor.STATUS_HAS_ACTIVITY_FLAG
     return debtor
 
 
