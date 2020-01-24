@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 125de6dea46f
+Revision ID: a51ab8e7084f
 Revises: 8d09bea9c7d1
-Create Date: 2020-01-21 15:35:34.662185
+Create Date: 2020-01-24 22:05:50.700103
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '125de6dea46f'
+revision = 'a51ab8e7084f'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -49,6 +49,11 @@ def upgrade():
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('interest_rate', sa.REAL(), nullable=False),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
+    )
+    op.create_table('configure_account_signal',
+    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.PrimaryKeyConstraint('debtor_id', 'change_ts')
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
@@ -166,6 +171,7 @@ def downgrade():
     op.drop_table('prepare_transfer_signal')
     op.drop_table('finalize_prepared_transfer_signal')
     op.drop_table('debtor')
+    op.drop_table('configure_account_signal')
     op.drop_table('change_interest_rate_signal')
     op.drop_table('capitalize_interest_signal')
     op.drop_table('account')

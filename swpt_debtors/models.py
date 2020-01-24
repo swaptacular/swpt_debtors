@@ -563,3 +563,19 @@ class PurgeDeletedAccountSignal(Signal):
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     creditor_id = db.Column(db.BigInteger, nullable=False)
     if_deleted_before = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+
+
+class ConfigureAccountSignal(Signal):
+    queue_name = 'swpt_accounts'
+    actor_name = 'configure_account'
+
+    class __marshmallow__(Schema):
+        debtor_id = fields.Integer()
+        creditor_id = fields.Constant(ROOT_CREDITOR_ID)
+        change_ts = fields.DateTime()
+        change_seqnum = fields.Constant(0)
+        is_scheduled_for_deletion = fields.Constant(False)
+        negligible_amount = fields.Constant(2.0)
+
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    change_ts = db.Column(db.TIMESTAMP(timezone=True), primary_key=True)

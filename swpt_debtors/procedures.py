@@ -7,7 +7,7 @@ from swpt_lib.utils import is_later_event
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedTransferSignal, \
-    InitiatedTransfer, RunningTransfer, PrepareTransferSignal, \
+    InitiatedTransfer, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
     MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
 
 T = TypeVar('T')
@@ -58,6 +58,7 @@ def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
         db.session.flush()
     except IntegrityError:
         raise DebtorExistsError(debtor_id)
+    _insert_configure_account_signal(debtor_id)
     return debtor
 
 
@@ -69,6 +70,7 @@ def get_or_create_debtor(debtor_id: int) -> Debtor:
         debtor = Debtor(debtor_id=debtor_id)
         with db.retry_on_integrity_error():
             db.session.add(debtor)
+        _insert_configure_account_signal(debtor_id)
     return debtor
 
 
@@ -420,3 +422,10 @@ def _finalize_initiated_transfer(
         if error is not None:
             initiated_transfer.error_code = str(error.get('error_code', ''))
             initiated_transfer.error_message = str(error.get('message', ''))
+
+
+def _insert_configure_account_signal(debtor_id: int) -> None:
+    db.session.add(ConfigureAccountSignal(
+        debtor_id=debtor_id,
+        change_ts=datetime.now(tz=timezone.utc),
+    ))

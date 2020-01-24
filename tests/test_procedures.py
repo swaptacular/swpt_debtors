@@ -3,7 +3,8 @@ from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
-    PrepareTransferSignal, FinalizePreparedTransferSignal, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID
+    PrepareTransferSignal, FinalizePreparedTransferSignal, ConfigureAccountSignal, \
+    INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
 
@@ -28,10 +29,14 @@ def test_get_or_create_debtor(db_session):
     assert debtor.debtor_id == D_ID
     assert not debtor.is_active
     assert debtor.deactivated_at_date is None
+    cas = ConfigureAccountSignal.query.one()
+    assert cas.debtor_id == D_ID
+
     debtor = p.get_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
     assert not debtor.is_active
     assert debtor.deactivated_at_date is None
+    assert len(ConfigureAccountSignal.query.all()) == 1
 
 
 def test_terminate_debtor(db_session, debtor):
@@ -216,6 +221,9 @@ def test_create_new_debtor(db_session, debtor):
         p.create_new_debtor(D_ID)
     debtor = p.create_new_debtor(1234567890)
     assert debtor.debtor_id == 1234567890
+    assert len(ConfigureAccountSignal.query.all()) == 2
+    assert ConfigureAccountSignal.query.filter_by(debtor_id=D_ID).one()
+    assert ConfigureAccountSignal.query.filter_by(debtor_id=1234567890).one()
 
 
 def test_initiate_transfer(db_session, debtor):
