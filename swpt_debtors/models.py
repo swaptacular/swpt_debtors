@@ -345,10 +345,10 @@ class RunningTransfer(db.Model):
         db.CheckConstraint(amount > 0),
         {
             'comment': 'Represents a running issuing transfer. Important note: The records for the '
-                       'finalized issuing transfers (failed or successful) must not be deleted '
-                       'right away. Instead, after they have been finalized, they should stay in '
-                       'the database for at least few days. This is necessary in order to prevent '
-                       'problems caused by message re-delivery.',
+                       'successfully finalized issuing transfers (those for which `issuing_transfer_id` '
+                       'is not `null`), must not be deleted right away. Instead, after they have been '
+                       'finalized, they should stay in the database for at least few days. This is '
+                       'necessary in order to prevent problems caused by message re-delivery.',
         }
     )
 

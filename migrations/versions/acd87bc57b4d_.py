@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: e2416aad92f7
+Revision ID: acd87bc57b4d
 Revises: 8d09bea9c7d1
-Create Date: 2020-01-25 01:47:45.582214
+Create Date: 2020-01-30 17:20:15.425346
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'e2416aad92f7'
+revision = 'acd87bc57b4d'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -122,7 +122,7 @@ def upgrade():
     sa.CheckConstraint('issuing_transfer_id IS NULL OR finalized_at_ts IS NOT NULL'),
     sa.CheckConstraint('transfer_info IS NOT NULL OR finalized_at_ts IS NOT NULL'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
-    comment='Represents a running issuing transfer. Important note: The records for the finalized issuing transfers (failed or successful) must not be deleted right away. Instead, after they have been finalized, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
+    comment='Represents a running issuing transfer. Important note: The records for the successfully finalized issuing transfers (those for which `issuing_transfer_id` is not `null`), must not be deleted right away. Instead, after they have been finalized, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
     )
     op.create_index('idx_issuing_coordinator_request_id', 'running_transfer', ['debtor_id', 'issuing_coordinator_request_id'], unique=True)
     op.create_table('try_to_delete_account_signal',
