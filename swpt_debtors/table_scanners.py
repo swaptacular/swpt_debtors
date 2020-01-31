@@ -172,6 +172,13 @@ class AccountsScanner(TableScanner):
         cutoff_ts = current_ts - self.account_purge_delay
         pks_to_purge = [(row[c.debtor_id], row[c.creditor_id]) for row in rows if row[c.change_ts] < cutoff_ts]
         if pks_to_purge:
+            pks_to_purge = db.session.\
+                query(Account.debtor_id, Account.creditor_id).\
+                filter(self.pk.in_(pks_to_purge)).\
+                filter(Account.status.op('&')(Account.STATUS_DELETED_FLAG) == Account.STATUS_DELETED_FLAG).\
+                filter(Account.change_ts < cutoff_ts).\
+                with_for_update().\
+                all()
             for pk in pks_to_purge:
                 db.session.add(PurgeDeletedAccountSignal(
                     debtor_id=pk[0],
