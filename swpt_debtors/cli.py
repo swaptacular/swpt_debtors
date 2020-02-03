@@ -54,18 +54,16 @@ def subscribe(queue_name):  # pragma: no cover
 @click.option('-d', '--days', type=float, help='The number of days.')
 @click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
 def collect_running_transfers(days, quit_early):
-    """Start a process that garbage-collects finalized running transfers.
+    """Start a process that garbage-collects staled running transfers.
 
     The specified number of days determines the intended duration of a
     single pass through the running transfers table. If the number of
-    days is not specified, the value of the environment variable
-    APP_SIGNALBUS_MAX_DELAY_DAYS, divided by 2, is used. If it is not
-    set, the default number of days is 7.
+    days is not specified, the default number of days is 7.
 
     """
 
     click.echo('Collecting running transfers...')
-    days = days or current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'] / 2
+    days = days or 7
     assert days > 0.0
     collector = RunningTransfersCollector()
     collector.run(db.engine, timedelta(days=days), quit_early=quit_early)

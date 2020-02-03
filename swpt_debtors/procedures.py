@@ -232,9 +232,8 @@ def process_prepared_issuing_transfer_signal(debtor_id: int,
             ))
 
         if not rt.is_finalized:
+            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, finalized_at_ts=datetime.now(tz=timezone.utc))
             rt.issuing_transfer_id = transfer_id
-            rt.finalized_at_ts = datetime.now(tz=timezone.utc)
-            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, finalized_at_ts=rt.finalized_at_ts)
             commmit_transfer()
             return
 

@@ -80,7 +80,7 @@ def test_running_transfer_attrs(debtor, db_session, current_ts):
     t = RunningTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one()
     assert t.transfer_info == {'note': 'a test note'}
     assert not t.is_finalized
-    t.finalized_at_ts = current_ts
+    t.issuing_transfer_id = 666
     assert t.is_finalized
 
 

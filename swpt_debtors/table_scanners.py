@@ -22,15 +22,15 @@ class CachedInterestRate(NamedTuple):
 
 class RunningTransfersCollector(TableScanner):
     table = RunningTransfer.__table__
-    columns = [RunningTransfer.debtor_id, RunningTransfer.transfer_uuid, RunningTransfer.finalized_at_ts]
+    columns = [RunningTransfer.debtor_id, RunningTransfer.transfer_uuid, RunningTransfer.started_at_ts]
     pk = tuple_(table.c.debtor_id, table.c.transfer_uuid)
 
     def __init__(self):
         super().__init__()
-        self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
+        self.abandon_interval = timedelta(days=current_app.config['APP_RUNNING_TRANSFERS_ABANDON_DAYS'])
 
     def process_rows(self, rows):
-        cutoff_ts = datetime.now(tz=timezone.utc) - self.signalbus_max_delay
+        cutoff_ts = datetime.now(tz=timezone.utc) - self.abandon_interval
         pks_to_delete = [(row[0], row[1]) for row in rows if row[2] < cutoff_ts]
         if pks_to_delete:
             db.engine.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))

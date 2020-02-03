@@ -313,10 +313,11 @@ class RunningTransfer(db.Model):
         comment='Notes from the debtor. Can be any JSON object that the debtor wants the recipient '
                 'to see.',
     )
-    finalized_at_ts = db.Column(
+    started_at_ts = db.Column(
         db.TIMESTAMP(timezone=True),
-        comment='The moment at which the transfer was finalized. A `null` means that the '
-                'transfer has not been finalized yet.',
+        nullable=False,
+        default=get_now_utc,
+        comment='The moment at which the transfer was started.',
     )
     issuing_coordinator_request_id = db.Column(
         db.BigInteger,
@@ -340,10 +341,6 @@ class RunningTransfer(db.Model):
             issuing_coordinator_request_id,
             unique=True,
         ),
-        db.CheckConstraint(or_(
-            and_(issuing_transfer_id == null(), finalized_at_ts == null()),
-            and_(issuing_transfer_id != null(), finalized_at_ts != null()),
-        )),
         db.CheckConstraint(amount > 0),
         {
             'comment': 'Represents a running issuing transfer. Important note: The records for the '
@@ -356,7 +353,7 @@ class RunningTransfer(db.Model):
 
     @property
     def is_finalized(self):
-        return bool(self.finalized_at_ts)
+        return self.issuing_transfer_id is not None
 
 
 class Account(db.Model):

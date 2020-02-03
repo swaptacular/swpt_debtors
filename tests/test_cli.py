@@ -15,7 +15,7 @@ def test_collect_running_transfers(app_unsafe_session):
         amount=1500,
         transfer_info={},
         issuing_transfer_id=666,
-        finalized_at_ts=datetime(2000, 1, 1, tzinfo=timezone.utc)
+        started_at_ts=datetime(2000, 1, 1, tzinfo=timezone.utc)
     )
     db.session.add(running_transfer)
     db.session.commit()

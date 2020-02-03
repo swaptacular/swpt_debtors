@@ -58,6 +58,7 @@ class Configuration(metaclass=MetaFlaskEnv):
     APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS = 365
     APP_PENDING_TRANSFERS_MAX_DELAY_DAYS = 7
     APP_MAX_INTEREST_TO_PRINCIPAL_RATIO = 0.01
+    APP_RUNNING_TRANSFERS_ABANDON_DAYS = 365
 
 
 def create_app(config_dict={}):
