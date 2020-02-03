@@ -1,3 +1,4 @@
+from swpt_debtors import procedures as p
 from swpt_debtors import actors as a
 
 D_ID = -1
@@ -55,4 +56,19 @@ def test_on_rejected_issuing_transfer_signal(db_session):
         coordinator_id=C_ID,
         coordinator_request_id=1,
         details={'error_code': '123456', 'message': 'Oops!'},
+    )
+
+
+def test_on_finalized_issuing_transfer_signal(db_session):
+    a.on_finalized_issuing_transfer_signal(
+        debtor_id=D_ID,
+        sender_creditor_id=p.ROOT_CREDITOR_ID,
+        transfer_id=123,
+        coordinator_type='issuing',
+        coordinator_id=D_ID,
+        coordinator_request_id=678,
+        recipient_creditor_id=1234,
+        prepared_at_ts='2019-10-01T00:00:00Z',
+        finalized_at_ts='2019-10-01T00:00:00Z',
+        committed_amount=100,
     )

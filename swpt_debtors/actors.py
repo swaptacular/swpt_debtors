@@ -83,3 +83,27 @@ def on_rejected_issuing_transfer_signal(
         coordinator_request_id,
         details,
     )
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_finalized_issuing_transfer_signal(
+        debtor_id: int,
+        sender_creditor_id: int,
+        transfer_id: int,
+        coordinator_type: str,
+        coordinator_id: int,
+        coordinator_request_id: int,
+        recipient_creditor_id: int,
+        prepared_at_ts: str,
+        finalized_at_ts: str,
+        committed_amount: int) -> None:
+    assert sender_creditor_id == procedures.ROOT_CREDITOR_ID
+    assert coordinator_type == 'issuing'
+    procedures.process_finalized_issuing_transfer_signal(
+        debtor_id,
+        transfer_id,
+        coordinator_id,
+        coordinator_request_id,
+        recipient_creditor_id,
+        committed_amount,
+    )

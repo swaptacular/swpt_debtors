@@ -198,7 +198,6 @@ def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_re
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and rt.finalized_at_ts is None:
         assert rt.issuing_transfer_id is None
-        assert rt.transfer_info is not None
         assert details is not None
         _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=details)
         db.session.delete(rt)
@@ -247,6 +246,23 @@ def process_prepared_issuing_transfer_signal(debtor_id: int,
         committed_amount=0,
         transfer_info={},
     ))
+
+
+@atomic
+def process_finalized_issuing_transfer_signal(
+        debtor_id: int,
+        transfer_id: int,
+        coordinator_id: int,
+        coordinator_request_id: int,
+        recipient_creditor_id: int,
+        committed_amount: int) -> None:
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    assert MIN_INT64 <= transfer_id <= MAX_INT64
+    rt = _find_running_transfer(coordinator_id, coordinator_request_id)
+    if (rt and rt.debtor_id == debtor_id and rt.issuing_transfer_id == transfer_id):
+        assert rt.recipient_creditor_id == recipient_creditor_id
+        assert committed_amount == 0 or committed_amount == rt.amount
+        db.session.delete(rt)
 
 
 @atomic

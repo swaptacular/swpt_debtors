@@ -345,6 +345,16 @@ def test_successful_transfer(db_session, debtor):
     it_list == InitiatedTransfer.query.all()
     assert len(it_list) == 1 and it_list[0].is_finalized
 
+    p.process_finalized_issuing_transfer_signal(
+        debtor_id=D_ID,
+        transfer_id=777,
+        coordinator_id=D_ID,
+        coordinator_request_id=pts.coordinator_request_id,
+        recipient_creditor_id=C_ID,
+        committed_amount=1000,
+    )
+    assert len(RunningTransfer.query.all()) == 0
+
 
 def test_failed_transfer(db_session, debtor):
     p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
