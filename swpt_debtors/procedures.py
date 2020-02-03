@@ -196,8 +196,7 @@ def initiate_transfer(debtor_id: int,
 @atomic
 def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_request_id: int, details: dict) -> None:
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
-    if rt and rt.finalized_at_ts is None:
-        assert rt.issuing_transfer_id is None
+    if rt and not rt.is_finalized:
         assert details is not None
         _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=details)
         db.session.delete(rt)
@@ -221,7 +220,9 @@ def process_prepared_issuing_transfer_signal(debtor_id: int,
         assert rt.amount == sender_locked_amount
         assert ROOT_CREDITOR_ID == sender_creditor_id
         assert rt.recipient_creditor_id == recipient_creditor_id
-        if rt.issuing_transfer_id is None and rt.finalized_at_ts is None:
+
+        def commmit_transfer() -> None:
+            assert rt is not None
             db.session.add(FinalizePreparedTransferSignal(
                 debtor_id=rt.debtor_id,
                 sender_creditor_id=ROOT_CREDITOR_ID,
@@ -229,16 +230,19 @@ def process_prepared_issuing_transfer_signal(debtor_id: int,
                 committed_amount=rt.amount,
                 transfer_info=rt.transfer_info,
             ))
+
+        if not rt.is_finalized:
+            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, finalized_at_ts=rt.finalized_at_ts)
             rt.issuing_transfer_id = transfer_id
             rt.finalized_at_ts = datetime.now(tz=timezone.utc)
-            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, finalized_at_ts=rt.finalized_at_ts)
-            return
-        if rt.issuing_transfer_id == transfer_id:
-            # Normally, this can happen only when the prepared
-            # transfer message has been re-delivered. Therefore, no
-            # action should be taken.
+            commmit_transfer()
             return
 
+        if rt.issuing_transfer_id == transfer_id:
+            commmit_transfer()
+            return
+
+    # The newly prepared transfer is dismissed.
     db.session.add(FinalizePreparedTransferSignal(
         debtor_id=debtor_id,
         sender_creditor_id=sender_creditor_id,

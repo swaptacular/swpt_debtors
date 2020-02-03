@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: ef5187358735
+Revision ID: f31ac65bcb60
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-03 19:55:10.414997
+Create Date: 2020-02-03 21:29:13.285963
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'ef5187358735'
+revision = 'f31ac65bcb60'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -119,7 +119,7 @@ def upgrade():
     sa.Column('issuing_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('issuing_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
     sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
     sa.CheckConstraint('amount > 0'),
-    sa.CheckConstraint('issuing_transfer_id IS NULL OR finalized_at_ts IS NOT NULL'),
+    sa.CheckConstraint('issuing_transfer_id IS NULL AND finalized_at_ts IS NULL OR issuing_transfer_id IS NOT NULL AND finalized_at_ts IS NOT NULL'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
     comment='Represents a running issuing transfer. Important note: The records for the successfully finalized issuing transfers (those for which `issuing_transfer_id` is not `null`), must not be deleted right away. Instead, after they have been finalized, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
     )

@@ -340,7 +340,10 @@ class RunningTransfer(db.Model):
             issuing_coordinator_request_id,
             unique=True,
         ),
-        db.CheckConstraint(or_(issuing_transfer_id == null(), finalized_at_ts != null())),
+        db.CheckConstraint(or_(
+            and_(issuing_transfer_id == null(), finalized_at_ts == null()),
+            and_(issuing_transfer_id != null(), finalized_at_ts != null()),
+        )),
         db.CheckConstraint(amount > 0),
         {
             'comment': 'Represents a running issuing transfer. Important note: The records for the '
