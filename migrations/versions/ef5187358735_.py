@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: acd87bc57b4d
+Revision ID: ef5187358735
 Revises: 8d09bea9c7d1
-Create Date: 2020-01-30 17:20:15.425346
+Create Date: 2020-02-03 19:55:10.414997
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'acd87bc57b4d'
+revision = 'ef5187358735'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -114,13 +114,12 @@ def upgrade():
     sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
     sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False, comment='The recipient of the transfer.'),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
-    sa.Column('transfer_info', postgresql.JSON(astext_type=sa.Text()), nullable=True, comment='Notes from the debtor. Can be any JSON object that the debtor wants the recipient to see. Can be set `null` (to save disk space) only after the transfer has been finalized.'),
+    sa.Column('transfer_info', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='Notes from the debtor. Can be any JSON object that the debtor wants the recipient to see.'),
     sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),
     sa.Column('issuing_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('issuing_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
     sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
     sa.CheckConstraint('amount > 0'),
     sa.CheckConstraint('issuing_transfer_id IS NULL OR finalized_at_ts IS NOT NULL'),
-    sa.CheckConstraint('transfer_info IS NOT NULL OR finalized_at_ts IS NOT NULL'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
     comment='Represents a running issuing transfer. Important note: The records for the successfully finalized issuing transfers (those for which `issuing_transfer_id` is not `null`), must not be deleted right away. Instead, after they have been finalized, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
     )

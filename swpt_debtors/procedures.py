@@ -232,12 +232,6 @@ def process_prepared_issuing_transfer_signal(debtor_id: int,
             ))
             rt.issuing_transfer_id = transfer_id
             rt.finalized_at_ts = datetime.now(tz=timezone.utc)
-
-            # Committed running transfers must stay in the database
-            # for some time, but the `transfer_info` will not be
-            # needed anymore, so we can save some disk space.
-            rt.transfer_info = None
-
             _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, finalized_at_ts=rt.finalized_at_ts)
             return
         if rt.issuing_transfer_id == transfer_id:
