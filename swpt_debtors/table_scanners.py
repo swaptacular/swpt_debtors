@@ -202,4 +202,8 @@ class AccountsScanner(TableScanner):
         pks_to_mute.extend(self._check_accumulated_interests(regular_account_rows, current_ts))
         pks_to_mute.extend(self._check_negative_balances(regular_account_rows, current_ts))
         pks_to_mute.extend(self._check_scheduled_for_deletion(regular_account_rows, current_ts))
+
+        # An account change event has been triggered for all "muted"
+        # accounts. The muted accounts will be un-muted when the
+        # triggered `AccountChangeSignal` is processed.
         self._mute_accounts(pks_to_mute, current_ts)
