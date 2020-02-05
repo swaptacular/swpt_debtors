@@ -42,6 +42,7 @@ def on_account_change_signal(
         interest,
         interest_rate,
         iso8601.parse_date(last_outgoing_transfer_date).date(),
+        iso8601.parse_date(creation_date).date(),
         negligible_amount,
         status,
     )

@@ -67,6 +67,7 @@ def test_process_account_change_signal(db_session, debtor):
         interest=12.5,
         interest_rate=-0.5,
         last_outgoing_transfer_date=last_outgoing_transfer_date,
+        creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
     )
@@ -95,6 +96,7 @@ def test_process_account_change_signal(db_session, debtor):
         interest=12.5,
         interest_rate=-0.5,
         last_outgoing_transfer_date=last_outgoing_transfer_date,
+        creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
     )
@@ -114,6 +116,7 @@ def test_process_account_change_signal(db_session, debtor):
         interest=12.6,
         interest_rate=-0.6,
         last_outgoing_transfer_date=last_outgoing_transfer_date + timedelta(days=1),
+        creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
     )
@@ -143,6 +146,7 @@ def test_process_root_account_change_signal(db_session, debtor):
         interest=0,
         interest_rate=0.0,
         last_outgoing_transfer_date=last_outgoing_transfer_date,
+        creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
     )
@@ -379,3 +383,24 @@ def test_failed_transfer(db_session, debtor):
     assert len(RunningTransfer.query.all()) == 0
     it_list == InitiatedTransfer.query.all()
     assert len(it_list) == 1 and it_list[0].is_finalized
+
+
+def test_process_account_purge_signal(db_session, debtor, current_ts):
+    creation_date = date(2020, 1, 10)
+    p.process_account_change_signal(
+        debtor_id=D_ID,
+        creditor_id=p.ROOT_CREDITOR_ID,
+        change_seqnum=1,
+        change_ts=current_ts,
+        principal=0,
+        interest=0.0,
+        interest_rate=0.0,
+        last_outgoing_transfer_date=current_ts.date(),
+        creation_date=creation_date,
+        negligible_amount=2.0,
+        status=0,
+    )
+    assert len(Account.query.all()) == 1
+    p.process_account_purge_signal(D_ID, p.ROOT_CREDITOR_ID, creation_date)
+    assert len(Account.query.all()) == 0
+    assert len(Debtor.query.all()) == 0

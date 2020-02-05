@@ -194,6 +194,18 @@ def initiate_transfer(debtor_id: int,
 
 
 @atomic
+def process_account_purge_signal(debtor_id: int, creditor_id: int, creation_date: date) -> None:
+    account = Account.lock_instance((debtor_id, creditor_id))
+    if account and account.creation_date == creation_date:
+        db.session.delete(account)
+        if creditor_id == ROOT_CREDITOR_ID:
+            # When the debtor's account is removed, the debtor should
+            # be removed too, because the debtor can not function
+            # normally without an account.
+            Debtor.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
+
+
+@atomic
 def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_request_id: int, details: dict) -> None:
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and not rt.is_finalized:
@@ -277,6 +289,7 @@ def process_account_change_signal(debtor_id: int,
                                   interest: float,
                                   interest_rate: float,
                                   last_outgoing_transfer_date: date,
+                                  creation_date: date,
                                   negligible_amount: float,
                                   status: int) -> None:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
@@ -299,6 +312,7 @@ def process_account_change_signal(debtor_id: int,
         account.interest = interest
         account.interest_rate = interest_rate
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
+        account.creation_date = creation_date
         account.negligible_amount = negligible_amount
         account.status = status
         account.do_not_send_signals_until_ts = None
@@ -313,6 +327,7 @@ def process_account_change_signal(debtor_id: int,
             interest=interest,
             interest_rate=interest_rate,
             last_outgoing_transfer_date=last_outgoing_transfer_date,
+            creation_date=creation_date,
             negligible_amount=negligible_amount,
             status=status,
         )

@@ -1,5 +1,5 @@
 from uuid import UUID
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 from swpt_debtors.models import RunningTransfer, Account, ROOT_CREDITOR_ID
 from swpt_debtors.extensions import db
 
@@ -31,6 +31,7 @@ def test_scan_accounts(app_unsafe_session):
     from swpt_debtors.models import Debtor, ChangeInterestRateSignal, \
         CapitalizeInterestSignal, ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
 
+    some_date = date(2018, 10, 20)
     current_ts = datetime.now(tz=timezone.utc)
     past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
     future_ts = datetime(2100, 1, 1, tzinfo=timezone.utc)
@@ -52,6 +53,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
+        creation_date=some_date,
         negligible_amount=2.0,
         status=0,
     ))
@@ -64,6 +66,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
+        creation_date=some_date,
         negligible_amount=2.0,
         status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG,
     ))
@@ -76,6 +79,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
+        creation_date=some_date,
         negligible_amount=2.0,
         status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG,
     ))
@@ -88,6 +92,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=100.0,
         interest_rate=10.0,
         last_outgoing_transfer_date=past_ts,
+        creation_date=some_date,
         negligible_amount=2.0,
         status=0,
     ))
@@ -100,6 +105,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=-20.0,
         interest_rate=10.0,
         last_outgoing_transfer_date=past_ts,
+        creation_date=some_date,
         negligible_amount=2.0,
         status=0,
     ))
@@ -112,6 +118,7 @@ def test_scan_accounts(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
+        creation_date=some_date,
         negligible_amount=50.0,
         status=Account.STATUS_SCHEDULED_FOR_DELETION_FLAG | Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
     ))
@@ -179,6 +186,7 @@ def test_scan_accounts_delete_debtor(app_unsafe_session):
         interest=0.0,
         interest_rate=0.0,
         last_outgoing_transfer_date=past_ts,
+        creation_date=date(2018, 10, 20),
         negligible_amount=2.0,
         status=Account.STATUS_DELETED_FLAG,
         last_heartbeat_ts=past_ts,
