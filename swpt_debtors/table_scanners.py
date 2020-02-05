@@ -171,7 +171,8 @@ class AccountsScanner(TableScanner):
     def _purge_dead_accounts(self, rows, current_ts):
         c = self.table.c
         cutoff_ts = current_ts - self.dead_accounts_abandon_delay
-        pks_to_purge = [(row[c.debtor_id], row[c.creditor_id]) for row in rows if row[c.last_heartbeat_ts] < cutoff_ts]
+        c_debtor_id, c_creditor_id = c.debtor_id, c.creditor_id
+        pks_to_purge = [(row[c_debtor_id], row[c_creditor_id]) for row in rows if row[c.last_heartbeat_ts] < cutoff_ts]
         if pks_to_purge:
             pks_to_purge = db.session.\
                 query(Account.debtor_id, Account.creditor_id).\
@@ -182,7 +183,6 @@ class AccountsScanner(TableScanner):
             Account.query.filter(self.pk.in_(pks_to_purge)).delete(synchronize_session=False)
             self._delete_debtors_with_purged_debtor_accounts(pks_to_purge)
             pks_to_purge = set(pks_to_purge)
-            c_debtor_id, c_creditor_id = c.debtor_id, c.creditor_id
             rows = [row for row in rows if ((row[c_debtor_id], row[c_creditor_id]) not in pks_to_purge)]
         return rows
 
@@ -195,7 +195,7 @@ class AccountsScanner(TableScanner):
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
         alive_account_rows = self._purge_dead_accounts(rows, current_ts)
-        regular_account_rows, deleted_account_rows, _ = self._separate_accounts_by_type(alive_account_rows)
+        regular_account_rows, _, _ = self._separate_accounts_by_type(alive_account_rows)
         regular_account_rows = self._remove_muted_accounts(regular_account_rows, current_ts)
         pks_to_mute = []
         pks_to_mute.extend(self._check_interest_rates(regular_account_rows, current_ts))
