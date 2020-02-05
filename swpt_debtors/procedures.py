@@ -304,6 +304,8 @@ def process_account_change_signal(debtor_id: int,
     if account:
         this_event = (change_ts, change_seqnum)
         prev_event = (account.change_ts, account.change_seqnum)
+        if this_event == prev_event:
+            account.last_heartbeat_ts = datetime.now(tz=timezone.utc)
         if not is_later_event(this_event, prev_event):
             return
         account.change_seqnum = change_seqnum

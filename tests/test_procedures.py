@@ -1,4 +1,5 @@
 import pytest
+import time
 from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
@@ -85,6 +86,34 @@ def test_process_account_change_signal(db_session, debtor):
     assert len(cirs) == 1
     assert cirs[0].debtor_id == D_ID
     assert cirs[0].creditor_id == C_ID
+    last_heartbeat_ts = a.last_heartbeat_ts
+
+    # Account heartbeat
+    time.sleep(0.1)
+    p.process_account_change_signal(
+        debtor_id=D_ID,
+        creditor_id=C_ID,
+        change_seqnum=change_seqnum,
+        change_ts=change_ts,
+        principal=1000,
+        interest=12.5,
+        interest_rate=-0.5,
+        last_outgoing_transfer_date=last_outgoing_transfer_date,
+        creation_date=date(2018, 10, 20),
+        negligible_amount=5.5,
+        status=0,
+    )
+    a = Account.get_instance((D_ID, C_ID))
+    assert a.last_heartbeat_ts > last_heartbeat_ts
+    assert a.change_seqnum == change_seqnum
+    assert a.change_ts == change_ts
+    assert a.principal == 1000
+    assert a.interest == 12.5
+    assert a.interest_rate == -0.5
+    assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
+    assert a.negligible_amount == 5.5
+    assert a.status == 0
+    assert len(ChangeInterestRateSignal.query.all()) == 1
 
     # Older message
     p.process_account_change_signal(
