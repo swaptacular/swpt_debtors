@@ -107,3 +107,15 @@ def on_finalized_issuing_transfer_signal(
         recipient_creditor_id,
         committed_amount,
     )
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_account_purge_signal(
+        debtor_id: int,
+        creditor_id: int,
+        creation_date: str) -> None:
+    procedures.process_account_purge_signal(
+        debtor_id,
+        creditor_id,
+        iso8601.parse_date(creation_date).date(),
+    )

@@ -72,3 +72,11 @@ def test_on_finalized_issuing_transfer_signal(db_session):
         finalized_at_ts='2019-10-01T00:00:00Z',
         committed_amount=100,
     )
+
+
+def test_on_account_purge_signal(db_session):
+    a.on_account_purge_signal(
+        debtor_id=D_ID,
+        creditor_id=C_ID,
+        creation_date='2019-10-01',
+    )

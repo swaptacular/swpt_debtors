@@ -171,8 +171,8 @@ class AccountsScanner(TableScanner):
     def _purge_dead_accounts(self, rows, current_ts):
         c = self.table.c
         cutoff_ts = current_ts - self.dead_accounts_abandon_delay
-        c_debtor_id, c_creditor_id = c.debtor_id, c.creditor_id
-        pks_to_purge = [(row[c_debtor_id], row[c_creditor_id]) for row in rows if row[c.last_heartbeat_ts] < cutoff_ts]
+        c_debtor_id, c_creditor_id, c_last_heartbeat_ts = c.debtor_id, c.creditor_id, c.last_heartbeat_ts
+        pks_to_purge = [(row[c_debtor_id], row[c_creditor_id]) for row in rows if row[c_last_heartbeat_ts] < cutoff_ts]
         if pks_to_purge:
             pks_to_purge = db.session.\
                 query(Account.debtor_id, Account.creditor_id).\
