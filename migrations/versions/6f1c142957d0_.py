@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 36a7737565f7
+Revision ID: 6f1c142957d0
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-03 22:00:05.104050
+Create Date: 2020-02-05 21:29:27.325057
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '36a7737565f7'
+revision = '6f1c142957d0'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -21,20 +21,21 @@ def upgrade():
     op.create_table('account',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('change_seqnum', sa.Integer(), nullable=False, comment='Updated when a received `AccountChangeSignal` is applied.'),
-    sa.Column('change_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated when a received `AccountChangeSignal` is applied.'),
-    sa.Column('principal', sa.BigInteger(), nullable=False, comment='The total owed amount. Can be negative.'),
-    sa.Column('interest', sa.FLOAT(), nullable=False, comment='The amount of interest accumulated on the account before `change_ts`, but not added to the `principal` yet. Can be a negative number. `interest`gets zeroed and added to the principal once in a while (like once per week).'),
-    sa.Column('interest_rate', sa.REAL(), nullable=False, comment='Annual rate (in percents) at which interest accumulates on the account.'),
-    sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=True, comment='Updated on each transfer for which this account is the sender. This field is not updated on demurrage payments.'),
-    sa.Column('negligible_amount', sa.REAL(), nullable=False, comment='An amount that is considered negligible. It is used to decide whether an account can be safely deleted or not.'),
-    sa.Column('status', sa.SmallInteger(), nullable=False, comment='Additional account status flags.'),
+    sa.Column('change_seqnum', sa.Integer(), nullable=False),
+    sa.Column('change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('principal', sa.BigInteger(), nullable=False),
+    sa.Column('interest', sa.FLOAT(), nullable=False),
+    sa.Column('interest_rate', sa.REAL(), nullable=False),
+    sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=False),
+    sa.Column('negligible_amount', sa.REAL(), nullable=False),
+    sa.Column('status', sa.SmallInteger(), nullable=False),
     sa.Column('do_not_send_signals_until_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='If not NULL, no account maintenance signals will be sent to the `accounts` service until that moment. This prevents sending signals too often.'),
+    sa.Column('last_heartbeat_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last `AccountChangeSignal` has been processed. It is used to detect "dead" accounts. A "dead" account is an account that have been removed from the `swpt_accounts` service, but still exist in this table.'),
     sa.CheckConstraint('interest_rate >= -50.0 AND interest_rate <= 100.0'),
     sa.CheckConstraint('negligible_amount >= 2.0'),
     sa.CheckConstraint('principal > -9223372036854775808'),
     sa.PrimaryKeyConstraint('debtor_id', 'creditor_id'),
-    comment='Tells who owes what to whom. This table is a replica of the table with the same name in the `swpt_accounts` service. It is used to perform maintenance routines like changing interest rates.'
+    comment='Tells who owes what to whom. This table is a replica of the table with the same name in the `swpt_accounts` service. It is used to perform maintenance routines like changing interest rates. Most of the columns get their values from the corresponding fields in the last applied `AccountChangeSignal`.'
     )
     op.create_table('capitalize_interest_signal',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
@@ -102,13 +103,6 @@ def upgrade():
     sa.CheckConstraint('min_amount > 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'coordinator_request_id')
     )
-    op.create_table('purge_deleted_account_signal',
-    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
-    sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
-    sa.Column('creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('if_deleted_before', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
-    )
     op.create_table('running_transfer',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
@@ -165,7 +159,6 @@ def downgrade():
     op.drop_table('try_to_delete_account_signal')
     op.drop_index('idx_issuing_coordinator_request_id', table_name='running_transfer')
     op.drop_table('running_transfer')
-    op.drop_table('purge_deleted_account_signal')
     op.drop_table('prepare_transfer_signal')
     op.drop_table('finalize_prepared_transfer_signal')
     op.drop_table('debtor')

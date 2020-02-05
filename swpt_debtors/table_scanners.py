@@ -6,7 +6,7 @@ from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_
 from flask import current_app
 from .extensions import db
-from .models import Debtor, RunningTransfer, Account, PurgeDeletedAccountSignal, CapitalizeInterestSignal, \
+from .models import Debtor, RunningTransfer, Account, CapitalizeInterestSignal, \
     ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, MAX_INT64, ROOT_CREDITOR_ID
 from .procedures import insert_change_interest_rate_signal
 
@@ -48,6 +48,7 @@ class AccountsScanner(TableScanner):
         self.pending_transfers_max_delay = timedelta(days=current_app.config['APP_PENDING_TRANSFERS_MAX_DELAY_DAYS'])
         self.account_purge_delay = 2 * self.signalbus_max_delay + self.pending_transfers_max_delay
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
+        self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
     def _separate_accounts_by_type(self, rows):
@@ -167,26 +168,23 @@ class AccountsScanner(TableScanner):
                 Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
             }, synchronize_session=False)
 
-    def _purge_not_recently_changed(self, rows, current_ts):
+    def _purge_dead_accounts(self, rows, current_ts):
         c = self.table.c
-        cutoff_ts = current_ts - self.account_purge_delay
-        pks_to_purge = [(row[c.debtor_id], row[c.creditor_id]) for row in rows if row[c.change_ts] < cutoff_ts]
+        cutoff_ts = current_ts - self.dead_accounts_abandon_delay
+        pks_to_purge = [(row[c.debtor_id], row[c.creditor_id]) for row in rows if row[c.last_heartbeat_ts] < cutoff_ts]
         if pks_to_purge:
             pks_to_purge = db.session.\
                 query(Account.debtor_id, Account.creditor_id).\
                 filter(self.pk.in_(pks_to_purge)).\
-                filter(Account.status.op('&')(Account.STATUS_DELETED_FLAG) == Account.STATUS_DELETED_FLAG).\
-                filter(Account.change_ts < cutoff_ts).\
+                filter(Account.last_heartbeat_ts < cutoff_ts).\
                 with_for_update().\
                 all()
-            for pk in pks_to_purge:
-                db.session.add(PurgeDeletedAccountSignal(
-                    debtor_id=pk[0],
-                    creditor_id=pk[1],
-                    if_deleted_before=cutoff_ts,
-                ))
             Account.query.filter(self.pk.in_(pks_to_purge)).delete(synchronize_session=False)
             self._delete_debtors_with_purged_debtor_accounts(pks_to_purge)
+            pks_to_purge = set(pks_to_purge)
+            c_debtor_id, c_creditor_id = c.debtor_id, c.creditor_id
+            rows = [row for row in rows if ((row[c_debtor_id], row[c_creditor_id]) not in pks_to_purge)]
+        return rows
 
     def _delete_debtors_with_purged_debtor_accounts(self, purged_account_pks):
         debtors_ids = [debtor_id for debtor_id, creditor_id in purged_account_pks if creditor_id == ROOT_CREDITOR_ID]
@@ -196,7 +194,8 @@ class AccountsScanner(TableScanner):
     @atomic
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
-        regular_account_rows, deleted_account_rows, _ = self._separate_accounts_by_type(rows)
+        alive_account_rows = self._purge_dead_accounts(rows, current_ts)
+        regular_account_rows, deleted_account_rows, _ = self._separate_accounts_by_type(alive_account_rows)
         regular_account_rows = self._remove_muted_accounts(regular_account_rows, current_ts)
         pks_to_mute = []
         pks_to_mute.extend(self._check_interest_rates(regular_account_rows, current_ts))
@@ -204,4 +203,3 @@ class AccountsScanner(TableScanner):
         pks_to_mute.extend(self._check_negative_balances(regular_account_rows, current_ts))
         pks_to_mute.extend(self._check_scheduled_for_deletion(regular_account_rows, current_ts))
         self._mute_accounts(pks_to_mute, current_ts)
-        self._purge_not_recently_changed(deleted_account_rows, current_ts)

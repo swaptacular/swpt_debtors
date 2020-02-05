@@ -28,7 +28,7 @@ def test_collect_running_transfers(app_unsafe_session):
 
 
 def test_scan_accounts(app_unsafe_session):
-    from swpt_debtors.models import Debtor, PurgeDeletedAccountSignal, ChangeInterestRateSignal, \
+    from swpt_debtors.models import Debtor, ChangeInterestRateSignal, \
         CapitalizeInterestSignal, ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
 
     current_ts = datetime.now(tz=timezone.utc)
@@ -37,10 +37,10 @@ def test_scan_accounts(app_unsafe_session):
     app = app_unsafe_session
     Debtor.query.delete()
     Account.query.delete()
-    PurgeDeletedAccountSignal.query.delete()
     ChangeInterestRateSignal.query.delete()
     CapitalizeInterestSignal.query.delete()
     ZeroOutNegativeBalanceSignal.query.delete()
+    TryToDeleteAccountSignal.query.delete()
     db.session.commit()
     db.session.add(Debtor(debtor_id=111, interest_rate_target=5.55))
     db.session.add(Account(
@@ -118,21 +118,13 @@ def test_scan_accounts(app_unsafe_session):
     db.session.commit()
     db.engine.execute('ANALYZE account')
     assert len(Account.query.all()) == 6
-    assert len(PurgeDeletedAccountSignal.query.all()) == 0
     assert len(ChangeInterestRateSignal.query.all()) == 0
     assert len(CapitalizeInterestSignal.query.all()) == 0
     assert len(ZeroOutNegativeBalanceSignal.query.all()) == 0
     runner = app.test_cli_runner()
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
-    assert len(Account.query.all()) == 5
-
-    purge_signals = PurgeDeletedAccountSignal.query.all()
-    assert len(purge_signals) == 1
-    ps = purge_signals[0]
-    assert ps.debtor_id == 1
-    assert ps.creditor_id == 2
-    assert ps.if_deleted_before > past_ts
+    assert len(Account.query.all()) == 6
 
     change_interest_rate_signals = ChangeInterestRateSignal.query.all()
     assert len(change_interest_rate_signals) == 2
@@ -160,7 +152,6 @@ def test_scan_accounts(app_unsafe_session):
 
     Debtor.query.delete()
     Account.query.delete()
-    PurgeDeletedAccountSignal.query.delete()
     ChangeInterestRateSignal.query.delete()
     CapitalizeInterestSignal.query.delete()
     ZeroOutNegativeBalanceSignal.query.delete()
@@ -169,14 +160,13 @@ def test_scan_accounts(app_unsafe_session):
 
 
 def test_scan_accounts_delete_debtor(app_unsafe_session):
-    from swpt_debtors.models import Debtor, PurgeDeletedAccountSignal
+    from swpt_debtors.models import Debtor
 
     current_ts = datetime.now(tz=timezone.utc)
     past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     Debtor.query.delete()
     Account.query.delete()
-    PurgeDeletedAccountSignal.query.delete()
     db.session.commit()
     db.session.add(Debtor(debtor_id=1, deactivated_at_date=current_ts.date()))
     db.session.add(Debtor(debtor_id=2, deactivated_at_date=current_ts.date()))
@@ -191,12 +181,12 @@ def test_scan_accounts_delete_debtor(app_unsafe_session):
         last_outgoing_transfer_date=past_ts,
         negligible_amount=2.0,
         status=Account.STATUS_DELETED_FLAG,
+        last_heartbeat_ts=past_ts,
     ))
     db.session.commit()
     db.engine.execute('ANALYZE account')
     assert len(Debtor.query.all()) == 2
     assert len(Account.query.all()) == 1
-    assert len(PurgeDeletedAccountSignal.query.all()) == 0
     runner = app.test_cli_runner()
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
@@ -204,14 +194,6 @@ def test_scan_accounts_delete_debtor(app_unsafe_session):
     assert len(Debtor.query.filter_by(debtor_id=2).all()) == 1
     assert len(Account.query.all()) == 0
 
-    purge_signals = PurgeDeletedAccountSignal.query.all()
-    assert len(purge_signals) == 1
-    ps = purge_signals[0]
-    assert ps.debtor_id == 1
-    assert ps.creditor_id == ROOT_CREDITOR_ID
-    assert ps.if_deleted_before > past_ts
-
     Debtor.query.delete()
     Account.query.delete()
-    PurgeDeletedAccountSignal.query.delete()
     db.session.commit()

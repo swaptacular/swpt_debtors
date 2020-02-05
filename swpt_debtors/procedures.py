@@ -299,9 +299,10 @@ def process_account_change_signal(debtor_id: int,
         account.interest = interest
         account.interest_rate = interest_rate
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
-        account.status = status
         account.negligible_amount = negligible_amount
+        account.status = status
         account.do_not_send_signals_until_ts = None
+        account.last_heartbeat_ts = datetime.now(tz=timezone.utc)
     else:
         account = Account(
             debtor_id=debtor_id,

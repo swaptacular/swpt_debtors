@@ -364,53 +364,26 @@ class Account(db.Model):
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     creditor_id = db.Column(db.BigInteger, primary_key=True)
-    change_seqnum = db.Column(
-        db.Integer,
-        nullable=False,
-        comment='Updated when a received `AccountChangeSignal` is applied.',
-    )
-    change_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        comment='Updated when a received `AccountChangeSignal` is applied.',
-    )
-    principal = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The total owed amount. Can be negative.',
-    )
-    interest = db.Column(
-        db.FLOAT,
-        nullable=False,
-        comment='The amount of interest accumulated on the account before `change_ts`, '
-                'but not added to the `principal` yet. Can be a negative number. `interest`'
-                'gets zeroed and added to the principal once in a while (like once per week).',
-    )
-    interest_rate = db.Column(
-        db.REAL,
-        nullable=False,
-        comment='Annual rate (in percents) at which interest accumulates on the account.',
-    )
-    last_outgoing_transfer_date = db.Column(
-        db.DATE,
-        comment='Updated on each transfer for which this account is the sender. This field is '
-                'not updated on demurrage payments.',
-    )
-    negligible_amount = db.Column(
-        db.REAL,
-        nullable=False,
-        comment='An amount that is considered negligible. It is used to decide whether '
-                'an account can be safely deleted or not.',
-    )
-    status = db.Column(
-        db.SmallInteger,
-        nullable=False,
-        comment='Additional account status flags.',
-    )
+    change_seqnum = db.Column(db.Integer, nullable=False)
+    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+    principal = db.Column(db.BigInteger, nullable=False)
+    interest = db.Column(db.FLOAT, nullable=False)
+    interest_rate = db.Column(db.REAL, nullable=False)
+    last_outgoing_transfer_date = db.Column(db.DATE, nullable=False)
+    negligible_amount = db.Column(db.REAL, nullable=False)
+    status = db.Column(db.SmallInteger, nullable=False)
     do_not_send_signals_until_ts = db.Column(
         db.TIMESTAMP(timezone=True),
         comment='If not NULL, no account maintenance signals will be sent to the `accounts` '
                 'service until that moment. This prevents sending signals too often.',
+    )
+    last_heartbeat_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        nullable=False,
+        default=get_now_utc,
+        comment='The moment at which the last `AccountChangeSignal` has been processed. It is '
+                'used to detect "dead" accounts. A "dead" account is an account that have been '
+                'removed from the `swpt_accounts` service, but still exist in this table.',
     )
     __table_args__ = (
         db.CheckConstraint((interest_rate >= INTEREST_RATE_FLOOR) & (interest_rate <= INTEREST_RATE_CEIL)),
@@ -419,7 +392,8 @@ class Account(db.Model):
         {
             'comment': 'Tells who owes what to whom. This table is a replica of the table with the '
                        'same name in the `swpt_accounts` service. It is used to perform maintenance '
-                       'routines like changing interest rates.',
+                       'routines like changing interest rates. Most of the columns get their values '
+                       'from the corresponding fields in the last applied `AccountChangeSignal`.',
         }
     )
 
@@ -534,21 +508,6 @@ class TryToDeleteAccountSignal(Signal):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     creditor_id = db.Column(db.BigInteger, nullable=False)
-
-
-class PurgeDeletedAccountSignal(Signal):
-    queue_name = 'swpt_accounts'
-    actor_name = 'purge_deleted_account'
-
-    class __marshmallow__(Schema):
-        debtor_id = fields.Integer()
-        creditor_id = fields.Integer()
-        if_deleted_before = fields.DateTime()
-
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    creditor_id = db.Column(db.BigInteger, nullable=False)
-    if_deleted_before = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
 class ConfigureAccountSignal(Signal):
