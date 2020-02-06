@@ -75,7 +75,7 @@ def get_or_create_debtor(debtor_id: int) -> Debtor:
 
 
 @atomic
-def terminate_debtor(debtor_id: int) -> Optional[Debtor]:
+def deactivate_debtor(debtor_id: int) -> Optional[Debtor]:
     debtor = Debtor.lock_instance(debtor_id)
     if debtor:
         current_ts = datetime.now(tz=timezone.utc)

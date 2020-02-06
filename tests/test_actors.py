@@ -11,8 +11,8 @@ def test_create_debtor(db_session):
     )
 
 
-def test_terminate_debtor(db_session):
-    a.terminate_debtor(
+def test_deactivate_debtor(db_session):
+    a.deactivate_debtor(
         debtor_id=D_ID,
     )
 

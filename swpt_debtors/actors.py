@@ -11,10 +11,10 @@ def create_debtor(debtor_id: int) -> None:
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME)
-def terminate_debtor(debtor_id: int) -> None:
-    """Permanently terminate a debtor."""
+def deactivate_debtor(debtor_id: int) -> None:
+    """Permanently deactivate a debtor."""
 
-    procedures.terminate_debtor(debtor_id)
+    procedures.deactivate_debtor(debtor_id)
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)

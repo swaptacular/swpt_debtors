@@ -40,18 +40,18 @@ def test_get_or_create_debtor(db_session):
     assert len(ConfigureAccountSignal.query.all()) == 1
 
 
-def test_terminate_debtor(db_session, debtor):
-    p.terminate_debtor(D_ID)
+def test_deactivate_debtor(db_session, debtor):
+    p.deactivate_debtor(D_ID)
     debtor = p.get_debtor(D_ID)
     assert not debtor.is_active
     assert debtor.deactivated_at_date is not None
 
-    p.terminate_debtor(D_ID)
+    p.deactivate_debtor(D_ID)
     debtor = p.get_debtor(D_ID)
     assert not debtor.is_active
     assert debtor.deactivated_at_date is not None
 
-    p.terminate_debtor(1234567890)
+    p.deactivate_debtor(1234567890)
     assert p.get_debtor(1234567890) is None
 
 
