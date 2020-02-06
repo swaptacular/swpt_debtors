@@ -223,10 +223,10 @@ def process_prepared_issuing_transfer_signal(
         debtor_id: int,
         sender_creditor_id: int,
         transfer_id: int,
-        recipient_creditor_id: int,
-        sender_locked_amount: int,
         coordinator_id: int,
-        coordinator_request_id: int) -> None:
+        coordinator_request_id: int,
+        sender_locked_amount: int,
+        recipient_creditor_id: int) -> None:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
@@ -291,8 +291,8 @@ def process_finalized_issuing_transfer_signal(
 def process_account_change_signal(
         debtor_id: int,
         creditor_id: int,
-        change_seqnum: int,
         change_ts: datetime,
+        change_seqnum: int,
         principal: int,
         interest: float,
         interest_rate: float,
