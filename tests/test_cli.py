@@ -157,6 +157,18 @@ def test_scan_accounts(app_unsafe_session):
     assert ttdas.debtor_id == 11111
     assert ttdas.creditor_id == 22222
 
+    # Ensure interest is not capitalized too often.
+    Account.query.filter_by(debtor_id=111, creditor_id=222).update(
+        {Account.interest: 200.0, Account.do_not_send_signals_until_ts: None},
+        synchronize_session=False,
+    )
+    db.session.commit()
+    db.engine.execute('ANALYZE account')
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    assert result.exit_code == 0
+    assert len(CapitalizeInterestSignal.query.all()) == 2
+
     Debtor.query.delete()
     Account.query.delete()
     ChangeInterestRateSignal.query.delete()

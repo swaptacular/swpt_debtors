@@ -6,9 +6,8 @@ from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_
 from flask import current_app
 from .extensions import db
-from .models import Debtor, RunningTransfer, Account, CapitalizeInterestSignal, \
+from .models import Debtor, RunningTransfer, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
     ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, MAX_INT64, ROOT_CREDITOR_ID
-from .procedures import insert_change_interest_rate_signal
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -49,6 +48,8 @@ class AccountsScanner(TableScanner):
         self.account_purge_delay = 2 * self.signalbus_max_delay + self.pending_transfers_max_delay
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])
+        self.min_interest_cap_interval = timedelta(days=current_app.config['APP_MIN_INTEREST_CAPITALIZATION_DAYS'])
+        self.max_interest_to_principal_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
     def _separate_accounts_by_type(self, rows):
@@ -109,14 +110,21 @@ class AccountsScanner(TableScanner):
             if not has_correct_interest_rate:
                 pk = (row[c.debtor_id], row[c.creditor_id])
                 pks.append(pk)
-                insert_change_interest_rate_signal(pk[0], pk[1], interest_rate)
+                db.session.add(ChangeInterestRateSignal(
+                    debtor_id=pk[0],
+                    creditor_id=pk[1],
+                    interest_rate=interest_rate,
+                ))
         return pks
 
     def _check_accumulated_interests(self, rows, current_ts):
         pks = []
         c = self.table.c
-        max_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
+        max_ratio = self.max_interest_to_principal_ratio
+        cutoff_ts = current_ts - self.min_interest_cap_interval
         for row in rows:
+            if row[c.last_interest_capitalization_ts] > cutoff_ts:
+                continue
             accumulated_interest = self._calc_accumulated_interest(row, current_ts)
             ratio = abs(accumulated_interest) / (1 + abs(row[c.principal]))
             if abs(accumulated_interest) > 1 and ratio > max_ratio:
@@ -127,6 +135,10 @@ class AccountsScanner(TableScanner):
                     creditor_id=pk[1],
                     accumulated_interest_threshold=accumulated_interest // 2,
                 ))
+        if pks:
+            Account.query.filter(self.pk.in_(pks)).update({
+                Account.last_interest_capitalization_ts: current_ts,
+            }, synchronize_session=False)
         return pks
 
     def _check_negative_balances(self, rows, current_ts):

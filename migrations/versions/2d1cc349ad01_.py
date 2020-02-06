@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 8112b6860e39
+Revision ID: 2d1cc349ad01
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-05 23:01:06.375627
+Create Date: 2020-02-06 15:29:55.361857
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '8112b6860e39'
+revision = '2d1cc349ad01'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -21,17 +21,18 @@ def upgrade():
     op.create_table('account',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('creation_date', sa.DATE(), nullable=False),
     sa.Column('change_seqnum', sa.Integer(), nullable=False),
     sa.Column('change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('principal', sa.BigInteger(), nullable=False),
     sa.Column('interest', sa.FLOAT(), nullable=False),
     sa.Column('interest_rate', sa.REAL(), nullable=False),
     sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=False),
+    sa.Column('creation_date', sa.DATE(), nullable=False),
     sa.Column('negligible_amount', sa.REAL(), nullable=False),
     sa.Column('status', sa.SmallInteger(), nullable=False),
     sa.Column('do_not_send_signals_until_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='If not NULL, no account maintenance signals will be sent to the `accounts` service until that moment. This prevents sending signals too often.'),
     sa.Column('last_heartbeat_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last `AccountChangeSignal` has been processed. It is used to detect "dead" accounts. A "dead" account is an account that have been removed from the `swpt_accounts` service, but still exist in this table.'),
+    sa.Column('last_interest_capitalization_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last interest capitalization was triggered. It is used to avoid capitalizing interest too often.'),
     sa.CheckConstraint('interest_rate >= -50.0 AND interest_rate <= 100.0'),
     sa.CheckConstraint('negligible_amount >= 2.0'),
     sa.CheckConstraint('principal > -9223372036854775808'),

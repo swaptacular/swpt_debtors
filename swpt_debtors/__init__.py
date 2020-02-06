@@ -60,6 +60,7 @@ class Configuration(metaclass=MetaFlaskEnv):
     APP_MAX_INTEREST_TO_PRINCIPAL_RATIO = 0.01
     APP_RUNNING_TRANSFERS_ABANDON_DAYS = 365
     APP_DEAD_ACCOUNTS_ABANDON_DAYS = 365
+    APP_MIN_INTEREST_CAPITALIZATION_DAYS = 14
 
 
 def create_app(config_dict={}):
