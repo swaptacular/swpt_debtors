@@ -172,8 +172,7 @@ def initiate_transfer(
             amount=amount,
             transfer_info=transfer_info,
             finalized_at_ts=datetime.now(tz=timezone.utc),
-            error_code='DEB001',
-            error_message='Unrecognized recipient URI.',
+            error={'errorCode': 'DEB001', 'message': 'Unrecognized recipient URI.'},
         )
     else:
         _insert_running_transfer_or_raise_conflict_error(
@@ -213,7 +212,6 @@ def process_account_purge_signal(debtor_id: int, creditor_id: int, creation_date
 def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_request_id: int, details: dict) -> None:
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and not rt.is_finalized:
-        assert details is not None
         _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=details)
         db.session.delete(rt)
 
@@ -464,8 +462,7 @@ def _finalize_initiated_transfer(
         initiated_transfer.finalized_at_ts = finalized_at_ts or datetime.now(tz=timezone.utc)
         initiated_transfer.is_successful = error is None
         if error is not None:
-            initiated_transfer.error_code = str(error.get('error_code', ''))
-            initiated_transfer.error_message = str(error.get('message', ''))
+            initiated_transfer.error = error
 
 
 def _insert_configure_account_signal(debtor_id: int) -> None:

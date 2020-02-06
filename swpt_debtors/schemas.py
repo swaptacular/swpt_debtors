@@ -198,18 +198,24 @@ class DebtorPolicyUpdateRequestSchema(Schema):
 
 
 class TransferErrorSchema(Schema):
-    error_code = fields.String(
+    errorCode = fields.String(
         required=True,
         dump_only=True,
-        data_key='code',
         description='The error code.',
-        example='ACC003',
+        example='ACC005',
     )
     message = fields.String(
         required=True,
         dump_only=True,
         description='The error message.',
-        example='The recipient account does not exist.',
+        example='The available balance is insufficient.',
+    )
+    avlBalance = fields.Integer(
+        required=False,
+        dump_only=True,
+        format="int64",
+        description='The amount currently available on the account.',
+        example=10000,
     )
 
 

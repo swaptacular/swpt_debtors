@@ -256,20 +256,15 @@ class InitiatedTransfer(db.Model):
         default=False,
         comment='Whether the transfer has been successful or not.',
     )
-    error_code = db.Column(
-        db.String,
-        comment="The error code, in case the transfer has not been successful.",
-    )
-    error_message = db.Column(
-        db.String,
-        comment="The error message, in case the transfer has not been successful.",
+    error = db.Column(
+        pg.JSON,
+        comment='Describes the reason of the failure, in case the transfer has not been successful.',
     )
     __table_args__ = (
         db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
         db.CheckConstraint(amount > 0),
         db.CheckConstraint(or_(is_successful == false(), finalized_at_ts != null())),
-        db.CheckConstraint(or_(finalized_at_ts == null(), is_successful == true(), error_code != null())),
-        db.CheckConstraint(or_(error_code == null(), error_message != null())),
+        db.CheckConstraint(or_(finalized_at_ts == null(), is_successful == true(), error != null())),
         {
             'comment': 'Represents an initiated issuing transfer. A new row is inserted when '
                        'a debtor creates a new issuing transfer. The row is deleted when the '
@@ -289,7 +284,7 @@ class InitiatedTransfer(db.Model):
     @property
     def errors(self):
         if self.is_finalized and not self.is_successful:
-            return [{'error_code': self.error_code, 'message': self.error_message}]
+            return [self.error]
         return []
 
 

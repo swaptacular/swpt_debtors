@@ -55,7 +55,7 @@ def test_on_rejected_issuing_transfer_signal(db_session):
         coordinator_type='issuing',
         coordinator_id=C_ID,
         coordinator_request_id=1,
-        details={'error_code': '123456', 'message': 'Oops!'},
+        details={'errorCode': '123456', 'message': 'Oops!'},
     )
 
 

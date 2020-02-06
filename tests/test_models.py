@@ -62,10 +62,9 @@ def test_initiated_transfer_attrs(debtor, db_session, current_ts):
     assert isinstance(t.initiated_at_ts, datetime)
     assert not t.is_successful
     t.finalized_at_ts = current_ts
-    t.error_code = 'Uups!'
-    t.error_message = 'Just testing'
+    t.error = {'errorCode': 'Uups!', 'message': 'Just testing'}
     assert t.is_finalized
-    assert t.errors == [{'error_code': 'Uups!', 'message': 'Just testing'}]
+    assert t.errors == [{'errorCode': 'Uups!', 'message': 'Just testing'}]
     t.is_successful = True
     assert t.errors == []
 

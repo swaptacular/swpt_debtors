@@ -393,7 +393,7 @@ def test_failed_transfer(db_session, debtor):
     p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
     pts = PrepareTransferSignal.query.all()[0]
     p.process_rejected_issuing_transfer_signal(D_ID, pts.coordinator_request_id, details={
-        'error_code': 'TEST',
+        'errorCode': 'TEST',
         'message': 'A testing error.',
     })
     assert len(FinalizePreparedTransferSignal.query.all()) == 0
@@ -406,7 +406,7 @@ def test_failed_transfer(db_session, debtor):
     assert not it.is_successful
 
     p.process_rejected_issuing_transfer_signal(D_ID, pts.coordinator_request_id, details={
-        'error_code': 'TEST',
+        'errorCode': 'TEST',
         'message': 'A testing error.',
     })
     assert len(RunningTransfer.query.all()) == 0
