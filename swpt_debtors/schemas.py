@@ -205,7 +205,7 @@ class TransferErrorSchema(Schema):
         example='ACC005',
     )
     message = fields.String(
-        required=True,
+        required=False,
         dump_only=True,
         description='The error message.',
         example='The available amount is insufficient.',
