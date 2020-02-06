@@ -208,9 +208,9 @@ class TransferErrorSchema(Schema):
         required=True,
         dump_only=True,
         description='The error message.',
-        example='The available balance is insufficient.',
+        example='The available amount is insufficient.',
     )
-    avlBalance = fields.Integer(
+    avlAmount = fields.Integer(
         required=False,
         dump_only=True,
         format="int64",
