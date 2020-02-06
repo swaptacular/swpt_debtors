@@ -100,7 +100,7 @@ class AccountsScanner(TableScanner):
         return accumulated_interest
 
     def _check_interest_rates(self, rows, current_ts):
-        pks = []
+        pks = set()
         c = self.table.c
         debtor_ids = [row[c.debtor_id] for row in rows]
         interest_rates = self._get_debtor_interest_rates(debtor_ids, current_ts)
@@ -109,7 +109,7 @@ class AccountsScanner(TableScanner):
             has_correct_interest_rate = row[c.status] & established_rate_flag and row[c.interest_rate] == interest_rate
             if not has_correct_interest_rate:
                 pk = (row[c.debtor_id], row[c.creditor_id])
-                pks.append(pk)
+                pks.add(pk)
                 db.session.add(ChangeInterestRateSignal(
                     debtor_id=pk[0],
                     creditor_id=pk[1],
@@ -118,7 +118,7 @@ class AccountsScanner(TableScanner):
         return pks
 
     def _check_accumulated_interests(self, rows, current_ts):
-        pks = []
+        pks = set()
         c = self.table.c
         max_ratio = self.max_interest_to_principal_ratio
         cutoff_ts = current_ts - self.min_interest_cap_interval
@@ -129,7 +129,7 @@ class AccountsScanner(TableScanner):
             ratio = abs(accumulated_interest) / (1 + abs(row[c.principal]))
             if abs(accumulated_interest) > 1 and ratio > max_ratio:
                 pk = (row[c.debtor_id], row[c.creditor_id])
-                pks.append(pk)
+                pks.add(pk)
                 db.session.add(CapitalizeInterestSignal(
                     debtor_id=pk[0],
                     creditor_id=pk[1],
@@ -138,11 +138,12 @@ class AccountsScanner(TableScanner):
         if pks:
             Account.query.filter(self.pk.in_(pks)).update({
                 Account.last_interest_capitalization_ts: current_ts,
+                Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
             }, synchronize_session=False)
         return pks
 
     def _check_negative_balances(self, rows, current_ts):
-        pks = []
+        pks = set()
         c = self.table.c
         cutoff_date = (current_ts - self.zero_out_negative_balance_delay).date()
         for row in rows:
@@ -151,7 +152,7 @@ class AccountsScanner(TableScanner):
             transfer_date_is_old = transfer_date is None or transfer_date <= cutoff_date
             if balance < 0 and transfer_date_is_old:
                 pk = (row[c.debtor_id], row[c.creditor_id])
-                pks.append(pk)
+                pks.add(pk)
                 db.session.add(ZeroOutNegativeBalanceSignal(
                     debtor_id=pk[0],
                     creditor_id=pk[1],
@@ -160,14 +161,14 @@ class AccountsScanner(TableScanner):
         return pks
 
     def _check_scheduled_for_deletion(self, rows, current_ts):
-        pks = []
+        pks = set()
         c = self.table.c
         scheduled_for_deletion_flag = Account.STATUS_SCHEDULED_FOR_DELETION_FLAG
         for row in rows:
             if (row[c.status] & scheduled_for_deletion_flag
                     and 0 <= self._calc_current_balance(row, current_ts) <= row[c.negligible_amount]):
                 pk = (row[c.debtor_id], row[c.creditor_id])
-                pks.append(pk)
+                pks.add(pk)
                 db.session.add(TryToDeleteAccountSignal(
                     debtor_id=pk[0],
                     creditor_id=pk[1],
@@ -209,13 +210,15 @@ class AccountsScanner(TableScanner):
         alive_account_rows = self._purge_dead_accounts(rows, current_ts)
         regular_account_rows, _, _ = self._separate_accounts_by_type(alive_account_rows)
         regular_account_rows = self._remove_muted_accounts(regular_account_rows, current_ts)
-        pks_to_mute = []
-        pks_to_mute.extend(self._check_interest_rates(regular_account_rows, current_ts))
-        pks_to_mute.extend(self._check_accumulated_interests(regular_account_rows, current_ts))
-        pks_to_mute.extend(self._check_negative_balances(regular_account_rows, current_ts))
-        pks_to_mute.extend(self._check_scheduled_for_deletion(regular_account_rows, current_ts))
+        pks_to_mute = set()
+        pks_to_mute |= self._check_interest_rates(regular_account_rows, current_ts)
+        pks_to_mute |= self._check_negative_balances(regular_account_rows, current_ts)
+        pks_to_mute |= self._check_scheduled_for_deletion(regular_account_rows, current_ts)
+        capitalized_pks = self._check_accumulated_interests(regular_account_rows, current_ts)
 
         # An account change event has been triggered for all "muted"
         # accounts. The muted accounts will be un-muted when the
-        # triggered `AccountChangeSignal` is processed.
-        self._mute_accounts(pks_to_mute, current_ts)
+        # triggered `AccountChangeSignal` is processed. The
+        # `capitalized_pks` are excluded because they have been muted
+        # already.
+        self._mute_accounts(pks_to_mute - capitalized_pks, current_ts)
