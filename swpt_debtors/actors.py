@@ -33,6 +33,7 @@ def on_account_change_signal(
         creation_date: str,
         negligible_amount: float,
         status: int) -> None:
+
     procedures.process_account_change_signal(
         debtor_id,
         creditor_id,
@@ -59,6 +60,7 @@ def on_prepared_issuing_transfer_signal(
         prepared_at_ts: str,
         coordinator_id: int,
         coordinator_request_id: int) -> None:
+
     assert coordinator_type == 'issuing'
     procedures.process_prepared_issuing_transfer_signal(
         debtor_id,
@@ -77,6 +79,7 @@ def on_rejected_issuing_transfer_signal(
         coordinator_id: int,
         coordinator_request_id: int,
         details: dict) -> None:
+
     assert coordinator_type == 'issuing'
     assert details is not None
     procedures.process_rejected_issuing_transfer_signal(
@@ -98,6 +101,7 @@ def on_finalized_issuing_transfer_signal(
         prepared_at_ts: str,
         finalized_at_ts: str,
         committed_amount: int) -> None:
+
     assert sender_creditor_id == procedures.ROOT_CREDITOR_ID
     assert coordinator_type == 'issuing'
     procedures.process_finalized_issuing_transfer_signal(
@@ -115,6 +119,7 @@ def on_account_purge_signal(
         debtor_id: int,
         creditor_id: int,
         creation_date: str) -> None:
+
     procedures.process_account_purge_signal(
         debtor_id,
         creditor_id,

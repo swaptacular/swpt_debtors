@@ -86,10 +86,12 @@ def deactivate_debtor(debtor_id: int) -> Optional[Debtor]:
 
 
 @atomic
-def update_debtor_policy(debtor_id: int,
-                         interest_rate_target: Optional[float],
-                         new_interest_rate_limits: LowerLimitSequence,
-                         new_balance_limits: LowerLimitSequence) -> Debtor:
+def update_debtor_policy(
+        debtor_id: int,
+        interest_rate_target: Optional[float],
+        new_interest_rate_limits: LowerLimitSequence,
+        new_balance_limits: LowerLimitSequence) -> Debtor:
+
     debtor = _throttle_debtor_actions(debtor_id)
     current_ts = datetime.now(tz=timezone.utc)
     date_week_ago = (current_ts - timedelta(days=7)).date()
@@ -146,12 +148,14 @@ def delete_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> bool:
 
 
 @atomic
-def initiate_transfer(debtor_id: int,
-                      transfer_uuid: UUID,
-                      recipient_creditor_id: Optional[int],
-                      recipient_uri: str,
-                      amount: int,
-                      transfer_info: dict) -> InitiatedTransfer:
+def initiate_transfer(
+        debtor_id: int,
+        transfer_uuid: UUID,
+        recipient_creditor_id: Optional[int],
+        recipient_uri: str,
+        amount: int,
+        transfer_info: dict) -> InitiatedTransfer:
+
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert recipient_creditor_id is None or MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
@@ -215,13 +219,15 @@ def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_re
 
 
 @atomic
-def process_prepared_issuing_transfer_signal(debtor_id: int,
-                                             sender_creditor_id: int,
-                                             transfer_id: int,
-                                             recipient_creditor_id: int,
-                                             sender_locked_amount: int,
-                                             coordinator_id: int,
-                                             coordinator_request_id: int) -> None:
+def process_prepared_issuing_transfer_signal(
+        debtor_id: int,
+        sender_creditor_id: int,
+        transfer_id: int,
+        recipient_creditor_id: int,
+        sender_locked_amount: int,
+        coordinator_id: int,
+        coordinator_request_id: int) -> None:
+
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
@@ -271,6 +277,7 @@ def process_finalized_issuing_transfer_signal(
         coordinator_request_id: int,
         recipient_creditor_id: int,
         committed_amount: int) -> None:
+
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
@@ -281,17 +288,19 @@ def process_finalized_issuing_transfer_signal(
 
 
 @atomic
-def process_account_change_signal(debtor_id: int,
-                                  creditor_id: int,
-                                  change_seqnum: int,
-                                  change_ts: datetime,
-                                  principal: int,
-                                  interest: float,
-                                  interest_rate: float,
-                                  last_outgoing_transfer_date: date,
-                                  creation_date: date,
-                                  negligible_amount: float,
-                                  status: int) -> None:
+def process_account_change_signal(
+        debtor_id: int,
+        creditor_id: int,
+        change_seqnum: int,
+        change_ts: datetime,
+        principal: int,
+        interest: float,
+        interest_rate: float,
+        last_outgoing_transfer_date: date,
+        creation_date: date,
+        negligible_amount: float,
+        status: int) -> None:
+
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= creditor_id <= MAX_INT64
     assert MIN_INT32 <= change_seqnum <= MAX_INT32
@@ -363,11 +372,13 @@ def insert_change_interest_rate_signal(debtor_id: int, creditor_id: int, interes
     ))
 
 
-def _insert_running_transfer_or_raise_conflict_error(debtor: Debtor,
-                                                     transfer_uuid: UUID,
-                                                     recipient_creditor_id: int,
-                                                     amount: int,
-                                                     transfer_info: dict) -> RunningTransfer:
+def _insert_running_transfer_or_raise_conflict_error(
+        debtor: Debtor,
+        transfer_uuid: UUID,
+        recipient_creditor_id: int,
+        amount: int,
+        transfer_info: dict) -> RunningTransfer:
+
     running_transfer = RunningTransfer(
         debtor_id=debtor.debtor_id,
         transfer_uuid=transfer_uuid,
@@ -393,11 +404,13 @@ def _insert_running_transfer_or_raise_conflict_error(debtor: Debtor,
     return running_transfer
 
 
-def _raise_error_if_transfer_exists(debtor_id: int,
-                                    transfer_uuid: UUID,
-                                    recipient_uri: str,
-                                    amount: int,
-                                    transfer_info: dict) -> None:
+def _raise_error_if_transfer_exists(
+        debtor_id: int,
+        transfer_uuid: UUID,
+        recipient_uri: str,
+        amount: int,
+        transfer_info: dict) -> None:
+
     t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one_or_none()
     if t:
         if t.recipient_uri == recipient_uri and t.amount == amount and t.transfer_info == transfer_info:
@@ -445,6 +458,7 @@ def _finalize_initiated_transfer(
         transfer_uuid: int,
         finalized_at_ts: datetime = None,
         error: dict = None) -> None:
+
     initiated_transfer = InitiatedTransfer.lock_instance((debtor_id, transfer_uuid))
     if initiated_transfer and initiated_transfer.finalized_at_ts is None:
         initiated_transfer.finalized_at_ts = finalized_at_ts or datetime.now(tz=timezone.utc)
