@@ -135,11 +135,6 @@ class AccountsScanner(TableScanner):
                     creditor_id=pk[1],
                     accumulated_interest_threshold=accumulated_interest // 2,
                 ))
-        if pks:
-            Account.query.filter(self.pk.in_(pks)).update({
-                Account.last_interest_capitalization_ts: current_ts,
-                Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
-            }, synchronize_session=False)
         return pks
 
     def _check_negative_balances(self, rows, current_ts):
@@ -175,11 +170,12 @@ class AccountsScanner(TableScanner):
                 ))
         return pks
 
-    def _mute_accounts(self, pks_to_mute, current_ts):
+    def _mute_accounts(self, pks_to_mute, current_ts, capitalized=False):
         if pks_to_mute:
-            Account.query.filter(self.pk.in_(pks_to_mute)).update({
-                Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay,
-            }, synchronize_session=False)
+            new_values = {Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay}
+            if capitalized:
+                new_values[Account.last_interest_capitalization_ts] = current_ts
+            Account.query.filter(self.pk.in_(pks_to_mute)).update(new_values, synchronize_session=False)
 
     def _purge_dead_accounts(self, rows, current_ts):
         c = self.table.c
@@ -217,6 +213,6 @@ class AccountsScanner(TableScanner):
         capitalized_pks = self._check_accumulated_interests(nonmuted_regular_rows, current_ts)
 
         # All muted accounts will be un-muted when the triggered
-        # `AccountChangeSignal` have got processed. (Note that all
-        # `capitalized_pks` have been muted already.)
-        self._mute_accounts(pks_to_mute - capitalized_pks, current_ts)
+        # `AccountChangeSignal` is processed.
+        self._mute_accounts(capitalized_pks, current_ts, capitalized=True)
+        self._mute_accounts(pks_to_mute - capitalized_pks, current_ts, capitalized=False)
