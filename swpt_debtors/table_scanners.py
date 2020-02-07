@@ -207,18 +207,16 @@ class AccountsScanner(TableScanner):
     @atomic
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
-        alive_account_rows = self._purge_dead_accounts(rows, current_ts)
-        regular_account_rows, _, _ = self._separate_accounts_by_type(alive_account_rows)
-        regular_account_rows = self._remove_muted_accounts(regular_account_rows, current_ts)
+        alive_rows = self._purge_dead_accounts(rows, current_ts)
+        regular_rows, _, _ = self._separate_accounts_by_type(alive_rows)
+        nonmuted_regular_rows = self._remove_muted_accounts(regular_rows, current_ts)
         pks_to_mute = set()
-        pks_to_mute |= self._check_interest_rates(regular_account_rows, current_ts)
-        pks_to_mute |= self._check_negative_balances(regular_account_rows, current_ts)
-        pks_to_mute |= self._check_scheduled_for_deletion(regular_account_rows, current_ts)
-        capitalized_pks = self._check_accumulated_interests(regular_account_rows, current_ts)
+        pks_to_mute |= self._check_interest_rates(nonmuted_regular_rows, current_ts)
+        pks_to_mute |= self._check_negative_balances(nonmuted_regular_rows, current_ts)
+        pks_to_mute |= self._check_scheduled_for_deletion(nonmuted_regular_rows, current_ts)
+        capitalized_pks = self._check_accumulated_interests(nonmuted_regular_rows, current_ts)
 
-        # An account change event has been triggered for all "muted"
-        # accounts. The muted accounts will be un-muted when the
-        # triggered `AccountChangeSignal` is processed. The
-        # `capitalized_pks` are excluded because they have been muted
-        # already.
+        # All muted accounts will be un-muted when the triggered
+        # `AccountChangeSignal` have got processed. (Note that all
+        # `capitalized_pks` have been muted already.)
         self._mute_accounts(pks_to_mute - capitalized_pks, current_ts)
