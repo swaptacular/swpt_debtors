@@ -357,10 +357,6 @@ def process_account_change_signal(
         debtor = lock_or_create_debtor(debtor_id, sent_configure_account_signal=False)
         debtor.balance = MIN_INT64 if account.is_overflown else account.principal
         debtor.balance_ts = account.change_ts
-
-        # Try to set the correct status when creating a new debtor.
-        if debtor.balance != 0:
-            debtor.status |= Debtor.STATUS_HAS_ACTIVITY_FLAG
     elif not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         # When the account does not have an interest rate set yet, we
         # should immediately send a `ChangeInterestRateSignal`.
