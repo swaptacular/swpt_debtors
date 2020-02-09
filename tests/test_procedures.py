@@ -18,22 +18,22 @@ RECIPIENT_URI = 'https://example.com/creditors/1'
 
 @pytest.fixture
 def debtor(db_session):
-    return p.get_or_create_debtor(D_ID)
+    return p.lock_or_create_debtor(D_ID)
 
 
 def test_version(db_session):
     assert __version__
 
 
-def test_get_or_create_debtor(db_session):
-    debtor = p.get_or_create_debtor(D_ID)
+def test_lock_or_create_debtor(db_session):
+    debtor = p.lock_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
     assert not debtor.is_active
     assert debtor.deactivated_at_date is None
     cas = ConfigureAccountSignal.query.one()
     assert cas.debtor_id == D_ID
 
-    debtor = p.get_or_create_debtor(D_ID)
+    debtor = p.lock_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
     assert not debtor.is_active
     assert debtor.deactivated_at_date is None

@@ -7,7 +7,7 @@ from . import procedures
 def create_debtor(debtor_id: int) -> None:
     """Make sure a debtor with ID `debtor_id` exists."""
 
-    procedures.get_or_create_debtor(debtor_id)
+    procedures.lock_or_create_debtor(debtor_id)
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME)

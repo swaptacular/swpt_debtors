@@ -69,7 +69,10 @@ class Signal(db.Model):
 #       were deactivated a very long time ago (20 years for
 #       example). Such debtors should be deactivated (if they have not
 #       been already), and an account deletion request should be send
-#       for the debtor's account.
+#       for the debtor's account. The daemon should also delete
+#       debtors with `balance_ts==BEGINNING_OF_TIME`, which were
+#       created some time ago (chances are that such debtors do not
+#       have properly created accounts).
 class Debtor(db.Model):
     STATUS_HAS_ACTIVITY_FLAG = 1
 
@@ -104,7 +107,7 @@ class Debtor(db.Model):
     balance_ts = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,
-        default=get_now_utc,
+        default=BEGINNING_OF_TIME,
         comment='Updated on each change of the `balance` field.',
     )
     interest_rate_target = db.Column(

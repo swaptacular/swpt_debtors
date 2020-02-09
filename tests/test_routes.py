@@ -10,7 +10,7 @@ def client(app, db_session):
 
 @pytest.fixture(scope='function')
 def debtor(db_session):
-    return p.get_or_create_debtor(123)
+    return p.lock_or_create_debtor(123)
 
 
 def test_create_debtor(client):

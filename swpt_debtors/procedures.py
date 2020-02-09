@@ -63,14 +63,15 @@ def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
 
 
 @atomic
-def get_or_create_debtor(debtor_id: int) -> Debtor:
+def lock_or_create_debtor(debtor_id: int, sent_configure_account_signal: bool = True) -> Debtor:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
-    debtor = Debtor.get_instance(debtor_id)
+    debtor = Debtor.lock_instance(debtor_id)
     if debtor is None:
         debtor = Debtor(debtor_id=debtor_id)
         with db.retry_on_integrity_error():
             db.session.add(debtor)
-        _insert_configure_account_signal(debtor_id)
+        if sent_configure_account_signal:
+            _insert_configure_account_signal(debtor_id)
     return debtor
 
 
@@ -350,13 +351,16 @@ def process_account_change_signal(
             db.session.add(account)
 
     if account.creditor_id == ROOT_CREDITOR_ID:
-        # If this is a debtors's account, we must update debtor's
-        # `balance` and `balance_ts` columns.
-        balance = MIN_INT64 if account.is_overflown else account.principal
-        Debtor.query.filter_by(debtor_id=debtor_id).update({
-            Debtor.balance: balance,
-            Debtor.balance_ts: account.change_ts,
-        }, synchronize_session=False)
+        # If this is a debtor's account, we must update debtor's
+        # `balance` and `balance_ts` columns. (Or even create a
+        # debtor, if it does not exist.)
+        debtor = lock_or_create_debtor(debtor_id, sent_configure_account_signal=False)
+        debtor.balance = MIN_INT64 if account.is_overflown else account.principal
+        debtor.balance_ts = account.change_ts
+
+        # Try to set the correct status when creating a new debtor.
+        if debtor.balance != 0:
+            debtor.status |= Debtor.STATUS_HAS_ACTIVITY_FLAG
     elif not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         # When the account does not have an interest rate set yet, we
         # should immediately send a `ChangeInterestRateSignal`.
