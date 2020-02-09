@@ -332,6 +332,7 @@ def test_successful_transfer(db_session, debtor):
     assert pts.sender_creditor_id == ROOT_CREDITOR_ID
     assert pts.recipient_creditor_id == C_ID
     assert pts.minimum_account_balance == debtor.minimum_account_balance
+    coordinator_request_id = pts.coordinator_request_id
 
     p.process_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
@@ -340,7 +341,7 @@ def test_successful_transfer(db_session, debtor):
         recipient_creditor_id=C_ID,
         sender_locked_amount=1000,
         coordinator_id=D_ID,
-        coordinator_request_id=pts.coordinator_request_id,
+        coordinator_request_id=coordinator_request_id,
     )
     assert len(PrepareTransferSignal.query.all()) == 1
     fpts_list = FinalizePreparedTransferSignal.query.all()
@@ -360,33 +361,22 @@ def test_successful_transfer(db_session, debtor):
     it_list = InitiatedTransfer.query.all()
     assert len(it_list) == 1
     it = it_list[0]
-    assert it.is_finalized
-    assert it.is_successful
-
-    p.process_prepared_issuing_transfer_signal(
-        debtor_id=D_ID,
-        sender_creditor_id=ROOT_CREDITOR_ID,
-        transfer_id=777,
-        recipient_creditor_id=C_ID,
-        sender_locked_amount=1000,
-        coordinator_id=D_ID,
-        coordinator_request_id=pts.coordinator_request_id,
-    )
-
-    rt_list == RunningTransfer.query.all()
-    assert len(rt_list) == 1 and rt_list[0].is_finalized
-    it_list == InitiatedTransfer.query.all()
-    assert len(it_list) == 1 and it_list[0].is_finalized
+    assert not it.is_finalized
+    assert not it.is_successful
 
     p.process_finalized_issuing_transfer_signal(
         debtor_id=D_ID,
         transfer_id=777,
         coordinator_id=D_ID,
-        coordinator_request_id=pts.coordinator_request_id,
+        coordinator_request_id=coordinator_request_id,
         recipient_creditor_id=C_ID,
         committed_amount=1000,
     )
-    assert len(RunningTransfer.query.all()) == 0
+    it_list = InitiatedTransfer.query.all()
+    assert len(it_list) == 1
+    it = it_list[0]
+    assert it.is_finalized
+    assert it.is_successful
 
 
 def test_failed_transfer(db_session, debtor):

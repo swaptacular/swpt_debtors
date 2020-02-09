@@ -238,8 +238,16 @@ def process_prepared_issuing_transfer_signal(
         assert ROOT_CREDITOR_ID == sender_creditor_id
         assert rt.recipient_creditor_id == recipient_creditor_id
 
-        def commmit_transfer() -> None:
-            assert rt is not None
+        if not rt.is_finalized:
+            # We finalize the `RunningTransfer` record here, but we
+            # deliberately do not finalize the corresponding
+            # `InitiatedTransfer` record yet (it will be finalized
+            # when the `FinalizedTransferSignal` is received). We do
+            # this to avoid reporting a success too early, or even
+            # incorrectly in the case of a database crash.
+            rt.issuing_transfer_id = transfer_id
+
+        if rt.issuing_transfer_id == transfer_id:
             db.session.add(FinalizePreparedTransferSignal(
                 debtor_id=rt.debtor_id,
                 sender_creditor_id=ROOT_CREDITOR_ID,
@@ -247,15 +255,6 @@ def process_prepared_issuing_transfer_signal(
                 committed_amount=rt.amount,
                 transfer_info=rt.transfer_info,
             ))
-
-        if not rt.is_finalized:
-            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, finalized_at_ts=datetime.now(tz=timezone.utc))
-            rt.issuing_transfer_id = transfer_id
-            commmit_transfer()
-            return
-
-        if rt.issuing_transfer_id == transfer_id:
-            commmit_transfer()
             return
 
     # The newly prepared transfer is dismissed.
@@ -282,7 +281,13 @@ def process_finalized_issuing_transfer_signal(
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if (rt and rt.debtor_id == debtor_id and rt.issuing_transfer_id == transfer_id):
         assert rt.recipient_creditor_id == recipient_creditor_id
-        assert committed_amount == 0 or committed_amount == rt.amount
+
+        # When `committed_amount` is zero, the `InitiatedTransfer`
+        # record has been already finalized (with an error).
+        if committed_amount != 0:
+            assert committed_amount == rt.amount
+            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, finalized_at_ts=datetime.now(tz=timezone.utc))
+
         db.session.delete(rt)
 
 
