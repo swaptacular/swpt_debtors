@@ -71,18 +71,25 @@ class Signal(db.Model):
 #    account exists. If yes (which is extremely unlikely) -- update
 #    the `balance_ts`; if no -- delete the debtor immediately.
 #
-# 2. For debtors created some time ago (a month for example), but
-#    without any activity so far: Check if the debtor's account is the
-#    only account left. If yes -- deactivate the debtor and send an
-#    account deletion request; if there are other accounts -- set the
-#    account's "has activity" flag; if there are no accounts, debtor's
-#    or otherwise -- delete the debtor immediately.
+# 2. For debtors created some time ago (a month for example), which
+#    are not deactivated, but have no activity so far: Check if the
+#    debtor's account is the only account left. If yes -- deactivate
+#    the debtor; if there are other accounts -- set the account's "has
+#    activity" flag; if there are no accounts, debtor's or otherwise
+#    -- delete the debtor immediately.
 #
-# 3. For debtors that had had activity once, but were deactivated a
+# 3. For debtors that have no activity so far, and are deactivated:
+#    Check if the debtor's account is the only account left. If yes --
+#    send an account deletion request; if no -- do nothing. In both
+#    cases, modify the account record so as to prevent it from being
+#    checked for deletion for some time.
+#
+# 4. For debtors that had had activity once, but were deactivated a
 #    very long time ago (20 years for example): Check if the debtor's
 #    account is the only account left. If yes -- send an account
-#    deletion request; if no -- modify the account record so as to
-#    prevent it from being checked for deletion for some time.
+#    deletion request; if no -- do nothing. In both cases, modify the
+#    account record so as to prevent it from being checked for
+#    deletion for some time.
 class Debtor(db.Model):
     STATUS_HAS_ACTIVITY_FLAG = 1
 
