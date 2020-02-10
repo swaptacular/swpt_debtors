@@ -162,6 +162,43 @@ def test_process_account_change_signal(db_session, debtor):
     assert len(cirs) == 1
 
 
+def test_process_account_change_signal_no_debtor(db_session):
+    assert len(Debtor.query.all()) == 0
+
+    change_seqnum = 1
+    change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
+    last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
+    p.process_account_change_signal(
+        debtor_id=D_ID,
+        creditor_id=ROOT_CREDITOR_ID,
+        change_seqnum=change_seqnum,
+        change_ts=change_ts,
+        principal=-1000,
+        interest=0.0,
+        interest_rate=0.0,
+        last_outgoing_transfer_date=last_outgoing_transfer_date,
+        creation_date=date(2018, 10, 20),
+        negligible_amount=2.0,
+        status=0,
+    )
+    assert len(Account.query.all()) == 1
+    a = Account.get_instance((D_ID, ROOT_CREDITOR_ID))
+    assert a.change_seqnum == change_seqnum
+    assert a.change_ts == change_ts
+    assert a.principal == -1000
+    assert a.interest == 0.0
+    assert a.interest_rate == 0.0
+    assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
+    assert a.negligible_amount == 2.0
+    assert a.status == 0
+    assert len(ChangeInterestRateSignal.query.all()) == 0
+    d = Debtor.query.filter_by(debtor_id=D_ID).one()
+    assert d.deactivated_at_date is not None
+    assert d.initiated_transfers_count == 0
+    assert d.balance == -1000
+    assert d.balance_ts == change_ts
+
+
 def test_process_root_account_change_signal(db_session, debtor):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
@@ -422,4 +459,10 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
     assert len(Account.query.all()) == 1
     p.process_account_purge_signal(D_ID, p.ROOT_CREDITOR_ID, creation_date)
     assert len(Account.query.all()) == 0
-    assert len(Debtor.query.all()) == 0
+    d = Debtor.query.one()
+    assert d
+    assert not d.status & Debtor.STATUS_HAS_ACCOUNT_FLAG
+    assert d.deactivated_at_date is not None
+    assert d.initiated_transfers_count == 0
+    assert len(InitiatedTransfer.query.filter_by(debtor_id=D_ID).all()) == 0
+    assert len(Account.query.all()) == 0

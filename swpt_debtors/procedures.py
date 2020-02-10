@@ -76,11 +76,28 @@ def lock_or_create_debtor(debtor_id: int, sent_configure_account_signal: bool = 
 
 
 @atomic
-def deactivate_debtor(debtor_id: int) -> Optional[Debtor]:
+def update_debtor_balance(debtor_id: int, balance: int, balance_ts: datetime) -> None:
+    debtor = Debtor.lock_instance(debtor_id)
+    if debtor is None:
+        # It the debtor does not exist, we create a new deactivated
+        # debtor. That way, we know that the debtor's account will be
+        # deleted from the `accounts` service (eventually).
+        debtor = Debtor(debtor_id=debtor_id, deactivated_at_date=datetime.now(tz=timezone.utc).date())
+        with db.retry_on_integrity_error():
+            db.session.add(debtor)
+    debtor.balance = balance
+    debtor.balance_ts = balance_ts
+    debtor.status |= Debtor.STATUS_HAS_ACCOUNT_FLAG
+
+
+@atomic
+def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> Optional[Debtor]:
     debtor = Debtor.lock_instance(debtor_id)
     if debtor:
-        current_ts = datetime.now(tz=timezone.utc)
-        debtor.deactivated_at_date = current_ts.date()
+        if debtor.deactivated_at_date is None:
+            debtor.deactivated_at_date = datetime.now(tz=timezone.utc).date()
+        if deleted_account:
+            debtor.status &= ~Debtor.STATUS_HAS_ACCOUNT_FLAG
         debtor.initiated_transfers_count = 0
         InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
     return debtor
@@ -203,10 +220,7 @@ def process_account_purge_signal(debtor_id: int, creditor_id: int, creation_date
     if account and account.creation_date == creation_date:
         db.session.delete(account)
         if creditor_id == ROOT_CREDITOR_ID:
-            # When the debtor's account is removed, the debtor should
-            # be removed too, because the debtor can not function
-            # normally without an account.
-            Debtor.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
+            deactivate_debtor(debtor_id, deleted_account=True)
 
 
 @atomic
@@ -354,9 +368,9 @@ def process_account_change_signal(
         # If this is a debtor's account, we must update debtor's
         # `balance` and `balance_ts` columns. (Or even create a
         # debtor, if it does not exist.)
-        debtor = lock_or_create_debtor(debtor_id, sent_configure_account_signal=False)
-        debtor.balance = MIN_INT64 if account.is_overflown else account.principal
-        debtor.balance_ts = account.change_ts
+        balance = MIN_INT64 if account.is_overflown else account.principal
+        balance_ts = account.change_ts
+        update_debtor_balance(debtor_id, balance, balance_ts)
     elif not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         # When the account does not have an interest rate set yet, we
         # should immediately send a `ChangeInterestRateSignal`.

@@ -66,32 +66,28 @@ class Signal(db.Model):
 # TODO: Implement a daemon that garbage-collects debtors. Here is how
 #       it should work:
 #
-# 1. For debtors created some time ago (a month for example), having
-#    `balance_ts==BEGINNING_OF_TIME`: Check if a corresponding debtor
-#    account exists. If yes (which is extremely unlikely) -- update
-#    the `balance_ts`; if no -- delete the debtor immediately.
+# 1. For debtors created some time ago (a month for example), which
+#    are not deactivated, but have their "has account" flag NOT SET:
+#    Deactivate the debtor.
 #
 # 2. For debtors created some time ago (a month for example), which
-#    are not deactivated, but have no activity so far: Check if the
-#    debtor's account is the only account left. If yes -- deactivate
-#    the debtor; if there are other accounts -- set the account's "has
-#    activity" flag; if there are no accounts, debtor's or otherwise
-#    -- delete the debtor immediately.
+#    are not deactivated, but have their "has activity" flag NOT SET:
+#    Deactivate the debtor.
 #
-# 3. For debtors that have no activity so far, and are deactivated:
-#    Check if the debtor's account is the only account left. If yes --
-#    send an account deletion request; if no -- do nothing. In both
-#    cases, modify the account record so as to prevent it from being
-#    checked for deletion for some time.
+# 3. For debtors which are deactivated, and have their "has account"
+#    flag SET: Check if the debtor's account is the only account left.
+#    If no -- do nothing; if yes -- send an account deletion request.
+#    In both cases, modify the account record so as to prevent it from
+#    being checked for garbage-collection for some time.
 #
-# 4. For debtors that had had activity once, but were deactivated a
-#    very long time ago (20 years for example): Check if the debtor's
-#    account is the only account left. If yes -- send an account
-#    deletion request; if no -- do nothing. In both cases, modify the
-#    account record so as to prevent it from being checked for
-#    deletion for some time.
+# 4. For debtors which are deactivated, and have their "has account"
+#    flag NOT SET: Check if the "has activity" flag is SET. If no --
+#    the debtor can be deleted immediately; if yes -- the debtor can
+#    be deleted only if a very long time has passed since debtor's
+#    deactivation date (20 years for example).
 class Debtor(db.Model):
     STATUS_HAS_ACTIVITY_FLAG = 1
+    STATUS_HAS_ACCOUNT_FLAG = 2
 
     debtor_id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
     status = db.Column(

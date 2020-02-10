@@ -4,10 +4,11 @@ from typing import NamedTuple, Dict, List, TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_
+from sqlalchemy.sql.functions import coalesce
 from flask import current_app
 from .extensions import db
 from .models import Debtor, RunningTransfer, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
-    ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, MAX_INT64, ROOT_CREDITOR_ID
+    ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, InitiatedTransfer, MAX_INT64, ROOT_CREDITOR_ID
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -193,15 +194,24 @@ class AccountsScanner(TableScanner):
                 with_for_update().\
                 all()
             Account.query.filter(self.pk.in_(pks_to_purge)).delete(synchronize_session=False)
-            self._delete_debtors_with_purged_debtor_accounts(pks_to_purge)
+            self._deactivate_debtors_with_purged_accounts(pks_to_purge, current_ts)
             pks_to_purge = set(pks_to_purge)
             rows = [row for row in rows if ((row[c_debtor_id], row[c_creditor_id]) not in pks_to_purge)]
         return rows
 
-    def _delete_debtors_with_purged_debtor_accounts(self, purged_account_pks):
+    def _deactivate_debtors_with_purged_accounts(self, purged_account_pks, current_ts):
         debtors_ids = [debtor_id for debtor_id, creditor_id in purged_account_pks if creditor_id == ROOT_CREDITOR_ID]
         if debtors_ids:
-            Debtor.query.filter(Debtor.debtor_id.in_(debtors_ids)).delete(synchronize_session=False)
+            Debtor.query.\
+                filter(Debtor.debtor_id.in_(debtors_ids)).\
+                update({
+                    Debtor.deactivated_at_date: coalesce(Debtor.deactivated_at_date, current_ts),
+                    Debtor.initiated_transfers_count: 0,
+                    Debtor.status: Debtor.status.op('&')(~Debtor.STATUS_HAS_ACCOUNT_FLAG),
+                }, synchronize_session=False)
+            InitiatedTransfer.query.\
+                filter(InitiatedTransfer.debtor_id.in_(debtors_ids)).\
+                delete(synchronize_session=False)
 
     @atomic
     def process_rows(self, rows):

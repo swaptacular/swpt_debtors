@@ -1,7 +1,8 @@
 from uuid import UUID
 from datetime import datetime, timezone, timedelta, date
-from swpt_debtors.models import RunningTransfer, Account, ROOT_CREDITOR_ID
+from swpt_debtors.models import RunningTransfer, Account, InitiatedTransfer, ROOT_CREDITOR_ID
 from swpt_debtors.extensions import db
+from swpt_debtors import procedures
 
 TEST_UUID = UUID('123e4567-e89b-12d3-a456-426655440000')
 
@@ -178,17 +179,17 @@ def test_scan_accounts(app_unsafe_session):
     db.session.commit()
 
 
-def test_scan_accounts_delete_debtor(app_unsafe_session):
+def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     from swpt_debtors.models import Debtor
 
-    current_ts = datetime.now(tz=timezone.utc)
     past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     Debtor.query.delete()
     Account.query.delete()
     db.session.commit()
-    db.session.add(Debtor(debtor_id=1, deactivated_at_date=current_ts.date()))
-    db.session.add(Debtor(debtor_id=2, deactivated_at_date=current_ts.date()))
+    db.session.add(Debtor(debtor_id=1, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
+    procedures.initiate_transfer(1, TEST_UUID, None, '', 50, {})
+    db.session.add(Debtor(debtor_id=2, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
     db.session.add(Account(
         debtor_id=1,
         creditor_id=ROOT_CREDITOR_ID,
@@ -210,8 +211,13 @@ def test_scan_accounts_delete_debtor(app_unsafe_session):
     runner = app.test_cli_runner()
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
-    assert len(Debtor.query.all()) == 1
-    assert len(Debtor.query.filter_by(debtor_id=2).all()) == 1
+    assert len(Debtor.query.all()) == 2
+    d = Debtor.query.filter_by(debtor_id=1).one()
+    assert d
+    assert not d.status & Debtor.STATUS_HAS_ACCOUNT_FLAG
+    assert d.deactivated_at_date is not None
+    assert d.initiated_transfers_count == 0
+    assert len(InitiatedTransfer.query.filter_by(debtor_id=1).all()) == 0
     assert len(Account.query.all()) == 0
 
     Debtor.query.delete()
