@@ -68,8 +68,8 @@ class Signal(db.Model):
 #
 # 1. For debtors created some time ago (a month for example), having
 #    `balance_ts==BEGINNING_OF_TIME`: Check if a corresponding debtor
-#    account exists. If yes -- update the `balance_ts`; if no --
-#    delete the debtor immediately.
+#    account exists. If yes (which is extremely unlikely) -- update
+#    the `balance_ts`; if no -- delete the debtor immediately.
 #
 # 2. For debtors created some time ago (a month for example), but
 #    without any activity so far: Check if the debtor's account is the
