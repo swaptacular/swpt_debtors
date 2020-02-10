@@ -63,15 +63,14 @@ def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
 
 
 @atomic
-def lock_or_create_debtor(debtor_id: int, sent_configure_account_signal: bool = True) -> Debtor:
+def lock_or_create_debtor(debtor_id: int) -> Debtor:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     debtor = Debtor.lock_instance(debtor_id)
     if debtor is None:
         debtor = Debtor(debtor_id=debtor_id)
         with db.retry_on_integrity_error():
             db.session.add(debtor)
-        if sent_configure_account_signal:
-            _insert_configure_account_signal(debtor_id)
+        _insert_configure_account_signal(debtor_id)
     return debtor
 
 
