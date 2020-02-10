@@ -63,16 +63,26 @@ class Signal(db.Model):
         broker.publish_message(message, exchange=MAIN_EXCHANGE_NAME, routing_key=routing_key)
 
 
-# TODO: Implement a daemon that garbage-collects debtors that were
-#       created some time ago (a month for example), but have not had
-#       any activity; also debtors that had had activity once, but
-#       were deactivated a very long time ago (20 years for
-#       example). Such debtors should be deactivated (if they have not
-#       been already), and an account deletion request should be send
-#       for the debtor's account. The daemon should also delete
-#       debtors with `balance_ts==BEGINNING_OF_TIME`, which were
-#       created some time ago (chances are that such debtors do not
-#       have properly created accounts).
+# TODO: Implement a daemon that garbage-collects debtors. Here is how
+#       it should work:
+#
+# 1. For debtors created some time ago (a month for example), having
+#    `balance_ts==BEGINNING_OF_TIME`: Check if a corresponding debtor
+#    account exists. If yes -- update the `balance_ts`; if no --
+#    delete the debtor immediately.
+#
+# 2. For debtors created some time ago (a month for example), but
+#    without any activity so far: Check if the debtor's account is the
+#    only account left. If yes -- deactivate the debtor and send an
+#    account deletion request; if there are other accounts -- set the
+#    account's "has activity" flag; if there are no accounts, debtor's
+#    or otherwise -- delete the debtor immediately.
+#
+# 3. For debtors that had had activity once, but were deactivated a
+#    very long time ago (20 years for example): Check if the debtor's
+#    account is the only account left. If yes -- send an account
+#    deletion request; if no -- modify the account record so as to
+#    prevent it from being checked for deletion for some time.
 class Debtor(db.Model):
     STATUS_HAS_ACTIVITY_FLAG = 1
 
