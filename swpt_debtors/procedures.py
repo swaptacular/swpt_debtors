@@ -364,9 +364,6 @@ def process_account_change_signal(
             db.session.add(account)
 
     if account.creditor_id == ROOT_CREDITOR_ID:
-        # If this is a debtor's account, we must update debtor's
-        # `balance` and `balance_ts` columns. (Or even create a
-        # debtor, if it does not exist.)
         balance = MIN_INT64 if account.is_overflown else account.principal
         balance_ts = account.change_ts
         update_debtor_balance(debtor_id, balance, balance_ts)
