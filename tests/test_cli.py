@@ -170,6 +170,18 @@ def test_scan_accounts(app_unsafe_session):
     assert result.exit_code == 0
     assert len(CapitalizeInterestSignal.query.all()) == 2
 
+    # Ensure attempt to delete an account are not made too often.
+    Account.query.filter_by(debtor_id=11111, creditor_id=22222).update(
+        {Account.do_not_send_signals_until_ts: None},
+        synchronize_session=False,
+    )
+    db.session.commit()
+    db.engine.execute('ANALYZE account')
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    assert result.exit_code == 0
+    assert len(TryToDeleteAccountSignal.query.all()) == 1
+
     Debtor.query.delete()
     Account.query.delete()
     ChangeInterestRateSignal.query.delete()

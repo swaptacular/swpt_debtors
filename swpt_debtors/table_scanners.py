@@ -163,7 +163,10 @@ class AccountsScanner(TableScanner):
         pks = set()
         c = self.table.c
         scheduled_for_deletion_flag = Account.STATUS_SCHEDULED_FOR_DELETION_FLAG
+        cutoff_ts = current_ts - self.signalbus_max_delay
         for row in rows:
+            if row[c.last_deletion_attempt_ts] > cutoff_ts:
+                continue
             if (row[c.status] & scheduled_for_deletion_flag
                     and 0 <= self._calc_current_balance(row, current_ts) <= row[c.negligible_amount]):
                 pk = (row[c.debtor_id], row[c.creditor_id])
@@ -174,11 +177,13 @@ class AccountsScanner(TableScanner):
                 ))
         return pks
 
-    def _mute_accounts(self, pks_to_mute, current_ts, capitalized=False):
+    def _mute_accounts(self, pks_to_mute, current_ts, capitalized=False, for_deletion=False):
         if pks_to_mute:
             new_values = {Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay}
             if capitalized:
                 new_values[Account.last_interest_capitalization_ts] = current_ts
+            if for_deletion:
+                new_values[Account.last_deletion_attempt_ts] = current_ts
             Account.query.filter(self.pk.in_(pks_to_mute)).update(new_values, synchronize_session=False)
 
     def _purge_dead_accounts(self, rows, current_ts):
@@ -222,10 +227,11 @@ class AccountsScanner(TableScanner):
         pks_to_mute = set()
         pks_to_mute |= self._check_interest_rates(nonmuted_regular_rows, current_ts)
         pks_to_mute |= self._check_negative_balances(nonmuted_regular_rows, current_ts)
-        pks_to_mute |= self._check_scheduled_for_deletion(nonmuted_regular_rows, current_ts)
+        for_deletion_pks = self._check_scheduled_for_deletion(nonmuted_regular_rows, current_ts)
         capitalized_pks = self._check_accumulated_interests(nonmuted_regular_rows, current_ts)
 
         # All muted accounts will be un-muted when the triggered
         # `AccountChangeSignal` is processed.
+        self._mute_accounts(for_deletion_pks, current_ts, for_deletion=True)
         self._mute_accounts(capitalized_pks, current_ts, capitalized=True)
-        self._mute_accounts(pks_to_mute - capitalized_pks, current_ts, capitalized=False)
+        self._mute_accounts(pks_to_mute - for_deletion_pks - capitalized_pks, current_ts)

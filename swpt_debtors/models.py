@@ -405,6 +405,13 @@ class Account(db.Model):
         comment='The moment at which the last interest capitalization was triggered. It is '
                 'used to avoid capitalizing interest too often.',
     )
+    last_deletion_attempt_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        nullable=False,
+        default=BEGINNING_OF_TIME,
+        comment='The moment at which the last deletion attempt was made. It is used to '
+                'avoid trying to delete the account too often.',
+    )
     __table_args__ = (
         db.CheckConstraint((interest_rate >= INTEREST_RATE_FLOOR) & (interest_rate <= INTEREST_RATE_CEIL)),
         db.CheckConstraint(principal > MIN_INT64),
