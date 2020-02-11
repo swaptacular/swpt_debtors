@@ -49,11 +49,12 @@ class AccountsScanner(TableScanner):
         self.account_purge_delay = 2 * self.signalbus_max_delay + self.pending_transfers_max_delay
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])
-        self.min_interest_cap_interval = max(
+        self.min_interest_capitalization_interval = max(
             timedelta(days=current_app.config['APP_MIN_INTEREST_CAPITALIZATION_DAYS']),
             self.signalbus_max_delay,
         )
         self.max_interest_to_principal_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
+        self.min_deletion_attempt_interval = max(self.signalbus_max_delay, self.pending_transfers_max_delay)
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
     def _separate_accounts_by_type(self, rows):
@@ -125,7 +126,7 @@ class AccountsScanner(TableScanner):
         pks = set()
         c = self.table.c
         max_ratio = self.max_interest_to_principal_ratio
-        cutoff_ts = current_ts - self.min_interest_cap_interval
+        cutoff_ts = current_ts - self.min_interest_capitalization_interval
         for row in rows:
             if row[c.last_interest_capitalization_ts] > cutoff_ts:
                 continue
@@ -163,7 +164,7 @@ class AccountsScanner(TableScanner):
         pks = set()
         c = self.table.c
         scheduled_for_deletion_flag = Account.STATUS_SCHEDULED_FOR_DELETION_FLAG
-        cutoff_ts = current_ts - self.signalbus_max_delay
+        cutoff_ts = current_ts - self.min_deletion_attempt_interval
         for row in rows:
             if row[c.last_deletion_attempt_ts] > cutoff_ts:
                 continue
