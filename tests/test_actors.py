@@ -80,3 +80,10 @@ def test_on_account_purge_signal(db_session):
         creditor_id=C_ID,
         creation_date='2019-10-01',
     )
+
+
+def test_on_account_maintenance_signal(db_session):
+    a.on_account_maintenance_signal(
+        debtor_id=D_ID,
+        creditor_id=C_ID,
+    )

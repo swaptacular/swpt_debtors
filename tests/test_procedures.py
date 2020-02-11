@@ -466,3 +466,24 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
     assert d.initiated_transfers_count == 0
     assert len(InitiatedTransfer.query.filter_by(debtor_id=D_ID).all()) == 0
     assert len(Account.query.all()) == 0
+
+
+def test_process_account_maintenance_signal(db_session, debtor, current_ts):
+    db_session.add(Account(
+        debtor_id=D_ID,
+        creditor_id=C_ID,
+        change_seqnum=0,
+        change_ts=current_ts,
+        principal=-10,
+        interest=0.0,
+        interest_rate=0.0,
+        last_outgoing_transfer_date=current_ts,
+        creation_date=current_ts.date(),
+        negligible_amount=2.0,
+        status=0,
+        do_not_send_signals_until_ts=current_ts + timedelta(days=10)
+    ))
+    db_session.commit()
+    p.process_account_maintenance_signal(D_ID, C_ID)
+    a = Account.get_instance((D_ID, C_ID))
+    assert a.do_not_send_signals_until_ts is None

@@ -344,7 +344,6 @@ def process_account_change_signal(
         account.creation_date = creation_date
         account.negligible_amount = negligible_amount
         account.status = status
-        account.do_not_send_signals_until_ts = None
         account.last_heartbeat_ts = datetime.now(tz=timezone.utc)
     else:
         account = Account(
@@ -375,6 +374,15 @@ def process_account_change_signal(
             signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
             account.do_not_send_signals_until_ts = datetime.now(tz=timezone.utc) + signalbus_max_delay
             insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate)
+
+
+@atomic
+def process_account_maintenance_signal(debtor_id: int, creditor_id: int) -> None:
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    assert MIN_INT64 <= creditor_id <= MAX_INT64
+    Account.query.\
+        filter_by(debtor_id=debtor_id, creditor_id=creditor_id).\
+        update({Account.do_not_send_signals_until_ts: None}, synchronize_session=False)
 
 
 @atomic

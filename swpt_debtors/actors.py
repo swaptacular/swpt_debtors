@@ -130,3 +130,15 @@ def on_account_purge_signal(
         creditor_id,
         iso8601.parse_date(creation_date).date(),
     )
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_account_maintenance_signal(
+        debtor_id: int,
+        creditor_id: int,
+        *args, **kwargs) -> None:
+
+    procedures.process_account_maintenance_signal(
+        debtor_id,
+        creditor_id,
+    )
