@@ -49,12 +49,13 @@ class AccountsScanner(TableScanner):
         self.account_purge_delay = 2 * self.signalbus_max_delay + self.pending_transfers_max_delay
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])
-        self.min_interest_capitalization_interval = max(
-            timedelta(days=current_app.config['APP_MIN_INTEREST_CAPITALIZATION_DAYS']),
-            self.signalbus_max_delay,
-        )
         self.max_interest_to_principal_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
-        self.min_deletion_attempt_interval = max(self.signalbus_max_delay, self.pending_transfers_max_delay)
+        self.min_interest_cap_interval = timedelta(days=current_app.config['APP_MIN_INTEREST_CAPITALIZATION_DAYS'])
+        self.min_deletion_attempt_interval = self.signalbus_max_delay + self.pending_transfers_max_delay
+        self.account_mute_interval = max(
+            timedelta(days=current_app.config['APP_ACCOUNT_MUTE_DAYS']),
+            2 * self.signalbus_max_delay,
+        )
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
     def _calc_current_balance(self, row, current_ts) -> Decimal:
@@ -165,7 +166,7 @@ class AccountsScanner(TableScanner):
         pks = set()
         c = self.table.c
         max_ratio = self.max_interest_to_principal_ratio
-        cutoff_ts = current_ts - self.min_interest_capitalization_interval
+        cutoff_ts = current_ts - self.min_interest_cap_interval
         for row in rows:
             if row[c.last_interest_capitalization_ts] > cutoff_ts:
                 continue
@@ -236,7 +237,7 @@ class AccountsScanner(TableScanner):
         """
 
         if pks_to_mute:
-            new_values = {Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay}
+            new_values = {Account.do_not_send_signals_until_ts: current_ts + self.account_mute_interval}
             if capitalized:
                 new_values[Account.last_interest_capitalization_ts] = current_ts
             if for_deletion:
