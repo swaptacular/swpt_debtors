@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: d8e6ca613862
+Revision ID: 2983c90eeaf9
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-12 22:30:11.491773
+Create Date: 2020-02-13 00:20:33.164588
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'd8e6ca613862'
+revision = '2983c90eeaf9'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -45,6 +45,7 @@ def upgrade():
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('accumulated_interest_threshold', sa.BigInteger(), nullable=False),
+    sa.Column('request_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('change_interest_rate_signal',
@@ -52,6 +53,7 @@ def upgrade():
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('interest_rate', sa.REAL(), nullable=False),
+    sa.Column('request_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('configure_account_signal',
@@ -124,6 +126,7 @@ def upgrade():
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
+    sa.Column('request_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('zero_out_negative_balance_signal',
@@ -131,6 +134,7 @@ def upgrade():
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=False),
+    sa.Column('request_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('initiated_transfer',

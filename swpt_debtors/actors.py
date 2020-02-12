@@ -136,9 +136,11 @@ def on_account_purge_signal(
 def on_account_maintenance_signal(
         debtor_id: int,
         creditor_id: int,
+        request_ts: str,
         *args, **kwargs) -> None:
 
     procedures.process_account_maintenance_signal(
         debtor_id,
         creditor_id,
+        iso8601.parse_date(request_ts),
     )

@@ -86,4 +86,5 @@ def test_on_account_maintenance_signal(db_session):
     a.on_account_maintenance_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
+        request_ts='2019-10-01T00:00:00Z',
     )

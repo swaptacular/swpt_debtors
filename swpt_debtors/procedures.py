@@ -13,6 +13,8 @@ from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedT
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
 
+TD_SECOND = timedelta(seconds=1)
+
 
 class DebtorDoesNotExistError(Exception):
     """The debtor does not exist."""
@@ -372,24 +374,31 @@ def process_account_change_signal(
         debtor = Debtor.get_instance(debtor_id)
         if debtor:
             account.muted_at_ts = datetime.now(tz=timezone.utc)
-            insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate)
+            insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate, account.muted_at_ts)
 
 
 @atomic
-def process_account_maintenance_signal(debtor_id: int, creditor_id: int) -> None:
+def process_account_maintenance_signal(debtor_id: int, creditor_id: int, request_ts: datetime) -> None:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= creditor_id <= MAX_INT64
     Account.query.\
         filter_by(debtor_id=debtor_id, creditor_id=creditor_id).\
+        filter(Account.muted_at_ts <= request_ts + TD_SECOND).\
         update({Account.muted_at_ts: None}, synchronize_session=False)
 
 
 @atomic
-def insert_change_interest_rate_signal(debtor_id: int, creditor_id: int, interest_rate: float) -> None:
+def insert_change_interest_rate_signal(
+        debtor_id: int,
+        creditor_id: int,
+        interest_rate: float,
+        request_ts: datetime) -> None:
+
     db.session.add(ChangeInterestRateSignal(
         debtor_id=debtor_id,
         creditor_id=creditor_id,
         interest_rate=interest_rate,
+        request_ts=request_ts,
     ))
 
 

@@ -438,11 +438,13 @@ class ChangeInterestRateSignal(Signal):
         debtor_id = fields.Integer()
         creditor_id = fields.Integer()
         interest_rate = fields.Float()
+        request_ts = fields.DateTime()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     creditor_id = db.Column(db.BigInteger, nullable=False)
     interest_rate = db.Column(db.REAL, nullable=False)
+    request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
 class PrepareTransferSignal(Signal):
@@ -503,11 +505,13 @@ class CapitalizeInterestSignal(Signal):
         debtor_id = fields.Integer()
         creditor_id = fields.Integer()
         accumulated_interest_threshold = fields.Integer()
+        request_ts = fields.DateTime()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     creditor_id = db.Column(db.BigInteger, nullable=False)
     accumulated_interest_threshold = db.Column(db.BigInteger, nullable=False)
+    request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
 class ZeroOutNegativeBalanceSignal(Signal):
@@ -518,11 +522,13 @@ class ZeroOutNegativeBalanceSignal(Signal):
         debtor_id = fields.Integer()
         creditor_id = fields.Integer()
         last_outgoing_transfer_date = fields.Date()
+        request_ts = fields.DateTime()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     creditor_id = db.Column(db.BigInteger, nullable=False)
     last_outgoing_transfer_date = db.Column(db.DATE, nullable=False)
+    request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
 class TryToDeleteAccountSignal(Signal):
@@ -532,10 +538,12 @@ class TryToDeleteAccountSignal(Signal):
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()
         creditor_id = fields.Integer()
+        request_ts = fields.DateTime()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     creditor_id = db.Column(db.BigInteger, nullable=False)
+    request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
 class ConfigureAccountSignal(Signal):

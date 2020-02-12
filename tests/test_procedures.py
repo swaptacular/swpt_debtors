@@ -484,6 +484,7 @@ def test_process_account_maintenance_signal(db_session, debtor, current_ts):
         muted_at_ts=current_ts
     ))
     db_session.commit()
-    p.process_account_maintenance_signal(D_ID, C_ID)
-    a = Account.get_instance((D_ID, C_ID))
-    assert a.muted_at_ts is None
+    p.process_account_maintenance_signal(D_ID, C_ID, current_ts - timedelta(seconds=10))
+    assert Account.get_instance((D_ID, C_ID)).muted_at_ts == current_ts
+    p.process_account_maintenance_signal(D_ID, C_ID, current_ts)
+    assert Account.get_instance((D_ID, C_ID)).muted_at_ts is None

@@ -154,6 +154,7 @@ class AccountsScanner(TableScanner):
                     debtor_id=pk[0],
                     creditor_id=pk[1],
                     interest_rate=interest_rate,
+                    request_ts=current_ts,
                 ))
         return pks
 
@@ -180,6 +181,7 @@ class AccountsScanner(TableScanner):
                     debtor_id=pk[0],
                     creditor_id=pk[1],
                     accumulated_interest_threshold=accumulated_interest // 2,
+                    request_ts=current_ts,
                 ))
         return pks
 
@@ -204,6 +206,7 @@ class AccountsScanner(TableScanner):
                     debtor_id=pk[0],
                     creditor_id=pk[1],
                     last_outgoing_transfer_date=cutoff_date,
+                    request_ts=current_ts,
                 ))
         return pks
 
@@ -228,6 +231,7 @@ class AccountsScanner(TableScanner):
                 db.session.add(TryToDeleteAccountSignal(
                     debtor_id=pk[0],
                     creditor_id=pk[1],
+                    request_ts=current_ts,
                 ))
         return pks
 
