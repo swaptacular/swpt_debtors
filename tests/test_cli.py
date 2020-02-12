@@ -156,7 +156,7 @@ def test_scan_accounts(app_unsafe_session):
 
     # Ensure attempt to delete an account are not made too often.
     Account.query.filter_by(debtor_id=11111, creditor_id=22222).update(
-        {Account.do_not_send_signals_until_ts: None},
+        {Account.muted_at_ts: None},
         synchronize_session=False,
     )
     db.session.commit()
@@ -241,7 +241,7 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
 
     # Ensure interest is not capitalized too often.
     Account.query.filter_by(debtor_id=111, creditor_id=222).update(
-        {Account.interest: 200.0, Account.do_not_send_signals_until_ts: None},
+        {Account.interest: 200.0, Account.muted_at_ts: None},
         synchronize_session=False,
     )
     db.session.commit()

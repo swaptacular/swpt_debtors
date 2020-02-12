@@ -481,9 +481,9 @@ def test_process_account_maintenance_signal(db_session, debtor, current_ts):
         creation_date=current_ts.date(),
         negligible_amount=2.0,
         status=0,
-        do_not_send_signals_until_ts=current_ts + timedelta(days=10)
+        muted_at_ts=current_ts
     ))
     db_session.commit()
     p.process_account_maintenance_signal(D_ID, C_ID)
     a = Account.get_instance((D_ID, C_ID))
-    assert a.do_not_send_signals_until_ts is None
+    assert a.muted_at_ts is None

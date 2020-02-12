@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9e2cccecb264
+Revision ID: d8e6ca613862
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-11 17:36:09.812191
+Create Date: 2020-02-12 22:30:11.491773
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '9e2cccecb264'
+revision = 'd8e6ca613862'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -30,7 +30,7 @@ def upgrade():
     sa.Column('creation_date', sa.DATE(), nullable=False),
     sa.Column('negligible_amount', sa.REAL(), nullable=False),
     sa.Column('status', sa.SmallInteger(), nullable=False),
-    sa.Column('do_not_send_signals_until_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='If not NULL, no account maintenance signals will be sent to the `accounts` service until that moment. This prevents sending signals too often.'),
+    sa.Column('muted_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='A non-NULL value means that the account has been muted at that moment. Sending maintenance signals for "muted" accounts is forbidden. This prevents flooding the signal bus with maintenance signals.'),
     sa.Column('last_heartbeat_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last `AccountChangeSignal` has been processed. It is used to detect "dead" accounts. A "dead" account is an account that have been removed from the `swpt_accounts` service, but still exist in this table.'),
     sa.Column('last_interest_capitalization_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last interest capitalization was triggered. It is used to avoid capitalizing interest too often.'),
     sa.Column('last_deletion_attempt_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last deletion attempt was made. It is used to avoid trying to delete the account too often.'),

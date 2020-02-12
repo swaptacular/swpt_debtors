@@ -98,13 +98,14 @@ class AccountsScanner(TableScanner):
 
     def _remove_muted_accounts(self, rows, current_ts):
         """Return the list of passed `rows`, but with the rows referring to
-        "muted" accounts removed. (Sendig maintenance signals for
+        "muted" accounts removed. (Sending maintenance signals for
         "muted" accounts is forbidden.)
 
         """
 
-        muted_until_ts = self.table.c.do_not_send_signals_until_ts
-        return [row for row in rows if row[muted_until_ts] is None or row[muted_until_ts] <= current_ts]
+        muted_at_ts = self.table.c.muted_at_ts
+        cutoff_ts = current_ts - self.account_mute_interval
+        return [row for row in rows if row[muted_at_ts] is None or row[muted_at_ts] <= cutoff_ts]
 
     def _remove_pks(self, rows, pks):
         """Return the list of passed `rows`, but with the rows referred in
@@ -231,13 +232,13 @@ class AccountsScanner(TableScanner):
         return pks
 
     def _mute_accounts(self, pks_to_mute, current_ts, capitalized=False, for_deletion=False):
-        """Mute the accounts refered by `pks_to_mute`. (Sendig maintenance
+        """Mute the accounts refered by `pks_to_mute`. (Sending maintenance
         signals for "muted" accounts is forbidden.)
 
         """
 
         if pks_to_mute:
-            new_values = {Account.do_not_send_signals_until_ts: current_ts + self.account_mute_interval}
+            new_values = {Account.muted_at_ts: current_ts}
             if capitalized:
                 new_values[Account.last_interest_capitalization_ts] = current_ts
             if for_deletion:

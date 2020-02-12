@@ -371,8 +371,7 @@ def process_account_change_signal(
         # should immediately send a `ChangeInterestRateSignal`.
         debtor = Debtor.get_instance(debtor_id)
         if debtor:
-            signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
-            account.do_not_send_signals_until_ts = datetime.now(tz=timezone.utc) + signalbus_max_delay
+            account.muted_at_ts = datetime.now(tz=timezone.utc)
             insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate)
 
 
@@ -382,7 +381,7 @@ def process_account_maintenance_signal(debtor_id: int, creditor_id: int) -> None
     assert MIN_INT64 <= creditor_id <= MAX_INT64
     Account.query.\
         filter_by(debtor_id=debtor_id, creditor_id=creditor_id).\
-        update({Account.do_not_send_signals_until_ts: None}, synchronize_session=False)
+        update({Account.muted_at_ts: None}, synchronize_session=False)
 
 
 @atomic
