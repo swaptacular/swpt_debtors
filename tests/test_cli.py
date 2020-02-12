@@ -96,6 +96,7 @@ def test_scan_accounts(app_unsafe_session):
         creation_date=some_date,
         negligible_amount=2.0,
         status=0,
+        last_interest_capitalization_ts=current_ts,
     ))
     db.session.add(Account(
         debtor_id=1111,
@@ -105,10 +106,11 @@ def test_scan_accounts(app_unsafe_session):
         principal=10,
         interest=-20.0,
         interest_rate=10.0,
-        last_outgoing_transfer_date=past_ts,
+        last_outgoing_transfer_date=current_ts,
         creation_date=some_date,
         negligible_amount=2.0,
         status=0,
+        last_interest_capitalization_ts=current_ts,
     ))
     db.session.add(Account(
         debtor_id=11111,
@@ -141,22 +143,101 @@ def test_scan_accounts(app_unsafe_session):
     assert sorted([x.interest_rate for x in change_interest_rate_signals]) == [0.0, 5.55]
 
     capitalize_interest_signals = CapitalizeInterestSignal.query.all()
-    assert len(capitalize_interest_signals) == 2
-    assert sorted([x.debtor_id for x in capitalize_interest_signals]) == [111, 1111]
-    assert sorted([x.creditor_id for x in capitalize_interest_signals]) == [222, 2222]
+    assert len(capitalize_interest_signals) == 0
 
     zero_out_negative_balance_signals = ZeroOutNegativeBalanceSignal.query.all()
-    assert len(zero_out_negative_balance_signals) == 1
-    zonbs = zero_out_negative_balance_signals[0]
-    assert zonbs.debtor_id == 1111
-    assert zonbs.creditor_id == 2222
-    assert zonbs.last_outgoing_transfer_date < (current_ts - timedelta(days=7)).date()
+    assert len(zero_out_negative_balance_signals) == 0
 
     try_to_delete_account_signals = TryToDeleteAccountSignal.query.all()
     assert len(try_to_delete_account_signals) == 1
     ttdas = try_to_delete_account_signals[0]
     assert ttdas.debtor_id == 11111
     assert ttdas.creditor_id == 22222
+
+    # Ensure attempt to delete an account are not made too often.
+    Account.query.filter_by(debtor_id=11111, creditor_id=22222).update(
+        {Account.do_not_send_signals_until_ts: None},
+        synchronize_session=False,
+    )
+    db.session.commit()
+    db.engine.execute('ANALYZE account')
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    assert result.exit_code == 0
+    assert len(TryToDeleteAccountSignal.query.all()) == 1
+
+    Debtor.query.delete()
+    Account.query.delete()
+    ChangeInterestRateSignal.query.delete()
+    CapitalizeInterestSignal.query.delete()
+    ZeroOutNegativeBalanceSignal.query.delete()
+    TryToDeleteAccountSignal.query.delete()
+    db.session.commit()
+
+
+def test_scan_accounts_capitalize_interest(app_unsafe_session):
+    from swpt_debtors.models import Debtor, CapitalizeInterestSignal, ChangeInterestRateSignal, \
+        ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
+
+    some_date = date(2018, 10, 20)
+    current_ts = datetime.now(tz=timezone.utc)
+    past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
+    app = app_unsafe_session
+    Debtor.query.delete()
+    Account.query.delete()
+    ChangeInterestRateSignal.query.delete()
+    CapitalizeInterestSignal.query.delete()
+    ZeroOutNegativeBalanceSignal.query.delete()
+    TryToDeleteAccountSignal.query.delete()
+    db.session.commit()
+    db.session.add(Account(
+        debtor_id=111,
+        creditor_id=222,
+        change_seqnum=0,
+        change_ts=current_ts - timedelta(days=3653),
+        principal=0,
+        interest=100.0,
+        interest_rate=10.0,
+        last_outgoing_transfer_date=past_ts,
+        creation_date=some_date,
+        negligible_amount=2.0,
+        status=0,
+    ))
+    db.session.add(Account(
+        debtor_id=1111,
+        creditor_id=2222,
+        change_seqnum=0,
+        change_ts=current_ts - timedelta(days=3653),
+        principal=10,
+        interest=-20.0,
+        interest_rate=10.0,
+        last_outgoing_transfer_date=current_ts,
+        creation_date=some_date,
+        negligible_amount=2.0,
+        status=0,
+    ))
+    db.session.commit()
+    db.engine.execute('ANALYZE account')
+    assert len(Account.query.all()) == 2
+    assert len(CapitalizeInterestSignal.query.all()) == 0
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    assert result.exit_code == 0
+    assert len(Account.query.all()) == 2
+
+    change_interest_rate_signals = ChangeInterestRateSignal.query.all()
+    assert len(change_interest_rate_signals) == 0
+
+    zero_out_negative_balance_signals = ZeroOutNegativeBalanceSignal.query.all()
+    assert len(zero_out_negative_balance_signals) == 0
+
+    try_to_delete_account_signals = TryToDeleteAccountSignal.query.all()
+    assert len(try_to_delete_account_signals) == 0
+
+    capitalize_interest_signals = CapitalizeInterestSignal.query.all()
+    assert len(capitalize_interest_signals) == 2
+    assert sorted([x.debtor_id for x in capitalize_interest_signals]) == [111, 1111]
+    assert sorted([x.creditor_id for x in capitalize_interest_signals]) == [222, 2222]
 
     # Ensure interest is not capitalized too often.
     Account.query.filter_by(debtor_id=111, creditor_id=222).update(
@@ -170,17 +251,67 @@ def test_scan_accounts(app_unsafe_session):
     assert result.exit_code == 0
     assert len(CapitalizeInterestSignal.query.all()) == 2
 
-    # Ensure attempt to delete an account are not made too often.
-    Account.query.filter_by(debtor_id=11111, creditor_id=22222).update(
-        {Account.do_not_send_signals_until_ts: None},
-        synchronize_session=False,
-    )
+    Debtor.query.delete()
+    Account.query.delete()
+    ChangeInterestRateSignal.query.delete()
+    CapitalizeInterestSignal.query.delete()
+    ZeroOutNegativeBalanceSignal.query.delete()
+    TryToDeleteAccountSignal.query.delete()
+    db.session.commit()
+
+
+def test_scan_accounts_zero_out(app_unsafe_session):
+    from swpt_debtors.models import Debtor, CapitalizeInterestSignal, ChangeInterestRateSignal, \
+        ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
+
+    some_date = date(2018, 10, 20)
+    current_ts = datetime.now(tz=timezone.utc)
+    past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
+    app = app_unsafe_session
+    Debtor.query.delete()
+    Account.query.delete()
+    ChangeInterestRateSignal.query.delete()
+    CapitalizeInterestSignal.query.delete()
+    ZeroOutNegativeBalanceSignal.query.delete()
+    TryToDeleteAccountSignal.query.delete()
+    db.session.commit()
+    db.session.add(Account(
+        debtor_id=1111,
+        creditor_id=2222,
+        change_seqnum=0,
+        change_ts=current_ts - timedelta(days=3653),
+        principal=10,
+        interest=-20.0,
+        interest_rate=10.0,
+        last_outgoing_transfer_date=past_ts,
+        creation_date=some_date,
+        negligible_amount=2.0,
+        status=0,
+    ))
     db.session.commit()
     db.engine.execute('ANALYZE account')
+    assert len(Account.query.all()) == 1
+    assert len(CapitalizeInterestSignal.query.all()) == 0
     runner = app.test_cli_runner()
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
-    assert len(TryToDeleteAccountSignal.query.all()) == 1
+    assert len(Account.query.all()) == 1
+
+    change_interest_rate_signals = ChangeInterestRateSignal.query.all()
+    assert len(change_interest_rate_signals) == 0
+
+    zero_out_negative_balance_signals = ZeroOutNegativeBalanceSignal.query.all()
+    assert len(zero_out_negative_balance_signals) == 1
+    zonbs = zero_out_negative_balance_signals[0]
+    assert zonbs.debtor_id == 1111
+    assert zonbs.creditor_id == 2222
+    assert zonbs.last_outgoing_transfer_date < (current_ts - timedelta(days=7)).date()
+
+    try_to_delete_account_signals = TryToDeleteAccountSignal.query.all()
+    assert len(try_to_delete_account_signals) == 0
+
+    capitalize_interest_signals = CapitalizeInterestSignal.query.all()
+    assert len(capitalize_interest_signals) == 0
 
     Debtor.query.delete()
     Account.query.delete()

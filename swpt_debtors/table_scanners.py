@@ -57,35 +57,6 @@ class AccountsScanner(TableScanner):
         self.min_deletion_attempt_interval = max(self.signalbus_max_delay, self.pending_transfers_max_delay)
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
-    def _separate_accounts_by_type(self, rows):
-        c = self.table.c
-        regular_account_rows = []
-        deleted_account_rows = []
-        debtor_account_rows = []
-        deleted_flag = Account.STATUS_DELETED_FLAG
-        for row in rows:
-            if row[c.status] & deleted_flag:
-                deleted_account_rows.append(row)
-            elif row[c.creditor_id] == ROOT_CREDITOR_ID:
-                debtor_account_rows.append(row)
-            else:
-                regular_account_rows.append(row)
-        return regular_account_rows, deleted_account_rows, debtor_account_rows
-
-    def _remove_muted_accounts(self, rows, current_ts):
-        muted_until_ts = self.table.c.do_not_send_signals_until_ts
-        return [row for row in rows if row[muted_until_ts] is None or row[muted_until_ts] <= current_ts]
-
-    def _get_debtor_interest_rates(self, debtor_ids: List[int], current_ts: datetime) -> List[float]:
-        cutoff_ts = current_ts - self.interval
-        rates = self.debtor_interest_rates
-        old_rate = self.old_interest_rate
-        old_rate_debtor_ids = [x for x in debtor_ids if rates.get(x, old_rate).timestamp < cutoff_ts]
-        if old_rate_debtor_ids:
-            for debtor in Debtor.query.filter(Debtor.debtor_id.in_(old_rate_debtor_ids)):
-                rates[debtor.debtor_id] = CachedInterestRate(debtor.interest_rate, current_ts)
-        return [rates.get(x, old_rate).interest_rate for x in debtor_ids]
-
     def _calc_current_balance(self, row, current_ts) -> Decimal:
         c = self.table.c
         assert row[c.creditor_id] != ROOT_CREDITOR_ID
@@ -104,7 +75,69 @@ class AccountsScanner(TableScanner):
         accumulated_interest = max(-MAX_INT64, accumulated_interest)
         return accumulated_interest
 
+    def _separate_accounts_by_type(self, rows):
+        """Separate `rows` in three categories: regular accounts, deleted
+        accounts, and debtors' accounts.
+
+        """
+
+        c = self.table.c
+        regular_account_rows = []
+        deleted_account_rows = []
+        debtor_account_rows = []
+        deleted_flag = Account.STATUS_DELETED_FLAG
+        for row in rows:
+            if row[c.status] & deleted_flag:
+                deleted_account_rows.append(row)
+            elif row[c.creditor_id] == ROOT_CREDITOR_ID:
+                debtor_account_rows.append(row)
+            else:
+                regular_account_rows.append(row)
+        return regular_account_rows, deleted_account_rows, debtor_account_rows
+
+    def _remove_muted_accounts(self, rows, current_ts):
+        """Return the list of passed `rows`, but with the rows referring to
+        "muted" accounts removed. (Sendig maintenance signals for
+        "muted" accounts is forbidden.)
+
+        """
+
+        muted_until_ts = self.table.c.do_not_send_signals_until_ts
+        return [row for row in rows if row[muted_until_ts] is None or row[muted_until_ts] <= current_ts]
+
+    def _remove_pks(self, rows, pks):
+        """Return the list of passed `rows`, but with the rows referred in
+        `pks` removed. (`pks` is a set of primary keys.)
+
+        """
+
+        c = self.table.c
+        c_debtor_id, c_creditor_id = c.debtor_id, c.creditor_id
+        return [row for row in rows if (row[c_debtor_id], row[c_creditor_id]) not in pks]
+
+    def _get_debtor_interest_rates(self, debtor_ids: List[int], current_ts: datetime) -> List[float]:
+        """Return a list of interest rates, corresponding to the passed list
+        of debtor IDs. Try to minimize database access by caching the
+        interest rates.
+
+        """
+
+        cutoff_ts = current_ts - self.interval
+        rates = self.debtor_interest_rates
+        old_rate = self.old_interest_rate
+        old_rate_debtor_ids = [x for x in debtor_ids if rates.get(x, old_rate).timestamp < cutoff_ts]
+        if old_rate_debtor_ids:
+            for debtor in Debtor.query.filter(Debtor.debtor_id.in_(old_rate_debtor_ids)):
+                rates[debtor.debtor_id] = CachedInterestRate(debtor.interest_rate, current_ts)
+        return [rates.get(x, old_rate).interest_rate for x in debtor_ids]
+
     def _check_interest_rates(self, rows, current_ts):
+        """Send `ChangeInterestRateSignal` if necessary. Return a set of
+        primary keys, for the accounts for which a signal has been
+        sent.
+
+        """
+
         pks = set()
         c = self.table.c
         debtor_ids = [row[c.debtor_id] for row in rows]
@@ -123,6 +156,12 @@ class AccountsScanner(TableScanner):
         return pks
 
     def _check_accumulated_interests(self, rows, current_ts):
+        """Send `CapitalizeInterestSignal` if necessary. Return a set of
+        primary keys, for the accounts for which a signal has been
+        sent.
+
+        """
+
         pks = set()
         c = self.table.c
         max_ratio = self.max_interest_to_principal_ratio
@@ -143,6 +182,12 @@ class AccountsScanner(TableScanner):
         return pks
 
     def _check_negative_balances(self, rows, current_ts):
+        """Send `ZeroOutNegativeBalanceSignal` if necessary. Return a set of
+        primary keys, for the accounts for which a signal has been
+        sent.
+
+        """
+
         pks = set()
         c = self.table.c
         cutoff_date = (current_ts - self.zero_out_negative_balance_delay).date()
@@ -161,6 +206,12 @@ class AccountsScanner(TableScanner):
         return pks
 
     def _check_scheduled_for_deletion(self, rows, current_ts):
+        """Send `TryToDeleteAccountSignal` if necessary. Return a set of
+        primary keys, for the accounts for which a signal has been
+        sent.
+
+        """
+
         pks = set()
         c = self.table.c
         scheduled_for_deletion_flag = Account.STATUS_SCHEDULED_FOR_DELETION_FLAG
@@ -179,6 +230,11 @@ class AccountsScanner(TableScanner):
         return pks
 
     def _mute_accounts(self, pks_to_mute, current_ts, capitalized=False, for_deletion=False):
+        """Mute the accounts refered by `pks_to_mute`. (Sendig maintenance
+        signals for "muted" accounts is forbidden.)
+
+        """
+
         if pks_to_mute:
             new_values = {Account.do_not_send_signals_until_ts: current_ts + self.signalbus_max_delay}
             if capitalized:
@@ -188,6 +244,12 @@ class AccountsScanner(TableScanner):
             Account.query.filter(self.pk.in_(pks_to_mute)).update(new_values, synchronize_session=False)
 
     def _purge_dead_accounts(self, rows, current_ts):
+        """Delete accounts which have not received a heartbeat for a very long
+        time. Returns the list of passed `rows`, but with the rows for
+        the purged accounts removed.
+
+        """
+
         c = self.table.c
         cutoff_ts = current_ts - self.dead_accounts_abandon_delay
         c_debtor_id, c_creditor_id, c_last_heartbeat_ts = c.debtor_id, c.creditor_id, c.last_heartbeat_ts
@@ -206,6 +268,12 @@ class AccountsScanner(TableScanner):
         return rows
 
     def _deactivate_debtors_with_purged_accounts(self, purged_account_pks, current_ts):
+        """Check if there are debtors' accounts among the accounts refereed by
+        `purged_account_pks`, and deactivate their corresponding
+        debtors.
+
+        """
+
         debtors_ids = [debtor_id for debtor_id, creditor_id in purged_account_pks if creditor_id == ROOT_CREDITOR_ID]
         if debtors_ids:
             Debtor.query.\
@@ -221,18 +289,43 @@ class AccountsScanner(TableScanner):
 
     @atomic
     def process_rows(self, rows):
+        """Send account maintenance signals if necessary.
+
+        We must send maintenance signals only for alive, regular
+        accounts, which are not "muted". Also, we want to send at most
+        one maintenance signal per account.
+
+        NOTE: We want the `ChangeInterestRateSignal` to have the
+              lowest priority, so that it does not prevent other more
+              important maintenance actions from taking place.
+
+        Each account for which a maintenance signal has been sent
+        should be "muted", to avoid flooding the signal bus with
+        maintenance signals. All muted accounts will be un-muted when
+        the triggered `AccountMaintenanceSignal` is processed.
+
+        """
+
         current_ts = datetime.now(tz=timezone.utc)
         alive_rows = self._purge_dead_accounts(rows, current_ts)
         regular_rows, _, _ = self._separate_accounts_by_type(alive_rows)
         nonmuted_regular_rows = self._remove_muted_accounts(regular_rows, current_ts)
-        pks_to_mute = set()
-        pks_to_mute |= self._check_interest_rates(nonmuted_regular_rows, current_ts)
-        pks_to_mute |= self._check_negative_balances(nonmuted_regular_rows, current_ts)
-        for_deletion_pks = self._check_scheduled_for_deletion(nonmuted_regular_rows, current_ts)
-        capitalized_pks = self._check_accumulated_interests(nonmuted_regular_rows, current_ts)
 
-        # All muted accounts will be un-muted when the triggered
-        # `AccountChangeSignal` is processed.
+        # 1) Send `ZeroOutNegativeBalanceSignal`s:
+        zeroed_out_pks = self._check_negative_balances(nonmuted_regular_rows, current_ts)
+        nonmuted_regular_rows = self._remove_pks(nonmuted_regular_rows, zeroed_out_pks)
+
+        # 2) Send `TryToDeleteAccountSignal`s:
+        for_deletion_pks = self._check_scheduled_for_deletion(nonmuted_regular_rows, current_ts)
+        nonmuted_regular_rows = self._remove_pks(nonmuted_regular_rows, for_deletion_pks)
+
+        # 3) Send `CapitalizeInterestSignal`s:
+        capitalized_pks = self._check_accumulated_interests(nonmuted_regular_rows, current_ts)
+        nonmuted_regular_rows = self._remove_pks(nonmuted_regular_rows, capitalized_pks)
+
+        # 4) Send `ChangeInterestRateSignal`s:
+        changed_rate_pks = self._check_interest_rates(nonmuted_regular_rows, current_ts)
+
         self._mute_accounts(for_deletion_pks, current_ts, for_deletion=True)
         self._mute_accounts(capitalized_pks, current_ts, capitalized=True)
-        self._mute_accounts(pks_to_mute - for_deletion_pks - capitalized_pks, current_ts)
+        self._mute_accounts((zeroed_out_pks | changed_rate_pks) - for_deletion_pks - capitalized_pks, current_ts)
