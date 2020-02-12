@@ -430,21 +430,21 @@ class Account(db.Model):
         return bool(self.status & Account.STATUS_OVERFLOWN_FLAG)
 
 
-class ChangeInterestRateSignal(Signal):
+class ConfigureAccountSignal(Signal):
     queue_name = 'swpt_accounts'
-    actor_name = 'change_interest_rate'
+    actor_name = 'configure_account'
 
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()
-        creditor_id = fields.Integer()
-        interest_rate = fields.Float()
-        request_ts = fields.DateTime()
+        creditor_id = fields.Constant(ROOT_CREDITOR_ID)
+        change_ts = fields.DateTime()
+        change_seqnum = fields.Constant(0)
+        is_scheduled_for_deletion = fields.Constant(False)
+        negligible_amount = fields.Constant(2.0)
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    creditor_id = db.Column(db.BigInteger, nullable=False)
-    interest_rate = db.Column(db.REAL, nullable=False)
-    request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
 class PrepareTransferSignal(Signal):
@@ -546,18 +546,18 @@ class TryToDeleteAccountSignal(Signal):
     request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
-class ConfigureAccountSignal(Signal):
+class ChangeInterestRateSignal(Signal):
     queue_name = 'swpt_accounts'
-    actor_name = 'configure_account'
+    actor_name = 'change_interest_rate'
 
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()
-        creditor_id = fields.Constant(ROOT_CREDITOR_ID)
-        change_ts = fields.DateTime()
-        change_seqnum = fields.Constant(0)
-        is_scheduled_for_deletion = fields.Constant(False)
-        negligible_amount = fields.Constant(2.0)
+        creditor_id = fields.Integer()
+        interest_rate = fields.Float()
+        request_ts = fields.DateTime()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+    creditor_id = db.Column(db.BigInteger, nullable=False)
+    interest_rate = db.Column(db.REAL, nullable=False)
+    request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
