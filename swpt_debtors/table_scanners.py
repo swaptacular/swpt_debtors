@@ -109,17 +109,22 @@ class AccountsScanner(TableScanner):
         """
 
         c = self.table.c
-        muted_at_ts, last_maintenance_request_ts = c.muted_at_ts, c.last_maintenance_request_ts
+        c_is_muted, c_last_maintenance_request_ts = c.is_muted, c.last_maintenance_request_ts
         mute_cutoff_ts = current_ts - self.account_mute_interval
         last_request_cutoff_ts = current_ts - self.interval / 10
         return [
             row for row in rows if (
+                # Muted accounts are excluded, unless they have been
+                # muted a long time ago. This is to avoid accounts
+                # staying muted forever when something went wrong with
+                # the awaited un-muting `AccountMaintenanceSignal`.
+                (not row[c_is_muted] or row[c_last_maintenance_request_ts] < mute_cutoff_ts)
+
                 # To avoid sending more than one maintenance signal
-                # for a given account, per table scan, we ensure that
+                # for a given account per table scan, we ensure that
                 # the last maintenance request was far enough in the
                 # past.
-                row[last_maintenance_request_ts] < last_request_cutoff_ts
-                and (row[muted_at_ts] is None or row[muted_at_ts] < mute_cutoff_ts)
+                and row[c_last_maintenance_request_ts] < last_request_cutoff_ts
             )
         ]
 
@@ -259,7 +264,7 @@ class AccountsScanner(TableScanner):
 
         if pks_to_mute:
             new_values = {
-                Account.muted_at_ts: current_ts,
+                Account.is_muted: True,
                 Account.last_maintenance_request_ts: current_ts,
             }
             if capitalized:

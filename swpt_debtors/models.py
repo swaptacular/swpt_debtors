@@ -385,11 +385,13 @@ class Account(db.Model):
     creation_date = db.Column(db.DATE, nullable=False)
     negligible_amount = db.Column(db.REAL, nullable=False)
     status = db.Column(db.SmallInteger, nullable=False)
-    muted_at_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        comment='A non-NULL value means that the account has been muted at that moment. '
-                'Sending maintenance signals for "muted" accounts is forbidden. This prevents '
-                'flooding the signal bus with maintenance signals.',
+    is_muted = db.Column(
+        db.BOOLEAN,
+        nullable=False,
+        default=False,
+        comment='Whether the account is "muted" or not. Sending maintenance signals for muted '
+                'accounts is forbidden. This prevents flooding the signal bus with '
+                'maintenance signals.',
     )
     last_heartbeat_ts = db.Column(
         db.TIMESTAMP(timezone=True),

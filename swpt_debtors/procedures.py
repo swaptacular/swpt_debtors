@@ -3,6 +3,7 @@ from uuid import UUID
 from typing import TypeVar, Optional, Callable, List
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql.expression import true
 from swpt_lib.utils import is_later_event
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
@@ -374,7 +375,7 @@ def process_account_change_signal(
         debtor = Debtor.get_instance(debtor_id)
         if debtor:
             current_ts = datetime.now(tz=timezone.utc)
-            account.muted_at_ts = current_ts
+            account.is_muted = True
             account.last_maintenance_request_ts = current_ts
             insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate, current_ts)
 
@@ -385,8 +386,9 @@ def process_account_maintenance_signal(debtor_id: int, creditor_id: int, request
     assert MIN_INT64 <= creditor_id <= MAX_INT64
     Account.query.\
         filter_by(debtor_id=debtor_id, creditor_id=creditor_id).\
-        filter(Account.muted_at_ts <= request_ts + TD_SECOND).\
-        update({Account.muted_at_ts: None}, synchronize_session=False)
+        filter(Account.is_muted == true()).\
+        filter(Account.last_maintenance_request_ts <= request_ts + TD_SECOND).\
+        update({Account.is_muted: False}, synchronize_session=False)
 
 
 @atomic
