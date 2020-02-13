@@ -83,7 +83,7 @@ def update_debtor_balance(debtor_id: int, balance: int, balance_ts: datetime) ->
     if debtor is None:
         # It the debtor does not exist, we create a new deactivated
         # debtor. That way, we know that the debtor's account will be
-        # deleted from the `accounts` service (eventually).
+        # deleted from the `swpt_accounts` service (eventually).
         debtor = Debtor(debtor_id=debtor_id, deactivated_at_date=datetime.now(tz=timezone.utc).date())
         with db.retry_on_integrity_error():
             db.session.add(debtor)
