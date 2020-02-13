@@ -370,8 +370,6 @@ def process_account_change_signal(
         balance_ts = account.change_ts
         update_debtor_balance(debtor_id, balance, balance_ts)
     elif not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
-        # When the account does not have an interest rate set yet, we
-        # should immediately send a `ChangeInterestRateSignal`.
         debtor = Debtor.get_instance(debtor_id)
         if debtor:
             current_ts = datetime.now(tz=timezone.utc)
