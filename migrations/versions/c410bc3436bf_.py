@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 2983c90eeaf9
+Revision ID: c410bc3436bf
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-13 00:20:33.164588
+Create Date: 2020-02-13 17:18:45.582177
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '2983c90eeaf9'
+revision = 'c410bc3436bf'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -34,6 +34,7 @@ def upgrade():
     sa.Column('last_heartbeat_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last `AccountChangeSignal` has been processed. It is used to detect "dead" accounts. A "dead" account is an account that have been removed from the `swpt_accounts` service, but still exist in this table.'),
     sa.Column('last_interest_capitalization_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last interest capitalization was triggered. It is used to avoid capitalizing interest too often.'),
     sa.Column('last_deletion_attempt_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last deletion attempt was made. It is used to avoid trying to delete the account too often.'),
+    sa.Column('last_maintenance_request_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last account maintenance operation request was made. It is used to avoid triggering account maintenance operations too often.'),
     sa.CheckConstraint('interest_rate >= -50.0 AND interest_rate <= 100.0'),
     sa.CheckConstraint('negligible_amount >= 2.0'),
     sa.CheckConstraint('principal > -9223372036854775808'),

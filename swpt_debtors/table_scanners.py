@@ -38,6 +38,8 @@ class RunningTransfersCollector(TableScanner):
 
 class AccountsScanner(TableScanner):
     table = Account.__table__
+    blocks_per_query = 60
+    target_beat_duration = 90  # milliseconds
     old_interest_rate = CachedInterestRate(0.0, datetime(1900, 1, 1, tzinfo=timezone.utc))
     pk = tuple_(Account.debtor_id, Account.creditor_id)
 
@@ -103,9 +105,20 @@ class AccountsScanner(TableScanner):
 
         """
 
-        muted_at_ts = self.table.c.muted_at_ts
-        cutoff_ts = current_ts - self.account_mute_interval
-        return [row for row in rows if row[muted_at_ts] is None or row[muted_at_ts] <= cutoff_ts]
+        c = self.table.c
+        muted_at_ts, last_maintenance_request_ts = c.muted_at_ts, c.last_maintenance_request_ts
+        mute_cutoff_ts = current_ts - self.account_mute_interval
+        last_request_cutoff_ts = current_ts - self.interval / 10
+        return [
+            row for row in rows if (
+                # To avoid sending more than one maintenance signal
+                # for a given account, per table scan, we ensure that
+                # the last maintenance request was far enough in the
+                # past.
+                row[last_maintenance_request_ts] < last_request_cutoff_ts
+                and (row[muted_at_ts] is None or row[muted_at_ts] < mute_cutoff_ts)
+            )
+        ]
 
     def _remove_pks(self, rows, pks):
         """Return the list of passed `rows`, but with the rows referred in
@@ -242,7 +255,10 @@ class AccountsScanner(TableScanner):
         """
 
         if pks_to_mute:
-            new_values = {Account.muted_at_ts: current_ts}
+            new_values = {
+                Account.muted_at_ts: current_ts,
+                Account.last_maintenance_request_ts: current_ts,
+            }
             if capitalized:
                 new_values[Account.last_interest_capitalization_ts] = current_ts
             if for_deletion:

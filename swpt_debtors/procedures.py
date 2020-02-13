@@ -373,8 +373,10 @@ def process_account_change_signal(
         # should immediately send a `ChangeInterestRateSignal`.
         debtor = Debtor.get_instance(debtor_id)
         if debtor:
-            account.muted_at_ts = datetime.now(tz=timezone.utc)
-            insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate, account.muted_at_ts)
+            current_ts = datetime.now(tz=timezone.utc)
+            account.muted_at_ts = current_ts
+            account.last_maintenance_request_ts = current_ts
+            insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate, current_ts)
 
 
 @atomic
