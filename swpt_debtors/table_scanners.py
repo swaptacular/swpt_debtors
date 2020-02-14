@@ -21,6 +21,8 @@ class CachedInterestRate(NamedTuple):
 
 
 class RunningTransfersCollector(TableScanner):
+    """Garbage-collects staled running transfers."""
+
     table = RunningTransfer.__table__
     columns = [RunningTransfer.debtor_id, RunningTransfer.transfer_uuid, RunningTransfer.started_at_ts]
     pk = tuple_(table.c.debtor_id, table.c.transfer_uuid)
@@ -37,9 +39,11 @@ class RunningTransfersCollector(TableScanner):
 
 
 class AccountsScanner(TableScanner):
+    """Executes accounts maintenance operations."""
+
     table = Account.__table__
     blocks_per_query = 60  # about 1000 to 4000 accounts per query
-    target_beat_duration = 90  # milliseconds
+    target_beat_duration = 90  # 90 milliseconds
     old_interest_rate = CachedInterestRate(0.0, datetime(1900, 1, 1, tzinfo=timezone.utc))
     pk = tuple_(Account.debtor_id, Account.creditor_id)
 
@@ -55,6 +59,10 @@ class AccountsScanner(TableScanner):
         self.account_unmute_interval = 2 * self.signalbus_max_delay
         self.min_interest_cap_interval = max(
             timedelta(days=current_app.config['APP_MIN_INTEREST_CAPITALIZATION_DAYS']),
+
+            # We want to avoid capitalizing interests on each table
+            # scan, because this could prevent other important
+            # maintenance actions from taking place.
             4 * self.interval,
         )
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
@@ -99,8 +107,7 @@ class AccountsScanner(TableScanner):
 
     def _remove_muted_accounts(self, rows, current_ts):
         """Return the list of passed `rows`, but with the rows referring to
-        "muted" accounts removed. (Sending maintenance signals for
-        "muted" accounts is forbidden.)
+        "muted" accounts removed.
 
         """
 
@@ -249,10 +256,7 @@ class AccountsScanner(TableScanner):
         return pks
 
     def _mute_accounts(self, pks_to_mute, current_ts, capitalized=False, for_deletion=False):
-        """Mute the accounts refered by `pks_to_mute`. (Sending maintenance
-        signals for "muted" accounts is forbidden.)
-
-        """
+        """Mute the accounts refered by `pks_to_mute`."""
 
         if pks_to_mute:
             new_values = {
@@ -315,20 +319,15 @@ class AccountsScanner(TableScanner):
 
     @atomic
     def process_rows(self, rows):
-        """Send account maintenance signals if necessary.
+        """Send account maintenance operation requests if necessary.
 
-        We must send maintenance signals only for alive, regular
-        accounts, which are not "muted". Also, we want to send at most
-        one maintenance signal per account.
+        We must send maintenance operation requests only for alive,
+        regular accounts, which are not "muted". Also, we want to send
+        at most one maintenance operation requests per account.
 
         NOTE: We want the `ChangeInterestRateSignal` to have the
               lowest priority, so that it does not prevent other more
               important maintenance actions from taking place.
-
-        Each account for which a maintenance signal has been sent
-        should be "muted", to avoid flooding the signal bus with
-        maintenance signals. All muted accounts will be un-muted when
-        the triggered `AccountMaintenanceSignal` is processed.
 
         """
 
