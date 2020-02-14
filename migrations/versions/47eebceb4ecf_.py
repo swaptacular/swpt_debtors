@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 095f75846cc4
+Revision ID: 47eebceb4ecf
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-14 19:30:09.519539
+Create Date: 2020-02-14 20:02:22.366812
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '095f75846cc4'
+revision = '47eebceb4ecf'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -30,7 +30,7 @@ def upgrade():
     sa.Column('creation_date', sa.DATE(), nullable=False),
     sa.Column('negligible_amount', sa.REAL(), nullable=False),
     sa.Column('status', sa.SmallInteger(), nullable=False),
-    sa.Column('is_muted', sa.BOOLEAN(), nullable=False, comment='Whether the account is "muted" or not. Sending maintenance signals for muted accounts is forbidden. This prevents flooding the signal bus with maintenance signals.'),
+    sa.Column('is_muted', sa.BOOLEAN(), nullable=False, comment='Whether the account is "muted" or not. Maintenance operation requests are not sent for muted accounts. This prevents flooding the signal bus with maintenance signals. It is set to `true` when a maintenance operation request is made, and set to back `false` when the matching `AccountMaintenanceSignal` is received. Important note: Accounts that have been muted a long time ago (this can be determined by checking the `last_maintenance_request_ts` column) are allowed to sent maintenance operation requests. (This is to avoid accounts staying muted forever when something went wrong with the awaited un-muting `AccountMaintenanceSignal`.'),
     sa.Column('last_heartbeat_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last `AccountChangeSignal` has been processed. It is used to detect "dead" accounts. A "dead" account is an account that have been removed from the `swpt_accounts` service, but still exist in this table.'),
     sa.Column('last_interest_capitalization_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last interest capitalization was triggered. It is used to avoid capitalizing interest too often.'),
     sa.Column('last_deletion_attempt_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last deletion attempt was made. It is used to avoid trying to delete the account too often.'),
@@ -125,7 +125,7 @@ def upgrade():
     sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
     sa.CheckConstraint('amount > 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
-    comment='Represents a running issuing transfer. Important note: The records for the successfully finalized issuing transfers (those for which `issuing_transfer_id` is not `null`), must not be deleted right away. Instead, after they have been finalized, they should stay in the database for at least few days. This is necessary in order to prevent problems caused by message re-delivery.'
+    comment='Represents a running issuing transfer. Important note: The records for the successfully finalized issuing transfers (those for which `issuing_transfer_id` is not `null`), must not be deleted right away. Instead, after they have been finalized, they should stay in the database until the corresponding `FinalizedTransferSignal` is received.'
     )
     op.create_index('idx_issuing_coordinator_request_id', 'running_transfer', ['debtor_id', 'issuing_coordinator_request_id'], unique=True)
     op.create_table('try_to_delete_account_signal',

@@ -363,8 +363,8 @@ class RunningTransfer(db.Model):
             'comment': 'Represents a running issuing transfer. Important note: The records for the '
                        'successfully finalized issuing transfers (those for which `issuing_transfer_id` '
                        'is not `null`), must not be deleted right away. Instead, after they have been '
-                       'finalized, they should stay in the database for at least few days. This is '
-                       'necessary in order to prevent problems caused by message re-delivery.',
+                       'finalized, they should stay in the database until the corresponding '
+                       '`FinalizedTransferSignal` is received.',
         }
     )
 
@@ -394,9 +394,15 @@ class Account(db.Model):
         db.BOOLEAN,
         nullable=False,
         default=False,
-        comment='Whether the account is "muted" or not. Sending maintenance signals for muted '
-                'accounts is forbidden. This prevents flooding the signal bus with '
-                'maintenance signals.',
+        comment='Whether the account is "muted" or not. Maintenance operation requests are '
+                'not sent for muted accounts. This prevents flooding the signal bus with '
+                'maintenance signals. It is set to `true` when a maintenance operation request '
+                'is made, and set to back `false` when the matching `AccountMaintenanceSignal` '
+                'is received. Important note: Accounts that have been muted a long time ago '
+                '(this can be determined by checking the `last_maintenance_request_ts` column) '
+                'are allowed to sent maintenance operation requests. (This is to avoid accounts '
+                'staying muted forever when something went wrong with the awaited un-muting '
+                '`AccountMaintenanceSignal`.'
     )
     last_heartbeat_ts = db.Column(
         db.TIMESTAMP(timezone=True),
