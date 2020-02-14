@@ -351,6 +351,7 @@ class AccountsScanner(TableScanner):
         # 4) Send `ChangeInterestRateSignal`s:
         changed_rate_pks = self._check_interest_rates(nonmuted_regular_rows, current_ts)
 
+        # TODO: Try to execute the three updates in one DB round-trip.
         self._mute_accounts(for_deletion_pks, current_ts, for_deletion=True)
         self._mute_accounts(capitalized_pks, current_ts, capitalized=True)
         self._mute_accounts(zeroed_out_pks | changed_rate_pks, current_ts)
