@@ -323,7 +323,7 @@ class AccountsScanner(TableScanner):
 
         We must send maintenance operation requests only for alive,
         regular accounts, which are not "muted". Also, we want to send
-        at most one maintenance operation requests per account.
+        at most one maintenance operation request per account.
 
         NOTE: We want the `ChangeInterestRateSignal` to have the
               lowest priority, so that it does not prevent other more
