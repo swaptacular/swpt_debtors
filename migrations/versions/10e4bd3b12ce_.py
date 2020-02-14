@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: c98d1180ac6c
+Revision ID: 10e4bd3b12ce
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-13 23:34:05.153264
+Create Date: 2020-02-14 15:30:40.649741
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'c98d1180ac6c'
+revision = '10e4bd3b12ce'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -42,6 +42,7 @@ def upgrade():
     comment='Tells who owes what to whom. This table is a replica of the table with the same name in the `swpt_accounts` service. It is used to perform maintenance routines like changing interest rates. Most of the columns get their values from the corresponding fields in the last applied `AccountChangeSignal`.'
     )
     op.create_table('capitalize_interest_signal',
+    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
@@ -50,6 +51,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('change_interest_rate_signal',
+    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
@@ -58,6 +60,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('configure_account_signal',
+    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
@@ -88,6 +91,7 @@ def upgrade():
     comment="Represents debtor's principal information."
     )
     op.create_table('finalize_prepared_transfer_signal',
+    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('sender_creditor_id', sa.BigInteger(), nullable=False),
@@ -98,6 +102,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('prepare_transfer_signal',
+    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
     sa.Column('min_amount', sa.BigInteger(), nullable=False),
@@ -124,6 +129,7 @@ def upgrade():
     )
     op.create_index('idx_issuing_coordinator_request_id', 'running_transfer', ['debtor_id', 'issuing_coordinator_request_id'], unique=True)
     op.create_table('try_to_delete_account_signal',
+    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
@@ -131,6 +137,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('zero_out_negative_balance_signal',
+    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),

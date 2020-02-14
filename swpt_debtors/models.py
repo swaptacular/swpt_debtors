@@ -33,7 +33,8 @@ class Signal(db.Model):
 
     # TODO: Define `send_signalbus_messages` class method, set
     #      `ModelClass.signalbus_autoflush = False` and
-    #      `ModelClass.signalbus_burst_count = N` in models.
+    #      `ModelClass.signalbus_burst_count = N` in models. Make sure
+    #      TTL is set properly for the messages.
 
     queue_name: Optional[str] = None
 
@@ -61,6 +62,8 @@ class Signal(db.Model):
             options={},
         )
         broker.publish_message(message, exchange=MAIN_EXCHANGE_NAME, routing_key=routing_key)
+
+    inserted_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
 
 
 # TODO: Implement a daemon that garbage-collects debtors. Here is how
