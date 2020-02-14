@@ -48,7 +48,6 @@ class AccountsScanner(TableScanner):
         self.interval = timedelta(days=days)
         self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
         self.pending_transfers_max_delay = timedelta(days=current_app.config['APP_PENDING_TRANSFERS_MAX_DELAY_DAYS'])
-        self.account_purge_delay = 2 * self.signalbus_max_delay + self.pending_transfers_max_delay
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])
         self.max_interest_to_principal_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
