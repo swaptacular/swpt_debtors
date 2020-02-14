@@ -53,13 +53,10 @@ class AccountsScanner(TableScanner):
         self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])
         self.max_interest_to_principal_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
         self.min_deletion_attempt_interval = self.signalbus_max_delay + self.pending_transfers_max_delay
+        self.account_unmute_interval = 2 * self.signalbus_max_delay
         self.min_interest_cap_interval = max(
             timedelta(days=current_app.config['APP_MIN_INTEREST_CAPITALIZATION_DAYS']),
             4 * self.interval,
-        )
-        self.account_mute_interval = max(
-            timedelta(days=current_app.config['APP_ACCOUNT_MUTE_DAYS']),
-            2 * self.signalbus_max_delay,
         )
         self.debtor_interest_rates: Dict[int, CachedInterestRate] = {}
 
@@ -110,7 +107,7 @@ class AccountsScanner(TableScanner):
 
         c = self.table.c
         c_is_muted, c_last_maintenance_request_ts = c.is_muted, c.last_maintenance_request_ts
-        mute_cutoff_ts = current_ts - self.account_mute_interval
+        mute_cutoff_ts = current_ts - self.account_unmute_interval
         last_request_cutoff_ts = current_ts - self.interval / 10
         return [
             row for row in rows if (

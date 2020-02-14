@@ -61,7 +61,6 @@ class Configuration(metaclass=MetaFlaskEnv):
     APP_RUNNING_TRANSFERS_ABANDON_DAYS = 365
     APP_DEAD_ACCOUNTS_ABANDON_DAYS = 365
     APP_MIN_INTEREST_CAPITALIZATION_DAYS = 14
-    APP_ACCOUNT_MUTE_DAYS = 30
 
 
 def create_app(config_dict={}):
