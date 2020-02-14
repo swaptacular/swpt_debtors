@@ -97,7 +97,9 @@ class Debtor(db.Model):
         db.SmallInteger,
         nullable=False,
         default=0,
-        comment=f"Debtor's status bits: {STATUS_HAS_ACTIVITY_FLAG} - has activity.",
+        comment="Debtor's status bits: "
+                f"{STATUS_HAS_ACTIVITY_FLAG} - has activity, "
+                f"{STATUS_HAS_ACCOUNT_FLAG} - has account.",
     )
     created_at_date = db.Column(
         db.DATE,

@@ -100,6 +100,10 @@ def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> Optional
             debtor.deactivated_at_date = datetime.now(tz=timezone.utc).date()
         if deleted_account:
             debtor.status &= ~Debtor.STATUS_HAS_ACCOUNT_FLAG
+            debtor.bll_values = None
+            debtor.bll_cutoffs = None
+            debtor.irll_values = None
+            debtor.irll_cutoffs = None
         debtor.initiated_transfers_count = 0
         InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
     return debtor

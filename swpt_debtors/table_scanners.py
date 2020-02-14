@@ -308,6 +308,10 @@ class AccountsScanner(TableScanner):
                     Debtor.deactivated_at_date: coalesce(Debtor.deactivated_at_date, current_ts),
                     Debtor.initiated_transfers_count: 0,
                     Debtor.status: Debtor.status.op('&')(~Debtor.STATUS_HAS_ACCOUNT_FLAG),
+                    Debtor.bll_values: None,
+                    Debtor.bll_cutoffs: None,
+                    Debtor.irll_values: None,
+                    Debtor.irll_cutoffs: None,
                 }, synchronize_session=False)
             InitiatedTransfer.query.\
                 filter(InitiatedTransfer.debtor_id.in_(debtors_ids)).\

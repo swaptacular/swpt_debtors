@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 10e4bd3b12ce
+Revision ID: 095f75846cc4
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-14 15:30:40.649741
+Create Date: 2020-02-14 19:30:09.519539
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '10e4bd3b12ce'
+revision = '095f75846cc4'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -68,7 +68,7 @@ def upgrade():
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
-    sa.Column('status', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - has activity."),
+    sa.Column('status', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - has activity, 2 - has account."),
     sa.Column('created_at_date', sa.DATE(), nullable=False, comment='The date on which the debtor was created.'),
     sa.Column('deactivated_at_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet. Management operations (like policy updates and credit issuing) are not allowed on deactivated debtors. Once deactivated, a debtor stays deactivated until it is deleted.'),
     sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
