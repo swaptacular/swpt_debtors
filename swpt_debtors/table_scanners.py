@@ -14,6 +14,9 @@ T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
 SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
 
+# TODO: Make `TableScanner.blocks_per_query` and
+#       `TableScanner.target_beat_duration` configurable.
+
 
 class CachedInterestRate(NamedTuple):
     interest_rate: float
@@ -42,8 +45,6 @@ class AccountsScanner(TableScanner):
     """Executes accounts maintenance operations."""
 
     table = Account.__table__
-    blocks_per_query = 60  # about 1000 to 4000 accounts per query
-    target_beat_duration = 90  # 90 milliseconds
     old_interest_rate = CachedInterestRate(0.0, datetime(1900, 1, 1, tzinfo=timezone.utc))
     pk = tuple_(Account.debtor_id, Account.creditor_id)
 
