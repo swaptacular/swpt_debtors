@@ -54,6 +54,10 @@ TRANSFER_CONFLICT = {
     'description': 'A different transfer entry with the same UUID already exists.',
 }
 
+TRANSFER_UPDATE_CONFLICT = {
+    'description': 'The requested transfer update is not possible.',
+}
+
 TOO_MANY_TRANSFERS = {
     'description': 'Too many issuing transfers.',
 }

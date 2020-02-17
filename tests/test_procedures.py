@@ -493,3 +493,20 @@ def test_process_account_maintenance_signal(db_session, debtor, current_ts):
     a = Account.get_instance((D_ID, C_ID))
     assert a.is_muted is False
     assert a.last_maintenance_request_ts == current_ts
+
+
+def test_update_transfer(db_session, debtor):
+    p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
+    pts = PrepareTransferSignal.query.one()
+    p.process_prepared_issuing_transfer_signal(
+        debtor_id=D_ID,
+        sender_creditor_id=ROOT_CREDITOR_ID,
+        transfer_id=777,
+        recipient_creditor_id=C_ID,
+        sender_locked_amount=1000,
+        coordinator_id=D_ID,
+        coordinator_request_id=pts.coordinator_request_id,
+    )
+    t = p.update_transfer(D_ID, TEST_UUID, True)
+    assert t.is_finalized is True
+    assert t.is_successful is True

@@ -5,7 +5,7 @@ from flask_smorest import Blueprint, abort
 from swpt_lib import endpoints
 from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
     DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, IssuingTransferCreationRequestSchema, \
-    TransfersCollection
+    TransfersCollection, TransferUpdateRequestSchema
 from . import specs
 from . import procedures
 
@@ -168,6 +168,25 @@ class TransferEndpoint(MethodView):
         """Return information about a credit-issuing transfer."""
 
         return procedures.get_initiated_transfer(debtorId, transferUuid) or abort(404)
+
+    @transfers_api.arguments(TransferUpdateRequestSchema)
+    @transfers_api.response(TransferSchema(context=CONTEXT))
+    @transfers_api.doc(responses={404: specs.TRANSFER_DOES_NOT_EXIST,
+                                  409: specs.TRANSFER_UPDATE_CONFLICT})
+    def patch(self, transfer_update_request, debtorId, transferUuid):
+        """Update a transfer.
+
+        This operation is **idempotent**!
+
+        """
+
+        try:
+            transfer = procedures.update_transfer(debtorId, transferUuid, transfer_update_request['is_finalized'])
+        except procedures.TransferDoesNotExistError:
+            abort(404)
+        except procedures.TransferUpdateConflictError as e:
+            abort(409, message=e.message)
+        return transfer
 
     @transfers_api.response(code=204)
     def delete(self, debtorId, transferUuid):

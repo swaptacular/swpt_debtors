@@ -219,3 +219,31 @@ def test_initiate_transfer(client, debtor):
             assert r.status_code == 403
         else:
             assert r.status_code == 201
+
+
+def test_update_transfer(client, debtor):
+    json_request_body = {
+        'amount': 1000,
+        'transferInfo': {'note': 'test'},
+        'recipientUri': 'http://example.com/creditors/1111',
+        'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
+    }
+    r = client.post('/debtors/123/transfers/', json=json_request_body)
+    assert r.status_code == 201
+    data = r.get_json()
+    assert data['isFinalized'] is False
+
+    r = client.patch('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001', json={'isFinalized': True})
+    assert r.status_code == 404
+
+    r = client.patch('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={'isFinalized': True})
+    assert r.status_code == 200
+
+    r = client.get('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000')
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['isFinalized'] is True
+    assert data['isSuccessful'] is False
+
+    r = client.patch('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={'isFinalized': False})
+    assert r.status_code == 409

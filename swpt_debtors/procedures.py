@@ -25,6 +25,10 @@ class DebtorExistsError(Exception):
     """The same debtor record already exists."""
 
 
+class TransferDoesNotExistError(Exception):
+    """The transfer does not exist."""
+
+
 class TransferExistsError(Exception):
     """The same initiated transfer record already exists."""
 
@@ -34,6 +38,13 @@ class TransferExistsError(Exception):
 
 class TransfersConflictError(Exception):
     """A different transfer with the same UUID already exists."""
+
+
+class TransferUpdateConflictError(Exception):
+    """The requested transfer update is not possible."""
+
+    def __init__(self, message: str):
+        self.message = message
 
 
 class TooManyManagementActionsError(Exception):
@@ -155,6 +166,27 @@ def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
 @atomic
 def get_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> Optional[InitiatedTransfer]:
     return InitiatedTransfer.get_instance((debtor_id, transfer_uuid))
+
+
+@atomic
+def update_transfer(debtor_id: int, transfer_uuid: UUID, should_be_finalized: bool) -> InitiatedTransfer:
+    initiated_transfer = InitiatedTransfer.lock_instance((debtor_id, transfer_uuid))
+    if not initiated_transfer:
+        raise TransferDoesNotExistError()
+    if initiated_transfer.is_finalized and not should_be_finalized:
+        raise TransferUpdateConflictError('The transfer is finalized.')
+    if not initiated_transfer.is_finalized and should_be_finalized:
+        rt = RunningTransfer.lock_instance((debtor_id, transfer_uuid))
+        initiated_transfer.finalized_at_ts = datetime.now(tz=timezone.utc)
+        initiated_transfer.is_successful = False
+        if rt:
+            if rt.issuing_transfer_id is None:
+                db.session.delete(rt)
+            else:
+                initiated_transfer.is_successful = True
+        if not initiated_transfer.is_successful:
+            initiated_transfer.error = {'errorCode': 'DEB002', 'message': 'Canceled transfer.'}
+    return initiated_transfer
 
 
 @atomic

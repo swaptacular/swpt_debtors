@@ -354,6 +354,15 @@ class TransferSchema(Schema):
         return finalized_at_ts.isoformat()
 
 
+class TransferUpdateRequestSchema(Schema):
+    is_finalized = fields.Boolean(
+        required=True,
+        data_key='isFinalized',
+        description='Whether the transfer is finalized or not.',
+        example=True,
+    )
+
+
 class TransfersCollectionSchema(Schema):
     uri = fields.Method(
         'get_uri',
