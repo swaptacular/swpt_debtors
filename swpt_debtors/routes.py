@@ -174,7 +174,7 @@ class TransferEndpoint(MethodView):
     @transfers_api.doc(responses={404: specs.TRANSFER_DOES_NOT_EXIST,
                                   409: specs.TRANSFER_UPDATE_CONFLICT})
     def patch(self, transfer_update_request, debtorId, transferUuid):
-        """Update a transfer.
+        """Cancel a credit-issuing transfer.
 
         This operation is **idempotent**!
 
@@ -194,6 +194,12 @@ class TransferEndpoint(MethodView):
 
     @transfers_api.response(code=204)
     def delete(self, debtorId, transferUuid):
-        """Delete a credit-issuing transfer."""
+        """Delete a credit-issuing transfer.
+
+        Note that deleting a running (not finalized) transfer does not
+        cancel it. To ensure that a running transfer has not been
+        successful, it must be canceled before deletion.
+
+        """
 
         procedures.delete_initiated_transfer(debtorId, transferUuid)
