@@ -181,7 +181,11 @@ class TransferEndpoint(MethodView):
         """
 
         try:
-            transfer = procedures.update_transfer(debtorId, transferUuid, transfer_update_request['is_finalized'])
+            transfer = procedures.update_transfer(
+                debtor_id=debtorId,
+                transfer_uuid=transferUuid,
+                should_be_finalized=transfer_update_request['is_finalized'],
+            )
         except procedures.TransferDoesNotExistError:
             abort(404)
         except procedures.TransferUpdateConflictError:
