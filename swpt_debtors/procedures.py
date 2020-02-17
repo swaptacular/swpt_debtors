@@ -43,9 +43,6 @@ class TransfersConflictError(Exception):
 class TransferUpdateConflictError(Exception):
     """The requested transfer update is not possible."""
 
-    def __init__(self, message: str):
-        self.message = message
-
 
 class TooManyManagementActionsError(Exception):
     """Too many management actions per month by a debtor."""
@@ -173,9 +170,9 @@ def update_transfer(debtor_id: int, transfer_uuid: UUID, should_be_finalized: bo
     initiated_transfer = InitiatedTransfer.lock_instance((debtor_id, transfer_uuid))
     if not initiated_transfer:
         raise TransferDoesNotExistError()
-    if initiated_transfer.is_finalized and not should_be_finalized:
-        raise TransferUpdateConflictError('The transfer is finalized.')
-    if not initiated_transfer.is_finalized and should_be_finalized:
+    if not should_be_finalized:
+        raise TransferUpdateConflictError()
+    if not initiated_transfer.is_finalized:
         rt = RunningTransfer.lock_instance((debtor_id, transfer_uuid))
         initiated_transfer.finalized_at_ts = datetime.now(tz=timezone.utc)
         initiated_transfer.is_successful = False

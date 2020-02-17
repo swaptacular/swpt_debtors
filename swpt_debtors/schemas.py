@@ -358,7 +358,7 @@ class TransferUpdateRequestSchema(Schema):
     is_finalized = fields.Boolean(
         required=True,
         data_key='isFinalized',
-        description='Whether the transfer is finalized or not.',
+        description='Whether the transfer should be canceled.',
         example=True,
     )
 

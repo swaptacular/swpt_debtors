@@ -184,8 +184,8 @@ class TransferEndpoint(MethodView):
             transfer = procedures.update_transfer(debtorId, transferUuid, transfer_update_request['is_finalized'])
         except procedures.TransferDoesNotExistError:
             abort(404)
-        except procedures.TransferUpdateConflictError as e:
-            abort(409, message=e.message)
+        except procedures.TransferUpdateConflictError:
+            abort(409)
         return transfer
 
     @transfers_api.response(code=204)
