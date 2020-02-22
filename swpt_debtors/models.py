@@ -20,10 +20,6 @@ INTEREST_RATE_CEIL = 100.0
 ROOT_CREDITOR_ID = 0
 
 
-def increment_seqnum(n):  # pragma: no cover
-    return MIN_INT32 if n == MAX_INT32 else n + 1
-
-
 def get_now_utc():
     return datetime.now(tz=timezone.utc)
 
