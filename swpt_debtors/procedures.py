@@ -366,11 +366,13 @@ def process_account_change_signal(
 
     account = Account.lock_instance((debtor_id, creditor_id))
     if account:
-        this_event = (change_ts, change_seqnum)
         prev_event = (account.change_ts, account.change_seqnum)
-        if this_event == prev_event:
+        this_event = (change_ts, change_seqnum)
+        this_event_is_not_old = not is_later_event(prev_event, this_event)
+        this_event_is_not_new = not is_later_event(this_event, prev_event)
+        if this_event_is_not_old:
             account.last_heartbeat_ts = datetime.now(tz=timezone.utc)
-        if not is_later_event(this_event, prev_event):
+        if this_event_is_not_new:
             return
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
@@ -381,7 +383,6 @@ def process_account_change_signal(
         account.creation_date = creation_date
         account.negligible_amount = negligible_amount
         account.status = status
-        account.last_heartbeat_ts = datetime.now(tz=timezone.utc)
     else:
         account = Account(
             debtor_id=debtor_id,
