@@ -374,6 +374,7 @@ def process_account_change_signal(
             account.last_heartbeat_ts = datetime.now(tz=timezone.utc)
         if this_event_is_not_new:
             return
+        assert this_event_is_not_old
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
         account.principal = principal
