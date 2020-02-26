@@ -68,7 +68,7 @@ def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
     try:
         db.session.flush()
     except IntegrityError:
-        raise DebtorExistsError(debtor_id)
+        raise DebtorExistsError()
     _insert_configure_account_signal(debtor_id)
     return debtor
 
