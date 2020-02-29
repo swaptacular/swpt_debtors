@@ -375,6 +375,7 @@ def process_account_change_signal(
         if this_event_is_not_new:
             return
         assert this_event_is_not_old
+        assert account.creation_date <= creation_date
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
         account.principal = principal
