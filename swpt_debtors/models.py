@@ -432,7 +432,7 @@ class Account(db.Model):
     __table_args__ = (
         db.CheckConstraint((interest_rate >= INTEREST_RATE_FLOOR) & (interest_rate <= INTEREST_RATE_CEIL)),
         db.CheckConstraint(principal > MIN_INT64),
-        db.CheckConstraint(negligible_amount >= 2.0),
+        db.CheckConstraint(negligible_amount >= 0.0),
         {
             'comment': 'Tells who owes what to whom. This table is a replica of the table with the '
                        'same name in the `swpt_accounts` service. It is used to perform maintenance '
@@ -456,7 +456,7 @@ class ConfigureAccountSignal(Signal):
         change_ts = fields.DateTime()
         change_seqnum = fields.Constant(0)
         is_scheduled_for_deletion = fields.Constant(False)
-        negligible_amount = fields.Constant(2.0)
+        negligible_amount = fields.Constant(0.0)
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 60379fa491b2
+Revision ID: d1d8157dbac7
 Revises: 8d09bea9c7d1
-Create Date: 2020-02-22 17:02:34.844852
+Create Date: 2020-02-29 15:44:20.742109
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '60379fa491b2'
+revision = 'd1d8157dbac7'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -36,7 +36,7 @@ def upgrade():
     sa.Column('last_deletion_attempt_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last deletion attempt was made. It is used to avoid trying to delete the account too often.'),
     sa.Column('last_maintenance_request_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last account maintenance operation request was made. It is used to avoid triggering account maintenance operations too often.'),
     sa.CheckConstraint('interest_rate >= -50.0 AND interest_rate <= 100.0'),
-    sa.CheckConstraint('negligible_amount >= 2.0'),
+    sa.CheckConstraint('negligible_amount >= 0.0'),
     sa.CheckConstraint('principal > -9223372036854775808'),
     sa.PrimaryKeyConstraint('debtor_id', 'creditor_id'),
     comment='Tells who owes what to whom. This table is a replica of the table with the same name in the `swpt_accounts` service. It is used to perform maintenance routines like changing interest rates. Most of the columns get their values from the corresponding fields in the last applied `AccountChangeSignal`.'

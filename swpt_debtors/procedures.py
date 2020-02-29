@@ -361,7 +361,7 @@ def process_account_change_signal(
     assert MIN_INT32 <= change_seqnum <= MAX_INT32
     assert -MAX_INT64 <= principal <= MAX_INT64
     assert -100 < interest_rate <= 100.0
-    assert negligible_amount >= 2.0
+    assert negligible_amount >= 0.0
     assert MIN_INT16 <= status <= MAX_INT16
 
     account = Account.lock_instance((debtor_id, creditor_id))
