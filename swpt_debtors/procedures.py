@@ -61,7 +61,7 @@ def get_debtor(debtor_id: int) -> Optional[Debtor]:
 
 
 @atomic
-def create_new_debtor(debtor_id: int) -> Optional[Debtor]:
+def create_new_debtor(debtor_id: int) -> Debtor:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     debtor = Debtor(debtor_id=debtor_id)
     db.session.add(debtor)
