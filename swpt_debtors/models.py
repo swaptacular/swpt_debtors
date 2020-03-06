@@ -476,6 +476,7 @@ class PrepareTransferSignal(Signal):
         debtor_id = fields.Integer()
         sender_creditor_id = fields.Integer()
         recipient_creditor_id = fields.Integer()
+        signal_ts = fields.DateTime(attribute='inserted_at_ts')
         minimum_account_balance = fields.Integer()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
