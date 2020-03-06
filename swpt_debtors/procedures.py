@@ -354,7 +354,9 @@ def process_account_change_signal(
         last_outgoing_transfer_date: date,
         creation_date: date,
         negligible_amount: float,
-        status: int) -> None:
+        status: int,
+        signal_ts: datetime,
+        signal_ttl: float) -> None:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= creditor_id <= MAX_INT64
@@ -363,6 +365,11 @@ def process_account_change_signal(
     assert -100 < interest_rate <= 100.0
     assert negligible_amount >= 0.0
     assert MIN_INT16 <= status <= MAX_INT16
+    assert signal_ttl > 0.0
+
+    current_ts = datetime.now(tz=timezone.utc)
+    if (current_ts - signal_ts).total_seconds() >= signal_ttl:
+        return
 
     account = Account.lock_instance((debtor_id, creditor_id))
     if account:
@@ -409,7 +416,6 @@ def process_account_change_signal(
     elif not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         debtor = Debtor.get_instance(debtor_id)
         if debtor:
-            current_ts = datetime.now(tz=timezone.utc)
             account.is_muted = True
             account.last_maintenance_request_ts = current_ts
             insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate, current_ts)

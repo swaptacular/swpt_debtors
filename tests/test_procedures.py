@@ -55,7 +55,7 @@ def test_deactivate_debtor(db_session, debtor):
     assert p.get_debtor(1234567890) is None
 
 
-def test_process_account_change_signal(db_session, debtor):
+def test_process_account_change_signal(db_session, debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
     last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
@@ -71,6 +71,8 @@ def test_process_account_change_signal(db_session, debtor):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
+        signal_ts=current_ts,
+        signal_ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
@@ -102,6 +104,8 @@ def test_process_account_change_signal(db_session, debtor):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
+        signal_ts=current_ts,
+        signal_ttl=1e30,
     )
     a = Account.get_instance((D_ID, C_ID))
     assert a.last_heartbeat_ts > last_heartbeat_ts
@@ -128,6 +132,8 @@ def test_process_account_change_signal(db_session, debtor):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
+        signal_ts=current_ts,
+        signal_ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
@@ -148,6 +154,8 @@ def test_process_account_change_signal(db_session, debtor):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
+        signal_ts=current_ts,
+        signal_ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
@@ -161,8 +169,29 @@ def test_process_account_change_signal(db_session, debtor):
     cirs = ChangeInterestRateSignal.query.all()
     assert len(cirs) == 1
 
+    # Ignored message
+    p.process_account_change_signal(
+        debtor_id=D_ID,
+        creditor_id=C_ID,
+        change_seqnum=change_seqnum + 2,
+        change_ts=change_ts + timedelta(seconds=5),
+        principal=1002,
+        interest=12.6,
+        interest_rate=-0.6,
+        last_outgoing_transfer_date=last_outgoing_transfer_date + timedelta(days=1),
+        creation_date=date(2018, 10, 20),
+        negligible_amount=5.5,
+        status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
+        signal_ts=current_ts - timedelta(seconds=1000),
+        signal_ttl=500,
+    )
+    assert len(Account.query.all()) == 1
+    a = Account.get_instance((D_ID, C_ID))
+    assert a.change_seqnum == change_seqnum + 1
+    assert a.principal == 1001
 
-def test_process_account_change_signal_no_debtor(db_session):
+
+def test_process_account_change_signal_no_debtor(db_session, current_ts):
     assert len(Debtor.query.all()) == 0
 
     change_seqnum = 1
@@ -180,6 +209,8 @@ def test_process_account_change_signal_no_debtor(db_session):
         creation_date=date(2018, 10, 20),
         negligible_amount=2.0,
         status=0,
+        signal_ts=current_ts,
+        signal_ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, ROOT_CREDITOR_ID))
@@ -199,7 +230,7 @@ def test_process_account_change_signal_no_debtor(db_session):
     assert d.balance_ts == change_ts
 
 
-def test_process_root_account_change_signal(db_session, debtor):
+def test_process_root_account_change_signal(db_session, debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
     last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
@@ -215,6 +246,8 @@ def test_process_root_account_change_signal(db_session, debtor):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
+        signal_ts=current_ts,
+        signal_ttl=1e30,
     )
     d = p.get_debtor(D_ID)
     assert d.balance == -9999
@@ -455,6 +488,8 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
         creation_date=creation_date,
         negligible_amount=2.0,
         status=0,
+        signal_ts=current_ts,
+        signal_ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     p.process_account_purge_signal(D_ID, p.ROOT_CREDITOR_ID, creation_date)

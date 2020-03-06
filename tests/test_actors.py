@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from swpt_debtors import procedures as p
 from swpt_debtors import actors as a
 
@@ -33,6 +34,8 @@ def test_on_account_change_signal(db_session):
         creation_date='2018-10-1',
         negligible_amount=2.0,
         status=0,
+        signal_ts=datetime.now(tz=timezone.utc).isoformat(),
+        signal_ttl=1e30,
     )
 
 

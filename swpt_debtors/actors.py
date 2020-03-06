@@ -33,6 +33,8 @@ def on_account_change_signal(
         creation_date: str,
         negligible_amount: float,
         status: int,
+        signal_ts: str,
+        signal_ttl: float,
         *args, **kwargs) -> None:
 
     procedures.process_account_change_signal(
@@ -47,6 +49,8 @@ def on_account_change_signal(
         iso8601.parse_date(creation_date).date(),
         negligible_amount,
         status,
+        iso8601.parse_date(signal_ts),
+        signal_ttl,
     )
 
 
