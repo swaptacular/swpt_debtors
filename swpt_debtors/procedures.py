@@ -368,7 +368,7 @@ def process_account_change_signal(
     assert signal_ttl > 0.0
 
     current_ts = datetime.now(tz=timezone.utc)
-    if (current_ts - signal_ts).total_seconds() >= signal_ttl:
+    if (current_ts - signal_ts).total_seconds() > signal_ttl:
         return
 
     account = Account.lock_instance((debtor_id, creditor_id))
