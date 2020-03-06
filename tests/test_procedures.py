@@ -104,11 +104,11 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
-        signal_ts=current_ts,
+        signal_ts=current_ts + timedelta(seconds=12),
         signal_ttl=1e30,
     )
     a = Account.get_instance((D_ID, C_ID))
-    assert a.last_heartbeat_ts > last_heartbeat_ts
+    assert 11.0 <= (a.last_heartbeat_ts - last_heartbeat_ts).total_seconds() <= 13.0
     assert a.change_seqnum == change_seqnum
     assert a.change_ts == change_ts
     assert a.principal == 1000

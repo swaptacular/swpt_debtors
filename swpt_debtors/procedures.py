@@ -378,7 +378,7 @@ def process_account_change_signal(
         this_event_is_not_old = not is_later_event(prev_event, this_event)
         this_event_is_not_new = not is_later_event(this_event, prev_event)
         if this_event_is_not_old:
-            account.last_heartbeat_ts = datetime.now(tz=timezone.utc)
+            account.last_heartbeat_ts = signal_ts
         if this_event_is_not_new:
             return
         assert this_event_is_not_old
