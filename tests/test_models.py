@@ -1,7 +1,6 @@
 import pytest
 import uuid
 from datetime import date, datetime
-from sqlalchemy.exc import IntegrityError
 from swpt_debtors.lower_limits import LowerLimit, LowerLimitSequence
 from swpt_debtors.models import Debtor, InitiatedTransfer, RunningTransfer, MIN_INT64
 
