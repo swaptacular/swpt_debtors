@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, List
@@ -63,6 +64,7 @@ def get_debtor(debtor_id: int) -> Optional[Debtor]:
 @atomic
 def create_new_debtor(debtor_id: int) -> Debtor:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
+
     debtor = Debtor(debtor_id=debtor_id)
     db.session.add(debtor)
     try:
@@ -76,6 +78,7 @@ def create_new_debtor(debtor_id: int) -> Debtor:
 @atomic
 def lock_or_create_debtor(debtor_id: int) -> Debtor:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
+
     debtor = Debtor.lock_instance(debtor_id)
     if debtor is None:
         debtor = Debtor(debtor_id=debtor_id)
@@ -285,7 +288,7 @@ def process_prepared_issuing_transfer_signal(
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt:
         assert rt.debtor_id == debtor_id
-        assert rt.amount == sender_locked_amount
+        assert rt.amount <= sender_locked_amount
         assert ROOT_CREDITOR_ID == sender_creditor_id
         assert rt.recipient_creditor_id == recipient_creditor_id
 
@@ -295,7 +298,7 @@ def process_prepared_issuing_transfer_signal(
             # `InitiatedTransfer` record yet (it will be finalized
             # when the `FinalizedTransferSignal` is received). We do
             # this to avoid reporting a success too early, or even
-            # incorrectly in the case of a database crash.
+            # incorrectly.
             rt.issuing_transfer_id = transfer_id
 
         if rt.issuing_transfer_id == transfer_id:
@@ -329,15 +332,22 @@ def process_finalized_issuing_transfer_signal(
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
-    rt = _find_running_transfer(coordinator_id, coordinator_request_id)
-    if (rt and rt.debtor_id == debtor_id and rt.issuing_transfer_id == transfer_id):
-        assert rt.recipient_creditor_id == recipient_creditor_id
 
-        # When `committed_amount` is zero, the `InitiatedTransfer`
-        # record has been already finalized (with an error).
-        if committed_amount != 0:
-            assert committed_amount == rt.amount
-            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, finalized_at_ts=datetime.now(tz=timezone.utc))
+    rt = _find_running_transfer(coordinator_id, coordinator_request_id)
+    if rt and rt.debtor_id == debtor_id and rt.issuing_transfer_id == transfer_id:
+        is_successfully_committed = rt.amount == committed_amount and rt.recipient_creditor_id == recipient_creditor_id
+        if is_successfully_committed:
+            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid)
+        else:
+            logging.getLogger(__name__).critical(
+                'Incorrect finalization of <PreparedTransfer %(debtor_id)s, %(sender_creditor_id)s, %(transfer_id)s>',
+                dict(debtor_id=debtor_id, sender_creditor_id=ROOT_CREDITOR_ID, transfer_id=transfer_id),
+            )
+            _finalize_initiated_transfer(
+                rt.debtor_id,
+                rt.transfer_uuid,
+                error={'errorCode': 'DEB003', 'message': 'Unexpected error.'},
+            )
 
         db.session.delete(rt)
 
@@ -425,6 +435,7 @@ def process_account_change_signal(
 def process_account_maintenance_signal(debtor_id: int, creditor_id: int, request_ts: datetime) -> None:
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= creditor_id <= MAX_INT64
+
     Account.query.\
         filter_by(debtor_id=debtor_id, creditor_id=creditor_id).\
         filter(Account.is_muted == true()).\
