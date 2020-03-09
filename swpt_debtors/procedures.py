@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, List
@@ -342,20 +341,9 @@ def process_finalized_issuing_transfer_signal(
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and rt.debtor_id == debtor_id and rt.issuing_transfer_id == transfer_id:
-        is_successfully_committed = rt.amount == committed_amount and rt.recipient_creditor_id == recipient_creditor_id
-        if is_successfully_committed:
-            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid)
-        else:
-            logging.getLogger(__name__).critical(
-                'Incorrect finalization of <PreparedTransfer %(debtor_id)s, %(sender_creditor_id)s, %(transfer_id)s>',
-                dict(debtor_id=debtor_id, sender_creditor_id=ROOT_CREDITOR_ID, transfer_id=transfer_id),
-            )
-            _finalize_initiated_transfer(
-                rt.debtor_id,
-                rt.transfer_uuid,
-                error={'errorCode': 'DEB003', 'message': 'Unexpected error.'},
-            )
-
+        assert rt.amount == committed_amount
+        assert rt.recipient_creditor_id == recipient_creditor_id
+        _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid)
         db.session.delete(rt)
 
 
