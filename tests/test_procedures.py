@@ -558,9 +558,18 @@ def test_process_account_maintenance_signal(db_session, debtor, current_ts):
     assert a.last_maintenance_request_ts == current_ts
 
 
-def test_update_transfer(db_session, debtor):
+def test_cancel_transfer_success(db_session, debtor):
     p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
-    pts = PrepareTransferSignal.query.one()
+    coordinator_request_id = PrepareTransferSignal.query.one().coordinator_request_id
+
+    t = p.cancel_transfer(D_ID, TEST_UUID)
+    assert t.is_finalized
+    assert not t.is_successful
+
+    t = p.cancel_transfer(D_ID, TEST_UUID)
+    assert t.is_finalized
+    assert not t.is_successful
+
     p.process_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
         sender_creditor_id=ROOT_CREDITOR_ID,
@@ -568,8 +577,40 @@ def test_update_transfer(db_session, debtor):
         recipient_creditor_id=C_ID,
         sender_locked_amount=1000,
         coordinator_id=D_ID,
-        coordinator_request_id=pts.coordinator_request_id,
+        coordinator_request_id=coordinator_request_id,
     )
-    t = p.update_transfer(D_ID, TEST_UUID, True)
-    assert t.is_finalized is True
-    assert t.is_successful is True
+    t = p.cancel_transfer(D_ID, TEST_UUID)
+    assert t.is_finalized
+    assert not t.is_successful
+
+
+def test_cancel_transfer_failure(db_session, debtor):
+    p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
+    coordinator_request_id = PrepareTransferSignal.query.one().coordinator_request_id
+
+    p.process_prepared_issuing_transfer_signal(
+        debtor_id=D_ID,
+        sender_creditor_id=ROOT_CREDITOR_ID,
+        transfer_id=777,
+        recipient_creditor_id=C_ID,
+        sender_locked_amount=1000,
+        coordinator_id=D_ID,
+        coordinator_request_id=coordinator_request_id,
+    )
+    with pytest.raises(p.TransferUpdateConflictError):
+        p.cancel_transfer(D_ID, TEST_UUID)
+    with pytest.raises(p.TransferUpdateConflictError):
+        p.cancel_transfer(D_ID, TEST_UUID)
+
+    p.process_finalized_issuing_transfer_signal(
+        debtor_id=D_ID,
+        transfer_id=777,
+        coordinator_id=D_ID,
+        coordinator_request_id=coordinator_request_id,
+        recipient_creditor_id=C_ID,
+        committed_amount=1000,
+    )
+    with pytest.raises(p.TransferUpdateConflictError):
+        p.cancel_transfer(D_ID, TEST_UUID)
+    with pytest.raises(p.TransferUpdateConflictError):
+        p.cancel_transfer(D_ID, TEST_UUID)

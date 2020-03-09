@@ -174,18 +174,16 @@ class TransferEndpoint(MethodView):
     @transfers_api.doc(responses={404: specs.TRANSFER_DOES_NOT_EXIST,
                                   409: specs.TRANSFER_UPDATE_CONFLICT})
     def patch(self, transfer_update_request, debtorId, transferUuid):
-        """Cancel a credit-issuing transfer.
+        """Cancel a credit-issuing transfer, if possible.
 
         This operation is **idempotent**!
 
         """
 
         try:
-            transfer = procedures.update_transfer(
-                debtor_id=debtorId,
-                transfer_uuid=transferUuid,
-                should_be_finalized=transfer_update_request['is_finalized'],
-            )
+            if not (transfer_update_request['is_finalized'] and not transfer_update_request['is_successful']):
+                raise procedures.TransferUpdateConflictError()
+            transfer = procedures.cancel_transfer(debtorId, transferUuid)
         except procedures.TransferDoesNotExistError:
             abort(404)
         except procedures.TransferUpdateConflictError:

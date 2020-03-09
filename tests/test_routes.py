@@ -221,7 +221,7 @@ def test_initiate_transfer(client, debtor):
             assert r.status_code == 201
 
 
-def test_update_transfer(client, debtor):
+def test_cancel_transfer(client, debtor):
     json_request_body = {
         'amount': 1000,
         'transferInfo': {'note': 'test'},
@@ -233,10 +233,12 @@ def test_update_transfer(client, debtor):
     data = r.get_json()
     assert data['isFinalized'] is False
 
-    r = client.patch('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001', json={'isFinalized': True})
+    r = client.patch('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001', json={
+        'isFinalized': True, 'isSuccessful': False})
     assert r.status_code == 404
 
-    r = client.patch('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={'isFinalized': True})
+    r = client.patch('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={
+        'isFinalized': True, 'isSuccessful': False})
     assert r.status_code == 200
 
     r = client.get('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000')
@@ -245,5 +247,6 @@ def test_update_transfer(client, debtor):
     assert data['isFinalized'] is True
     assert data['isSuccessful'] is False
 
-    r = client.patch('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={'isFinalized': False})
+    r = client.patch('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={
+        'isFinalized': False, 'isSuccessful': False})
     assert r.status_code == 409

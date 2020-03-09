@@ -169,23 +169,30 @@ def get_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> Optional[Init
 
 
 @atomic
-def update_transfer(debtor_id: int, transfer_uuid: UUID, should_be_finalized: bool) -> InitiatedTransfer:
+def cancel_transfer(debtor_id: int, transfer_uuid: UUID) -> InitiatedTransfer:
     initiated_transfer = InitiatedTransfer.lock_instance((debtor_id, transfer_uuid))
+
     if not initiated_transfer:
         raise TransferDoesNotExistError()
-    if not should_be_finalized:
+
+    if initiated_transfer.is_successful:
         raise TransferUpdateConflictError()
+
     if not initiated_transfer.is_finalized:
         rt = RunningTransfer.lock_instance((debtor_id, transfer_uuid))
+
+        # The `InitiatedTransfer` and `RunningTransfer` records are
+        # created together, and whenever the `RunningTransfer` gets
+        # removed, the `InitiatedTransfer` gets finalizad.
+        assert rt
+
+        if rt.is_finalized:
+            raise TransferUpdateConflictError()
         initiated_transfer.finalized_at_ts = datetime.now(tz=timezone.utc)
-        initiated_transfer.is_successful = False
-        if rt:
-            if rt.issuing_transfer_id is None:
-                db.session.delete(rt)
-            else:
-                initiated_transfer.is_successful = True
-        if not initiated_transfer.is_successful:
-            initiated_transfer.error = {'errorCode': 'DEB002', 'message': 'Canceled transfer.'}
+        initiated_transfer.error = {'errorCode': 'DEB002', 'message': 'Canceled transfer.'}
+        db.session.delete(rt)
+
+    assert initiated_transfer.is_finalized and not initiated_transfer.is_successful
     return initiated_transfer
 
 
