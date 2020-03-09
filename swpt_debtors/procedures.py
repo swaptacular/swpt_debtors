@@ -224,9 +224,10 @@ def initiate_transfer(
     assert recipient_creditor_id is None or MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
 
-    debtor = _throttle_debtor_actions(debtor_id)
-    _raise_error_if_too_many_transfers(debtor)
     _raise_error_if_transfer_exists(debtor_id, transfer_uuid, recipient_uri, amount, transfer_info)
+
+    debtor = _throttle_debtor_actions(debtor_id)
+    _increment_initiated_transfers_count(debtor)
 
     if recipient_creditor_id is None:
         new_transfer = InitiatedTransfer(
@@ -253,10 +254,9 @@ def initiate_transfer(
             amount=amount,
             transfer_info=transfer_info,
         )
+
     with db.retry_on_integrity_error():
         db.session.add(new_transfer)
-
-    debtor.initiated_transfers_count += 1
     return new_transfer
 
 
@@ -511,9 +511,10 @@ def _raise_error_if_transfer_exists(
         raise TransfersConflictError()
 
 
-def _raise_error_if_too_many_transfers(debtor: Debtor) -> None:
+def _increment_initiated_transfers_count(debtor: Debtor) -> None:
     if debtor.initiated_transfers_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
         raise TransfersConflictError()
+    debtor.initiated_transfers_count += 1
 
 
 def _throttle_debtor_actions(debtor_id: int) -> Debtor:
