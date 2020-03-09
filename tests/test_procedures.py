@@ -449,34 +449,6 @@ def test_successful_transfer(db_session, debtor):
     assert it.is_successful
 
 
-def test_transfer_unexpected_finalization_error(db_session, debtor):
-    p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
-    coordinator_request_id = PrepareTransferSignal.query.one().coordinator_request_id
-    p.process_prepared_issuing_transfer_signal(
-        debtor_id=D_ID,
-        sender_creditor_id=ROOT_CREDITOR_ID,
-        transfer_id=777,
-        recipient_creditor_id=C_ID,
-        sender_locked_amount=1000,
-        coordinator_id=D_ID,
-        coordinator_request_id=coordinator_request_id,
-    )
-    p.process_finalized_issuing_transfer_signal(
-        debtor_id=D_ID,
-        transfer_id=777,
-        coordinator_id=D_ID,
-        coordinator_request_id=coordinator_request_id,
-        recipient_creditor_id=C_ID,
-        committed_amount=999,
-    )
-    it = InitiatedTransfer.query.one()
-    assert it.is_finalized
-    assert not it.is_successful
-    assert len(it.errors) == 1
-    assert it.errors[0]['errorCode'] == 'DEB003'
-    assert len(RunningTransfer.query.all()) == 0
-
-
 def test_failed_transfer(db_session, debtor):
     p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
     pts = PrepareTransferSignal.query.all()[0]

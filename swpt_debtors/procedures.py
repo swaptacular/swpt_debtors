@@ -37,7 +37,7 @@ class TransferExistsError(Exception):
 
 
 class TransfersConflictError(Exception):
-    """A different transfer with the same UUID already exists."""
+    """A different transfer with conflicting UUID already exists."""
 
 
 class TransferUpdateConflictError(Exception):
@@ -197,17 +197,17 @@ def cancel_transfer(debtor_id: int, transfer_uuid: UUID) -> InitiatedTransfer:
 
 @atomic
 def delete_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> bool:
-    n = InitiatedTransfer.query.filter_by(
-        debtor_id=debtor_id,
-        transfer_uuid=transfer_uuid,
-    ).delete(synchronize_session=False)
-    if n == 1:
-        Debtor.query.filter_by(debtor_id=debtor_id).update({
-            Debtor.initiated_transfers_count: Debtor.initiated_transfers_count - 1,
-        }, synchronize_session=False)
-        return True
-    assert n == 0
-    return False
+    number_of_deleted_rows = InitiatedTransfer.query.\
+        filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).\
+        delete(synchronize_session=False)
+
+    assert number_of_deleted_rows in [0, 1]
+    if number_of_deleted_rows == 1:
+        Debtor.query.\
+            filter_by(debtor_id=debtor_id).\
+            update({Debtor.initiated_transfers_count: Debtor.initiated_transfers_count - 1}, synchronize_session=False)
+
+    return number_of_deleted_rows == 1
 
 
 @atomic
