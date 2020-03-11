@@ -302,7 +302,7 @@ def process_prepared_issuing_transfer_signal(
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
-    assert sender_locked_amount > 0
+    assert 0 < sender_locked_amount <= MAX_INT64
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt:
