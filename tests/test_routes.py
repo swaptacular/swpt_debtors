@@ -181,7 +181,6 @@ def test_initiate_transfer(client, debtor):
     errors = data['errors']
     assert len(errors) == 1
     assert isinstance(errors[0]['errorCode'], str)
-    assert isinstance(errors[0]['message'], str)
     assert data['uri'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001'
     assert data['transferInfo'] == {}
     assert data['isSuccessful'] is False

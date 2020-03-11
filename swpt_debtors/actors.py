@@ -84,15 +84,16 @@ def on_rejected_issuing_transfer_signal(
         coordinator_type: str,
         coordinator_id: int,
         coordinator_request_id: int,
-        details: dict,
+        rejection_code: str,
+        available_amount: int,
         *args, **kwargs) -> None:
 
     assert coordinator_type == 'issuing'
-    assert type(details) is dict
     procedures.process_rejected_issuing_transfer_signal(
         coordinator_id,
         coordinator_request_id,
-        details,
+        rejection_code,
+        available_amount,
     )
 
 

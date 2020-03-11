@@ -188,7 +188,7 @@ def cancel_transfer(debtor_id: int, transfer_uuid: UUID) -> InitiatedTransfer:
         if rt.is_finalized:
             raise TransferUpdateConflictError()
         initiated_transfer.finalized_at_ts = datetime.now(tz=timezone.utc)
-        initiated_transfer.error = {'errorCode': 'DEB002', 'message': 'Canceled transfer.'}
+        initiated_transfer.error = {'errorCode': 'CANCELED_TRANSFER'}
         db.session.delete(rt)
 
     assert initiated_transfer.is_finalized and not initiated_transfer.is_successful
@@ -236,7 +236,7 @@ def initiate_transfer(
             amount=amount,
             transfer_info=transfer_info,
             finalized_at_ts=datetime.now(tz=timezone.utc),
-            error={'errorCode': 'DEB001', 'message': 'Unrecognized recipient URI.'},
+            error={'errorCode': 'WRONG_RECIPIENT_URI'},
         )
     else:
         _insert_running_transfer_or_raise_conflict_error(
@@ -269,10 +269,22 @@ def process_account_purge_signal(debtor_id: int, creditor_id: int, creation_date
 
 
 @atomic
-def process_rejected_issuing_transfer_signal(coordinator_id: int, coordinator_request_id: int, details: dict) -> None:
+def process_rejected_issuing_transfer_signal(
+        coordinator_id: int,
+        coordinator_request_id: int,
+        rejection_code: str,
+        available_amount: int) -> None:
+
+    assert len(rejection_code) <= 30 and rejection_code.encode('ascii')
+    assert MIN_INT64 <= available_amount <= MAX_INT64
+
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and not rt.is_finalized:
-        _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=details)
+        _finalize_initiated_transfer(
+            rt.debtor_id,
+            rt.transfer_uuid,
+            error={'errorCode': rejection_code, 'avlAmount': available_amount},
+        )
         db.session.delete(rt)
 
 
