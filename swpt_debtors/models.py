@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from typing import Optional
 from datetime import datetime, date, timezone
 from marshmallow import Schema, fields
@@ -501,7 +502,12 @@ class FinalizePreparedTransferSignal(Signal):
         sender_creditor_id = fields.Integer()
         transfer_id = fields.Integer()
         committed_amount = fields.Integer()
-        transfer_info = fields.Raw()
+        transfer_info = fields.Method('get_transfer_info_string')
+
+        def get_transfer_info_string(self, obj):
+            transfer_info_dict = obj.transfer_info
+            assert type(transfer_info_dict) is dict
+            return json.dumps(transfer_info_dict) if transfer_info_dict else ''
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)

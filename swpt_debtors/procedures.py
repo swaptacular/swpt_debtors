@@ -222,6 +222,7 @@ def initiate_transfer(
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert recipient_creditor_id is None or MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
+    assert type(transfer_info) is dict
 
     _raise_error_if_transfer_exists(debtor_id, transfer_uuid, recipient_uri, amount, transfer_info)
 
