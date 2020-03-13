@@ -371,6 +371,11 @@ class RunningTransfer(db.Model):
 
 
 class Account(db.Model):
+    # TODO: To achieve better scalability, consider moving the `Account`
+    #       table to a separate database. This will allow for it to be
+    #       sharded independently from the debtor-related tables. If
+    #       necessary, use signals to communicate between the two.
+
     STATUS_DELETED_FLAG = 1
     STATUS_ESTABLISHED_INTEREST_RATE_FLAG = 2
     STATUS_OVERFLOWN_FLAG = 4
