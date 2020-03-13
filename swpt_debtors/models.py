@@ -75,7 +75,7 @@ class Signal(db.Model):
 #    Deactivate the debtor.
 #
 # 3. For debtors which are deactivated, and have their "has account"
-#    flag SET: Check if the debtor's account is the only account left.
+#    flag SET: Check if the debtor's account principal is zero.
 #    If no -- do nothing; if yes -- send an account deletion request.
 #    In both cases, modify the account record so as to prevent it from
 #    being checked for garbage-collection for some time.
