@@ -204,12 +204,6 @@ class TransferErrorSchema(Schema):
         description='The error code.',
         example='INSUFFICIENT_AVAILABLE_AMOUNT',
     )
-    message = fields.String(
-        required=False,
-        dump_only=True,
-        description='The error message.',
-        example='Insufficient available amount.',
-    )
     avlAmount = fields.Integer(
         required=False,
         dump_only=True,
