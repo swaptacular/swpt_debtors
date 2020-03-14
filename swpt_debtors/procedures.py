@@ -280,6 +280,8 @@ def process_rejected_issuing_transfer_signal(
 
     assert len(rejection_code) <= 30 and rejection_code.encode('ascii')
     assert MIN_INT64 <= available_amount <= MAX_INT64
+    assert MIN_INT64 <= debtor_id <= MAX_INT64
+    assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and not rt.is_finalized:
@@ -305,6 +307,7 @@ def process_prepared_issuing_transfer_signal(
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
     assert 0 < sender_locked_amount <= MAX_INT64
+    assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     rt_matches_the_signal = (
@@ -355,7 +358,10 @@ def process_finalized_issuing_transfer_signal(
         committed_amount: int) -> None:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
+    assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
+    assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
+    assert 0 <= committed_amount <= MAX_INT64
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     rt_matches_the_signal = (
@@ -365,10 +371,11 @@ def process_finalized_issuing_transfer_signal(
         and rt.issuing_transfer_id == transfer_id
     )
     if rt_matches_the_signal:
-        assert rt.amount == committed_amount
-        assert rt.recipient_creditor_id == recipient_creditor_id
-
-        _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid)
+        if committed_amount == rt.amount and recipient_creditor_id == rt.recipient_creditor_id:
+            error = None
+        else:  # pragma: no cover
+            error = {'errorCode': 'UNEXPECTED_ERROR'}
+        _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=error)
         db.session.delete(rt)
 
 
