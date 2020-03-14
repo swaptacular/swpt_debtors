@@ -348,6 +348,7 @@ def process_prepared_issuing_transfer_signal(
 @atomic
 def process_finalized_issuing_transfer_signal(
         debtor_id: int,
+        sender_creditor_id: int,
         transfer_id: int,
         coordinator_id: int,
         coordinator_request_id: int,
@@ -358,9 +359,16 @@ def process_finalized_issuing_transfer_signal(
     assert MIN_INT64 <= transfer_id <= MAX_INT64
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
-    if rt and rt.debtor_id == debtor_id and rt.issuing_transfer_id == transfer_id:
+    rt_matches_the_signal = (
+        rt is not None
+        and rt.debtor_id == debtor_id
+        and ROOT_CREDITOR_ID == sender_creditor_id
+        and rt.issuing_transfer_id == transfer_id
+    )
+    if rt_matches_the_signal:
         assert rt.amount == committed_amount
         assert rt.recipient_creditor_id == recipient_creditor_id
+
         _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid)
         db.session.delete(rt)
 

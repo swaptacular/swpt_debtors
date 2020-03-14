@@ -437,6 +437,7 @@ def test_successful_transfer(db_session, debtor):
 
     p.process_finalized_issuing_transfer_signal(
         debtor_id=D_ID,
+        sender_creditor_id=p.ROOT_CREDITOR_ID,
         transfer_id=777,
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,
@@ -571,6 +572,7 @@ def test_cancel_transfer_failure(db_session, debtor):
 
     p.process_finalized_issuing_transfer_signal(
         debtor_id=D_ID,
+        sender_creditor_id=p.ROOT_CREDITOR_ID,
         transfer_id=777,
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,

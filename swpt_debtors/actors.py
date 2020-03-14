@@ -115,10 +115,10 @@ def on_finalized_issuing_transfer_signal(
         committed_amount: int,
         *args, **kwargs) -> None:
 
-    assert sender_creditor_id == procedures.ROOT_CREDITOR_ID
     assert coordinator_type == 'issuing'
     procedures.process_finalized_issuing_transfer_signal(
         debtor_id,
+        sender_creditor_id,
         transfer_id,
         coordinator_id,
         coordinator_request_id,
