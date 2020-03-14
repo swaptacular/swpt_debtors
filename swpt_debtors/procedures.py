@@ -310,12 +310,14 @@ def process_prepared_issuing_transfer_signal(
     assert 0 < sender_locked_amount <= MAX_INT64
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
-    if rt:
-        assert rt.debtor_id == debtor_id
-        assert rt.amount <= sender_locked_amount
-        assert ROOT_CREDITOR_ID == sender_creditor_id
-        assert rt.recipient_creditor_id == recipient_creditor_id
-
+    rt_matches_the_signal = (
+        rt is not None
+        and rt.debtor_id == debtor_id
+        and ROOT_CREDITOR_ID == sender_creditor_id
+        and rt.recipient_creditor_id == recipient_creditor_id
+        and rt.amount <= sender_locked_amount
+    )
+    if rt_matches_the_signal:
         if not rt.is_finalized:
             # We finalize the `RunningTransfer` record here, but we
             # deliberately do not finalize the corresponding
