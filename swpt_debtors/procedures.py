@@ -283,14 +283,11 @@ def process_rejected_issuing_transfer_signal(
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and not rt.is_finalized:
-        assert rt.debtor_id == debtor_id
-        assert ROOT_CREDITOR_ID == sender_creditor_id
-
-        _finalize_initiated_transfer(
-            rt.debtor_id,
-            rt.transfer_uuid,
-            error={'errorCode': rejection_code, 'avlAmount': available_amount},
-        )
+        if rt.debtor_id == debtor_id and ROOT_CREDITOR_ID == sender_creditor_id:
+            error = {'errorCode': rejection_code, 'avlAmount': available_amount}
+        else:  # pragma:  no cover
+            error = {'errorCode': 'UNEXPECTED_ERROR'}
+        _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=error)
         db.session.delete(rt)
 
 
