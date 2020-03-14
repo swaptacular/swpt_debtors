@@ -453,7 +453,7 @@ def test_successful_transfer(db_session, debtor):
 def test_failed_transfer(db_session, debtor):
     p.initiate_transfer(D_ID, TEST_UUID, C_ID, RECIPIENT_URI, 1000, {'note': 'test'})
     pts = PrepareTransferSignal.query.all()[0]
-    p.process_rejected_issuing_transfer_signal(D_ID, pts.coordinator_request_id, 'TEST', 1000)
+    p.process_rejected_issuing_transfer_signal(D_ID, pts.coordinator_request_id, 'TEST', 1000, D_ID, p.ROOT_CREDITOR_ID)
     assert len(FinalizePreparedTransferSignal.query.all()) == 0
 
     assert len(RunningTransfer.query.all()) == 0
@@ -463,7 +463,7 @@ def test_failed_transfer(db_session, debtor):
     assert it.is_finalized
     assert not it.is_successful
 
-    p.process_rejected_issuing_transfer_signal(D_ID, pts.coordinator_request_id, 'TEST', 1000)
+    p.process_rejected_issuing_transfer_signal(D_ID, pts.coordinator_request_id, 'TEST', 1000, D_ID, p.ROOT_CREDITOR_ID)
     assert len(RunningTransfer.query.all()) == 0
     it_list == InitiatedTransfer.query.all()
     assert len(it_list) == 1 and it_list[0].is_finalized

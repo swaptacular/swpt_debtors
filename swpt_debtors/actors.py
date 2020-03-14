@@ -86,6 +86,8 @@ def on_rejected_issuing_transfer_signal(
         coordinator_request_id: int,
         rejection_code: str,
         available_amount: int,
+        debtor_id: int,
+        sender_creditor_id: int,
         *args, **kwargs) -> None:
 
     assert coordinator_type == 'issuing'
@@ -94,6 +96,8 @@ def on_rejected_issuing_transfer_signal(
         coordinator_request_id,
         rejection_code,
         available_amount,
+        debtor_id,
+        sender_creditor_id,
     )
 
 

@@ -60,6 +60,8 @@ def test_on_rejected_issuing_transfer_signal(db_session):
         coordinator_request_id=1,
         rejection_code='TEST',
         available_amount=1000,
+        debtor_id=D_ID,
+        sender_creditor_id=p.ROOT_CREDITOR_ID,
     )
 
 
