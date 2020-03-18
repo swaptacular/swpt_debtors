@@ -422,7 +422,7 @@ def test_successful_transfer(db_session, debtor):
     assert fpts.transfer_id is not None
     assert fpts.committed_amount == 1000
     assert fpts.transfer_info == {'note': 'test'}
-    assert fpts.__marshmallow_schema__.dump(fpts)['transfer_info'] == '{"note": "test"}'
+    assert fpts.__marshmallow_schema__.dump(fpts)['transfer_message'] == '{"note": "test"}'
 
     rt_list = RunningTransfer.query.all()
     assert len(rt_list) == 1

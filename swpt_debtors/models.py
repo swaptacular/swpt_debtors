@@ -507,12 +507,16 @@ class FinalizePreparedTransferSignal(Signal):
         sender_creditor_id = fields.Integer()
         transfer_id = fields.Integer()
         committed_amount = fields.Integer()
-        transfer_info = fields.Method('get_transfer_info_string')
+        transfer_message = fields.Method('get_transfer_message')
+        transfer_flags = fields.Constant(0)
 
-        def get_transfer_info_string(self, obj):
+        def get_transfer_message(self, obj):
             transfer_info_dict = obj.transfer_info
             assert type(transfer_info_dict) is dict
             return json.dumps(transfer_info_dict) if transfer_info_dict else ''
+
+    # TODO: Add `transfer_flags` column here and in
+    #       `InitiatedTransfer`. Update the WebAPI.
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
