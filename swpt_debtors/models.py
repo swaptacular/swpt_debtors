@@ -515,8 +515,8 @@ class FinalizePreparedTransferSignal(Signal):
             assert type(transfer_info_dict) is dict
             return json.dumps(transfer_info_dict) if transfer_info_dict else ''
 
-    # TODO: Add `transfer_flags` column here and in
-    #       `InitiatedTransfer`. Update the WebAPI.
+    # TODO: Consider adding a `transfer_flags` column here and in
+    #       `InitiatedTransfer`, update transfers WebAPI accordingly.
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
