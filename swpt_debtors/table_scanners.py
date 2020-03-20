@@ -8,7 +8,8 @@ from sqlalchemy.sql.functions import coalesce
 from flask import current_app
 from .extensions import db
 from .models import Debtor, RunningTransfer, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
-    ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, InitiatedTransfer, MAX_INT64, ROOT_CREDITOR_ID
+    ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, InitiatedTransfer, MAX_INT64, ROOT_CREDITOR_ID, \
+    BEGINNING_OF_TIME
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -45,7 +46,7 @@ class AccountsScanner(TableScanner):
     """Executes accounts maintenance operations."""
 
     table = Account.__table__
-    old_interest_rate = CachedInterestRate(0.0, datetime(1900, 1, 1, tzinfo=timezone.utc))
+    old_interest_rate = CachedInterestRate(0.0, BEGINNING_OF_TIME)
     pk = tuple_(Account.debtor_id, Account.creditor_id)
 
     def __init__(self, days: float):

@@ -34,7 +34,7 @@ def test_scan_accounts(app_unsafe_session):
 
     some_date = date(2018, 10, 20)
     current_ts = datetime.now(tz=timezone.utc)
-    past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
+    past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     future_ts = datetime(2100, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     Debtor.query.delete()
@@ -181,7 +181,7 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
 
     some_date = date(2018, 10, 20)
     current_ts = datetime.now(tz=timezone.utc)
-    past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
+    past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     Debtor.query.delete()
     Account.query.delete()
@@ -266,7 +266,7 @@ def test_scan_accounts_zero_out(app_unsafe_session):
 
     some_date = date(2018, 10, 20)
     current_ts = datetime.now(tz=timezone.utc)
-    past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
+    past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     Debtor.query.delete()
     Account.query.delete()
@@ -325,7 +325,7 @@ def test_scan_accounts_zero_out(app_unsafe_session):
 def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     from swpt_debtors.models import Debtor
 
-    past_ts = datetime(1900, 1, 1, tzinfo=timezone.utc)
+    past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     Debtor.query.delete()
     Account.query.delete()

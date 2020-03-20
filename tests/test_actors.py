@@ -29,7 +29,7 @@ def test_on_account_change_signal(db_session):
         interest_rate=-0.5,
         last_transfer_seqnum=0,
         last_outgoing_transfer_date='2018-10-01',
-        last_config_signal_ts='1900-01-01T00:00:00Z',
+        last_config_signal_ts='1970-01-01T00:00:00Z',
         last_config_signal_seqnum=0,
         creation_date='2018-10-1',
         negligible_amount=2.0,
