@@ -9,7 +9,7 @@ from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedTransferSignal, \
     InitiatedTransfer, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
-    MIN_INT16, MAX_INT16, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
+    MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -401,7 +401,7 @@ def process_account_change_signal(
     assert -MAX_INT64 <= principal <= MAX_INT64
     assert -100 < interest_rate <= 100.0
     assert negligible_amount >= 0.0
-    assert MIN_INT16 <= status <= MAX_INT16
+    assert MIN_INT32 <= status <= MAX_INT32
     assert signal_ttl > 0.0
 
     current_ts = datetime.now(tz=timezone.utc)

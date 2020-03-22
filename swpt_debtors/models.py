@@ -376,10 +376,10 @@ class Account(db.Model):
     #       sharded independently from the debtor-related tables. If
     #       necessary, use signals to communicate between the two.
 
-    STATUS_DELETED_FLAG = 1
-    STATUS_ESTABLISHED_INTEREST_RATE_FLAG = 2
-    STATUS_OVERFLOWN_FLAG = 4
-    STATUS_SCHEDULED_FOR_DELETION_FLAG = 8
+    STATUS_SCHEDULED_FOR_DELETION_FLAG = 1 << 0
+    STATUS_DELETED_FLAG = 1 << 16
+    STATUS_ESTABLISHED_INTEREST_RATE_FLAG = 1 << 17
+    STATUS_OVERFLOWN_FLAG = 1 << 18
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     creditor_id = db.Column(db.BigInteger, primary_key=True)
@@ -391,7 +391,7 @@ class Account(db.Model):
     last_outgoing_transfer_date = db.Column(db.DATE, nullable=False)
     creation_date = db.Column(db.DATE, nullable=False)
     negligible_amount = db.Column(db.REAL, nullable=False)
-    status = db.Column(db.SmallInteger, nullable=False)
+    status = db.Column(db.Integer, nullable=False)
     is_muted = db.Column(
         db.BOOLEAN,
         nullable=False,
@@ -461,7 +461,7 @@ class ConfigureAccountSignal(Signal):
         creditor_id = fields.Constant(ROOT_CREDITOR_ID)
         change_ts = fields.DateTime()
         change_seqnum = fields.Constant(0)
-        is_scheduled_for_deletion = fields.Constant(False)
+        status_flags = fields.Constant(0)
         negligible_amount = fields.Constant(0.0)
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
