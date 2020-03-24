@@ -69,6 +69,14 @@ class DebtorSchema(Schema):
         description='The type of this object.',
         example='Debtor',
     )
+    debtor_id = fields.Int(
+        required=True,
+        dump_only=True,
+        data_key='debtorId',
+        format="uint64",
+        description="The debtor's ID.",
+        example=1,
+    )
     accountingAuthorityUri = fields.Function(
         lambda obj: endpoints.build_url('authority'),
         required=True,
