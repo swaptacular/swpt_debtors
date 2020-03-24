@@ -209,7 +209,7 @@ class TransferErrorSchema(Schema):
         dump_only=True,
         format="int64",
         description='The amount currently available on the account.',
-        example=10000,
+        example=100,
     )
 
 
