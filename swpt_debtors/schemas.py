@@ -378,7 +378,7 @@ class TransfersCollectionSchema(Schema):
         type='string',
         format='uri',
         description="The URI of this object.",
-        example='https://example.com/debtors/1/transfers',
+        example='https://example.com/debtors/1/transfers/',
     )
     type = fields.Constant(
         'TransfersCollection',
