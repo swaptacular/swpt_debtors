@@ -77,6 +77,7 @@ def test_on_finalized_issuing_transfer_signal(db_session):
         prepared_at_ts='2019-10-01T00:00:00Z',
         finalized_at_ts='2019-10-01T00:00:00Z',
         committed_amount=100,
+        status_code='OK',
     )
 
 

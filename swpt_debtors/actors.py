@@ -113,6 +113,7 @@ def on_finalized_issuing_transfer_signal(
         prepared_at_ts: str,
         finalized_at_ts: str,
         committed_amount: int,
+        status_code: str,
         *args, **kwargs) -> None:
 
     assert coordinator_type == 'issuing'
@@ -124,6 +125,7 @@ def on_finalized_issuing_transfer_signal(
         coordinator_request_id,
         recipient_creditor_id,
         committed_amount,
+        status_code,
     )
 
 

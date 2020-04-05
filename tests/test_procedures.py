@@ -443,6 +443,7 @@ def test_successful_transfer(db_session, debtor):
         coordinator_request_id=coordinator_request_id,
         recipient_creditor_id=C_ID,
         committed_amount=1000,
+        status_code='OK',
     )
     it_list = InitiatedTransfer.query.all()
     assert len(it_list) == 1
@@ -578,6 +579,7 @@ def test_cancel_transfer_failure(db_session, debtor):
         coordinator_request_id=coordinator_request_id,
         recipient_creditor_id=C_ID,
         committed_amount=1000,
+        status_code='OK',
     )
     with pytest.raises(p.TransferUpdateConflictError):
         p.cancel_transfer(D_ID, TEST_UUID)
