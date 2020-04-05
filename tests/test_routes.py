@@ -14,29 +14,29 @@ def debtor(db_session):
 
 
 def test_create_debtor(client):
-    r = client.get('/debtors/123')
+    r = client.get('/debtors/123/')
     assert r.status_code == 404
 
-    r = client.post('/debtors/123', json={})
+    r = client.post('/debtors/123/', json={})
     assert r.status_code == 201
-    assert r.headers['Location'] == 'http://example.com/debtors/123'
+    assert r.headers['Location'] == 'http://example.com/debtors/123/'
     data = r.get_json()
     assert data['balance'] == 0
     assert data['isActive'] is False
     assert data['type'] == 'Debtor'
-    assert data['uri'] == 'http://example.com/debtors/123'
+    assert data['uri'] == 'http://example.com/debtors/123/'
 
-    r = client.post('/debtors/123', json={})
+    r = client.post('/debtors/123/', json={})
     assert r.status_code == 409
 
-    r = client.get('/debtors/123')
+    r = client.get('/debtors/123/')
     assert r.status_code == 200
     assert 'max-age' in r.headers['Cache-Control']
     data = r.get_json()
     assert data['balance'] == 0
     assert data['isActive'] is False
     assert data['type'] == 'Debtor'
-    assert data['uri'] == 'http://example.com/debtors/123'
+    assert data['uri'] == 'http://example.com/debtors/123/'
 
 
 def test_change_debtor_policy(client, debtor):
@@ -123,7 +123,7 @@ def test_initiate_transfer(client, debtor):
     r = client.get('/debtors/123/transfers/')
     assert r.status_code == 200
     data = r.get_json()
-    assert data['debtorUri'] == 'http://example.com/debtors/123'
+    assert data['debtorUri'] == 'http://example.com/debtors/123/'
     assert data['type'] == 'TransfersCollection'
     assert data['uri'] == 'http://example.com/debtors/123/transfers/'
     assert data['totalItems'] == 0
@@ -132,7 +132,7 @@ def test_initiate_transfer(client, debtor):
     json_request_body = {
         'amount': 1000,
         'transferInfo': {'note': 'test'},
-        'recipientUri': 'http://example.com/creditors/1111',
+        'recipientUri': 'http://example.com/creditors/1111/',
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
     r = client.post('/debtors/123/transfers/', json=json_request_body)
@@ -143,12 +143,12 @@ def test_initiate_transfer(client, debtor):
     assert iso8601.parse_date(data['finalizedAt'])
     assert data['isFinalized'] is False
     assert data['errors'] == []
-    assert data['recipientUri'] == 'http://example.com/creditors/1111'
+    assert data['recipientUri'] == 'http://example.com/creditors/1111/'
     assert data['type'] == 'Transfer'
     assert data['uri'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
-    assert data['senderUri'] == 'http://example.com/creditors/0'
+    assert data['senderUri'] == 'http://example.com/creditors/0/'
     assert data['transferInfo'] == {'note': 'test'}
-    assert data['debtorUri'] == 'http://example.com/debtors/123'
+    assert data['debtorUri'] == 'http://example.com/debtors/123/'
     assert data['isSuccessful'] is False
     assert r.headers['Location'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
 
@@ -210,7 +210,7 @@ def test_initiate_transfer(client, debtor):
         suffix = '{:0>4}'.format(i)
         json_request_body = {
             'amount': 1,
-            'recipientUri': 'http://example.com/creditors/1111',
+            'recipientUri': 'http://example.com/creditors/1111/',
             'transferUuid': f'123e4567-e89b-12d3-a456-42665544{suffix}',
         }
         r = client.post('/debtors/123/transfers/', json=json_request_body)
@@ -224,7 +224,7 @@ def test_cancel_transfer(client, debtor):
     json_request_body = {
         'amount': 1000,
         'transferInfo': {'note': 'test'},
-        'recipientUri': 'http://example.com/creditors/1111',
+        'recipientUri': 'http://example.com/creditors/1111/',
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
     r = client.post('/debtors/123/transfers/', json=json_request_body)

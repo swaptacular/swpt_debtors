@@ -25,7 +25,7 @@ debtors_api = Blueprint(
 )
 
 
-@debtors_api.route('/<i64:debtorId>', parameters=[specs.DEBTOR_ID])
+@debtors_api.route('/<i64:debtorId>/', parameters=[specs.DEBTOR_ID])
 class DebtorEndpoint(MethodView):
     @debtors_api.response(DebtorSchema(context=CONTEXT))
     @debtors_api.doc(responses={404: specs.DEBTOR_DOES_NOT_EXIST})

@@ -59,7 +59,7 @@ class DebtorSchema(Schema):
         type='string',
         format='uri',
         description="The URI of this object.",
-        example='https://example.com/debtors/1',
+        example='https://example.com/debtors/1/',
     )
     type = fields.Constant(
         'Debtor',
@@ -161,7 +161,7 @@ class DebtorPolicySchema(DebtorSchema):
         type='string',
         format="uri",
         description="The debtor's URI.",
-        example='https://example.com/debtors/1',
+        example='https://example.com/debtors/1/',
     )
     interest_rate_target = fields.Float(
         required=True,
@@ -266,7 +266,7 @@ class TransferSchema(Schema):
         type='string',
         format="uri",
         description="The debtor's URI.",
-        example='https://example.com/debtors/1',
+        example='https://example.com/debtors/1/',
     )
     senderUri = fields.Function(
         lambda obj: endpoints.build_url('creditor', creditorId=ROOT_CREDITOR_ID),
@@ -386,7 +386,7 @@ class TransfersCollectionSchema(Schema):
         type='string',
         format="uri",
         description="The debtor's URI.",
-        example='https://example.com/debtors/1',
+        example='https://example.com/debtors/1/',
     )
     totalItems = fields.Function(
         lambda obj: len(obj.items),
