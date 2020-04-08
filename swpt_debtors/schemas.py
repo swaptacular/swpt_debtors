@@ -382,14 +382,15 @@ class TransfersCollectionSchema(Schema):
         lambda obj: len(obj.items),
         required=True,
         type='integer',
-        description="The number of items in the `items` array.",
+        description="The total number of items in the list.",
         example=2,
     )
     items = fields.List(
         fields.Str(format='uri-reference'),
-        required=True,
         dump_only=True,
-        description="An unordered set of *relative* URIs for debtor's remaining credit-issuing transfers.",
+        description="When the number of debtor's remaining credit-issuing transfers is small enough, "
+                    "this field will contain an unordered array of relative URIs for all of them, "
+                    "so that in such cases it would be unnecessary to follow the `first` link.",
         example=['123e4567-e89b-12d3-a456-426655440000', '183ea7c7-7a96-4ed7-a50a-a2b069687d23'],
     )
     itemsType = fields.Function(
@@ -398,6 +399,18 @@ class TransfersCollectionSchema(Schema):
         type='string',
         description='The type of the items in the list.',
         example='string',
+    )
+    first = fields.Function(
+        lambda obj: '',
+        required=True,
+        type='string',
+        format="uri-reference",
+        description='The URI of the first page in the paginated list. The object retrieved from '
+                    'this URI will have: 1) An `items` property (an array), which will contain the '
+                    'first items of the paginated list; 2) May have a `next` property (a string), '
+                    'which would contain the URI of the next page in the list. This can be a '
+                    'relative URI.',
+        example='',
     )
 
     def get_uri(self, obj):
