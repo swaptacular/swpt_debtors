@@ -382,22 +382,23 @@ class TransfersCollectionSchema(Schema):
         lambda obj: len(obj.items),
         required=True,
         type='integer',
-        description="The total number of items in the list.",
+        description="The total number of items in the collection.",
         example=2,
     )
     items = fields.List(
         fields.Str(format='uri-reference'),
         dump_only=True,
-        description="When the number of debtor's remaining credit-issuing transfers is small enough, "
-                    "this field will contain an unordered array of relative URIs for all of them, "
-                    "so that in such cases it would be unnecessary to follow the `first` link.",
+        description="When the total number of items in the collection is small enough, this field "
+                    "will contain all of them (in an array), so that in such cases it would be "
+                    "unnecessary to follow the `first` link.",
         example=['123e4567-e89b-12d3-a456-426655440000', '183ea7c7-7a96-4ed7-a50a-a2b069687d23'],
     )
     itemsType = fields.Function(
         lambda obj: 'string',
         required=True,
         type='string',
-        description='The type of the items in the list.',
+        description='The type of the items in the collection. In this particular case the items '
+                    'are relative URIs, so the type will be `"string"`.',
         example='string',
     )
     first = fields.Function(
@@ -405,11 +406,11 @@ class TransfersCollectionSchema(Schema):
         required=True,
         type='string',
         format="uri-reference",
-        description='The URI of the first page in the paginated list. The object retrieved from '
-                    'this URI will have: 1) An `items` property (an array), which will contain the '
-                    'first items of the paginated list; 2) May have a `next` property (a string), '
-                    'which would contain the URI of the next page in the list. This can be a '
-                    'relative URI.',
+        description='The URI of the first page in the paginated collection. The object retrieved '
+                    'from this URI will have: 1) An `items` property (an array), which will contain '
+                    'the first items of the collection; 2) May have a `next` property (a string), '
+                    'which would contain the URI of the next page in the collection. This can be '
+                    'a relative URI.',
         example='',
     )
 
