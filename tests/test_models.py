@@ -51,7 +51,7 @@ def test_limit_properties(db_session):
 def test_initiated_transfer_attrs(debtor, db_session, current_ts):
     debtor_id = debtor.debtor_id
     transfer_uuid = uuid.uuid4()
-    t = InitiatedTransfer(debtor_id=debtor_id, transfer_uuid=transfer_uuid, recipient_uri='', amount=1)
+    t = InitiatedTransfer(debtor_id=debtor_id, transfer_uuid=transfer_uuid, recipient_creditor_id=C_ID, amount=1)
     db_session.add(t)
     db_session.commit()
     t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one()

@@ -15,6 +15,7 @@ MIN_INT32 = -1 << 31
 MAX_INT32 = (1 << 31) - 1
 MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
+MAX_UINT64 = (1 << 64) - 1
 BEGINNING_OF_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
 INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
@@ -240,11 +241,7 @@ class Debtor(db.Model):
 class InitiatedTransfer(db.Model):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
-    recipient_uri = db.Column(
-        db.String,
-        nullable=False,
-        comment="The recipient's URI.",
-    )
+    recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
     amount = db.Column(
         db.BigInteger,
         nullable=False,

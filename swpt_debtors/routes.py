@@ -1,8 +1,7 @@
-from urllib.parse import urljoin
-from flask import redirect, url_for, request
+from flask import redirect, url_for
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from swpt_lib import endpoints
+from swpt_lib import endpoints, utils
 from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
     DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, IssuingTransferCreationRequestSchema, \
     TransfersCollection, TransferUpdateRequestSchema
@@ -134,18 +133,13 @@ class TransfersCollectionEndpoint(MethodView):
         """Create a new credit-issuing transfer."""
 
         transfer_uuid = transfer_creation_request['transfer_uuid']
-        recipient_uri = urljoin(request.base_url, transfer_creation_request['recipient_uri'])
+        recipient_creditor_id = utils.u64_to_i64(transfer_creation_request['recipient_creditor_id'])
         location = url_for('transfers.TransferEndpoint', _external=True, debtorId=debtorId, transferUuid=transfer_uuid)
-        try:
-            recipient_creditor_id = endpoints.match_url('creditor', recipient_uri)['creditorId']
-        except endpoints.MatchError:
-            recipient_creditor_id = None
         try:
             transfer = procedures.initiate_transfer(
                 debtor_id=debtorId,
                 transfer_uuid=transfer_uuid,
                 recipient_creditor_id=recipient_creditor_id,
-                recipient_uri=recipient_uri,
                 amount=transfer_creation_request['amount'],
                 transfer_info=transfer_creation_request['transfer_info'],
             )

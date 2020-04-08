@@ -1,3 +1,4 @@
+import pytest
 from uuid import UUID
 from datetime import datetime, timezone, timedelta, date
 from swpt_debtors.models import RunningTransfer, Account, InitiatedTransfer, ROOT_CREDITOR_ID
@@ -5,6 +6,26 @@ from swpt_debtors.extensions import db
 from swpt_debtors import procedures
 
 TEST_UUID = UUID('123e4567-e89b-12d3-a456-426655440000')
+
+
+@pytest.fixture(scope='function')
+def app_unsafe_session(app_unsafe_session):
+    from swpt_debtors.models import Debtor, CapitalizeInterestSignal, ChangeInterestRateSignal, \
+        ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, RunningTransfer, PrepareTransferSignal
+
+    try:
+        yield app_unsafe_session
+    finally:
+        db.session.rollback()
+        Debtor.query.delete()
+        Account.query.delete()
+        ChangeInterestRateSignal.query.delete()
+        CapitalizeInterestSignal.query.delete()
+        ZeroOutNegativeBalanceSignal.query.delete()
+        TryToDeleteAccountSignal.query.delete()
+        RunningTransfer.query.delete()
+        PrepareTransferSignal.query.delete()
+        db.session.commit()
 
 
 def test_collect_running_transfers(app_unsafe_session):
@@ -37,13 +58,6 @@ def test_scan_accounts(app_unsafe_session):
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     future_ts = datetime(2100, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
-    Debtor.query.delete()
-    Account.query.delete()
-    ChangeInterestRateSignal.query.delete()
-    CapitalizeInterestSignal.query.delete()
-    ZeroOutNegativeBalanceSignal.query.delete()
-    TryToDeleteAccountSignal.query.delete()
-    db.session.commit()
     db.session.add(Debtor(debtor_id=111, interest_rate_target=5.55))
     db.session.add(Account(
         debtor_id=1,
@@ -166,30 +180,15 @@ def test_scan_accounts(app_unsafe_session):
     assert result.exit_code == 0
     assert len(TryToDeleteAccountSignal.query.all()) == 1
 
-    Debtor.query.delete()
-    Account.query.delete()
-    ChangeInterestRateSignal.query.delete()
-    CapitalizeInterestSignal.query.delete()
-    ZeroOutNegativeBalanceSignal.query.delete()
-    TryToDeleteAccountSignal.query.delete()
-    db.session.commit()
-
 
 def test_scan_accounts_capitalize_interest(app_unsafe_session):
-    from swpt_debtors.models import Debtor, CapitalizeInterestSignal, ChangeInterestRateSignal, \
+    from swpt_debtors.models import CapitalizeInterestSignal, ChangeInterestRateSignal, \
         ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
 
     some_date = date(2018, 10, 20)
     current_ts = datetime.now(tz=timezone.utc)
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
-    Debtor.query.delete()
-    Account.query.delete()
-    ChangeInterestRateSignal.query.delete()
-    CapitalizeInterestSignal.query.delete()
-    ZeroOutNegativeBalanceSignal.query.delete()
-    TryToDeleteAccountSignal.query.delete()
-    db.session.commit()
     db.session.add(Account(
         debtor_id=111,
         creditor_id=222,
@@ -251,30 +250,15 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
     assert result.exit_code == 0
     assert len(CapitalizeInterestSignal.query.all()) == 2
 
-    Debtor.query.delete()
-    Account.query.delete()
-    ChangeInterestRateSignal.query.delete()
-    CapitalizeInterestSignal.query.delete()
-    ZeroOutNegativeBalanceSignal.query.delete()
-    TryToDeleteAccountSignal.query.delete()
-    db.session.commit()
-
 
 def test_scan_accounts_zero_out(app_unsafe_session):
-    from swpt_debtors.models import Debtor, CapitalizeInterestSignal, ChangeInterestRateSignal, \
+    from swpt_debtors.models import CapitalizeInterestSignal, ChangeInterestRateSignal, \
         ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
 
     some_date = date(2018, 10, 20)
     current_ts = datetime.now(tz=timezone.utc)
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
-    Debtor.query.delete()
-    Account.query.delete()
-    ChangeInterestRateSignal.query.delete()
-    CapitalizeInterestSignal.query.delete()
-    ZeroOutNegativeBalanceSignal.query.delete()
-    TryToDeleteAccountSignal.query.delete()
-    db.session.commit()
     db.session.add(Account(
         debtor_id=1111,
         creditor_id=2222,
@@ -313,25 +297,14 @@ def test_scan_accounts_zero_out(app_unsafe_session):
     capitalize_interest_signals = CapitalizeInterestSignal.query.all()
     assert len(capitalize_interest_signals) == 0
 
-    Debtor.query.delete()
-    Account.query.delete()
-    ChangeInterestRateSignal.query.delete()
-    CapitalizeInterestSignal.query.delete()
-    ZeroOutNegativeBalanceSignal.query.delete()
-    TryToDeleteAccountSignal.query.delete()
-    db.session.commit()
-
 
 def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     from swpt_debtors.models import Debtor
 
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
-    Debtor.query.delete()
-    Account.query.delete()
-    db.session.commit()
     db.session.add(Debtor(debtor_id=1, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
-    procedures.initiate_transfer(1, TEST_UUID, None, '', 50, {})
+    procedures.initiate_transfer(1, TEST_UUID, 1, 50, {})
     db.session.add(Debtor(debtor_id=2, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
     db.session.add(Account(
         debtor_id=1,
@@ -362,7 +335,3 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     assert d.initiated_transfers_count == 0
     assert len(InitiatedTransfer.query.filter_by(debtor_id=1).all()) == 0
     assert len(Account.query.all()) == 0
-
-    Debtor.query.delete()
-    Account.query.delete()
-    db.session.commit()

@@ -214,49 +214,38 @@ def delete_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> bool:
 def initiate_transfer(
         debtor_id: int,
         transfer_uuid: UUID,
-        recipient_creditor_id: Optional[int],
-        recipient_uri: str,
+        recipient_creditor_id: int,
         amount: int,
         transfer_info: dict) -> InitiatedTransfer:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert recipient_creditor_id is None or MIN_INT64 <= recipient_creditor_id <= MAX_INT64
+    assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
     assert type(transfer_info) is dict
 
-    _raise_error_if_transfer_exists(debtor_id, transfer_uuid, recipient_uri, amount, transfer_info)
-
+    _raise_error_if_transfer_exists(debtor_id, transfer_uuid, recipient_creditor_id, amount, transfer_info)
     debtor = _throttle_debtor_actions(debtor_id)
     _increment_initiated_transfers_count(debtor)
 
-    if recipient_creditor_id is None:
-        new_transfer = InitiatedTransfer(
-            debtor_id=debtor_id,
-            transfer_uuid=transfer_uuid,
-            recipient_uri=recipient_uri,
-            amount=amount,
-            transfer_info=transfer_info,
-            finalized_at_ts=datetime.now(tz=timezone.utc),
-            error={'errorCode': 'WRONG_RECIPIENT_URI'},
-        )
-    else:
-        _insert_running_transfer_or_raise_conflict_error(
-            debtor=debtor,
-            transfer_uuid=transfer_uuid,
-            recipient_creditor_id=recipient_creditor_id,
-            amount=amount,
-            transfer_info=transfer_info,
-        )
-        new_transfer = InitiatedTransfer(
-            debtor_id=debtor_id,
-            transfer_uuid=transfer_uuid,
-            recipient_uri=recipient_uri,
-            amount=amount,
-            transfer_info=transfer_info,
-        )
+    _insert_running_transfer_or_raise_conflict_error(
+        debtor=debtor,
+        transfer_uuid=transfer_uuid,
+        recipient_creditor_id=recipient_creditor_id,
+        amount=amount,
+        transfer_info=transfer_info,
+    )
+
+    new_transfer = InitiatedTransfer(
+        debtor_id=debtor_id,
+        transfer_uuid=transfer_uuid,
+        recipient_creditor_id=recipient_creditor_id,
+        amount=amount,
+        transfer_info=transfer_info,
+    )
 
     with db.retry_on_integrity_error():
         db.session.add(new_transfer)
+
     return new_transfer
 
 
@@ -318,6 +307,7 @@ def process_prepared_issuing_transfer_signal(
         and rt.amount <= sender_locked_amount
     )
     if rt_matches_the_signal:
+        assert rt is not None
         if not rt.is_finalized:
             # We finalize the `RunningTransfer` record here, but we
             # deliberately do not finalize the corresponding
@@ -373,6 +363,7 @@ def process_finalized_issuing_transfer_signal(
         and rt.issuing_transfer_id == transfer_id
     )
     if rt_matches_the_signal:
+        assert rt is not None
         if committed_amount == rt.amount and recipient_creditor_id == rt.recipient_creditor_id:
             error = None
         else:  # pragma: no cover
@@ -522,13 +513,13 @@ def _insert_running_transfer_or_raise_conflict_error(
 def _raise_error_if_transfer_exists(
         debtor_id: int,
         transfer_uuid: UUID,
-        recipient_uri: str,
+        recipient_creditor_id: int,
         amount: int,
         transfer_info: dict) -> None:
 
     t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one_or_none()
     if t:
-        if t.recipient_uri == recipient_uri and t.amount == amount and t.transfer_info == transfer_info:
+        if t.recipient_creditor_id == recipient_creditor_id and t.amount == amount and t.transfer_info == transfer_info:
             raise TransferExistsError(t)
         raise TransfersConflictError()
 

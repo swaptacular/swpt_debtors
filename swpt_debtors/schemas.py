@@ -3,7 +3,7 @@ from typing import NamedTuple, List
 from marshmallow import Schema, fields, validate, post_load
 from flask import url_for, current_app
 from .lower_limits import LowerLimit
-from .models import ROOT_CREDITOR_ID, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
+from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
     Debtor, InitiatedTransfer
 from swpt_lib import endpoints
 
@@ -61,8 +61,8 @@ class DebtorSchema(Schema):
         description="The URI of this object.",
         example='https://example.com/debtors/1/',
     )
-    type = fields.Constant(
-        'Debtor',
+    type = fields.Function(
+        lambda obj: 'Debtor',
         required=True,
         dump_only=True,
         type='string',
@@ -147,8 +147,8 @@ class DebtorPolicySchema(DebtorSchema):
         description="The URI of this object.",
         example='https://example.com/debtors/1/policy',
     )
-    type = fields.Constant(
-        'DebtorPolicy',
+    type = fields.Function(
+        lambda obj: 'DebtorPolicy',
         required=True,
         dump_only=True,
         type='string',
@@ -220,14 +220,12 @@ class IssuingTransferCreationRequestSchema(Schema):
         description="A client-generated UUID for the transfer.",
         example='123e4567-e89b-12d3-a456-426655440000',
     )
-    recipient_uri = fields.Url(
+    recipient_creditor_id = fields.Integer(
         required=True,
-        relative=True,
-        schemes=[endpoints.get_url_scheme()],
-        data_key='recipientUri',
-        format='uri',
-        description="The recipient's URI.",
-        example='https://example.com/creditors/1111',
+        validate=validate.Range(min=0, max=MAX_UINT64),
+        data_key='recipientCreditorId',
+        description="The recipient's creditor ID.",
+        example=1111,
     )
     amount = fields.Integer(
         required=True,
@@ -252,8 +250,8 @@ class TransferSchema(Schema):
         description="The URI of this object.",
         example='https://example.com/debtors/1/transfers/123e4567-e89b-12d3-a456-426655440000',
     )
-    type = fields.Constant(
-        'Transfer',
+    type = fields.Function(
+        lambda obj: 'Transfer',
         required=True,
         dump_only=True,
         type='string',
@@ -268,21 +266,13 @@ class TransferSchema(Schema):
         description="The debtor's URI.",
         example='https://example.com/debtors/1/',
     )
-    senderUri = fields.Function(
-        lambda obj: endpoints.build_url('creditor', creditorId=ROOT_CREDITOR_ID),
-        required=True,
-        type='string',
-        format="uri",
-        description="The sender's URI.",
-        example='https://example.com/creditors/0',
-    )
-    recipient_uri = fields.String(
+    recipient_creditor_id = fields.Integer(
         required=True,
         dump_only=True,
-        data_key='recipientUri',
-        format="uri",
-        description="The recipient's URI.",
-        example='https://example.com/creditors/1111',
+        validate=validate.Range(min=0, max=MAX_UINT64),
+        data_key='recipientCreditorId',
+        description="The recipient's creditor ID.",
+        example=1111,
     )
     amount = fields.Integer(
         required=True,
@@ -372,8 +362,8 @@ class TransfersCollectionSchema(Schema):
         description="The URI of this object.",
         example='https://example.com/debtors/1/transfers/',
     )
-    type = fields.Constant(
-        'TransfersCollection',
+    type = fields.Function(
+        lambda obj: 'TransfersCollection',
         required=True,
         dump_only=True,
         type='string',
@@ -401,6 +391,13 @@ class TransfersCollectionSchema(Schema):
         dump_only=True,
         description="An unordered set of *relative* URIs for debtor's remaining credit-issuing transfers.",
         example=['123e4567-e89b-12d3-a456-426655440000', '183ea7c7-7a96-4ed7-a50a-a2b069687d23'],
+    )
+    itemsType = fields.Function(
+        lambda obj: 'string',
+        required=True,
+        type='string',
+        description='The type of the items in the list.',
+        example='string',
     )
 
     def get_uri(self, obj):

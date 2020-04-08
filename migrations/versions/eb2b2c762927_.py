@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: cde05fde93d5
+Revision ID: eb2b2c762927
 Revises: 8d09bea9c7d1
-Create Date: 2020-03-22 16:10:31.251856
+Create Date: 2020-04-08 14:43:42.775783
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'cde05fde93d5'
+revision = 'eb2b2c762927'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -148,7 +148,7 @@ def upgrade():
     op.create_table('initiated_transfer',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('recipient_uri', sa.String(), nullable=False, comment="The recipient's URI."),
+    sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
     sa.Column('transfer_info', postgresql.JSON(astext_type=sa.Text()), nullable=False, comment='Notes from the debtor. Can be any JSON object that the debtor wants the recipient to see.'),
     sa.Column('initiated_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was initiated.'),
