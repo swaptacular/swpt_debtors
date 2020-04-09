@@ -236,7 +236,7 @@ class IssuingTransferCreationRequestSchema(Schema):
     )
     transfer_info = fields.Dict(
         missing={},
-        data_key='transferInfo',
+        data_key='info',
         description=InitiatedTransfer.transfer_info.comment,
     )
 
@@ -285,7 +285,7 @@ class TransferSchema(Schema):
     transfer_info = fields.Dict(
         required=True,
         dump_only=True,
-        data_key='transferInfo',
+        data_key='info',
         description=InitiatedTransfer.transfer_info.comment,
     )
     initiated_at_ts = fields.DateTime(

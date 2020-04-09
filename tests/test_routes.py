@@ -131,7 +131,7 @@ def test_initiate_transfer(client, debtor):
 
     json_request_body = {
         'amount': 1000,
-        'transferInfo': {'note': 'test'},
+        'info': {'note': 'test'},
         'recipientCreditorId': 1111,
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
@@ -146,7 +146,7 @@ def test_initiate_transfer(client, debtor):
     assert data['recipientCreditorId'] == 1111
     assert data['type'] == 'Transfer'
     assert data['uri'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
-    assert data['transferInfo'] == {'note': 'test'}
+    assert data['info'] == {'note': 'test'}
     assert data['debtorUri'] == 'http://example.com/debtors/123/'
     assert data['isSuccessful'] is False
     assert r.headers['Location'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
@@ -205,7 +205,7 @@ def test_initiate_transfer(client, debtor):
 def test_cancel_transfer(client, debtor):
     json_request_body = {
         'amount': 1000,
-        'transferInfo': {'note': 'test'},
+        'info': {'note': 'test'},
         'recipientCreditorId': 1111,
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
