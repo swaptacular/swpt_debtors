@@ -460,6 +460,7 @@ class ConfigureAccountSignal(Signal):
         change_seqnum = fields.Constant(0)
         status_flags = fields.Constant(0)
         negligible_amount = fields.Constant(0.0)
+        config = fields.Constant('')
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
