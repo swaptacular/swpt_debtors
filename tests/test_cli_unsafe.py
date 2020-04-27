@@ -35,7 +35,7 @@ def test_collect_running_transfers(app_unsafe_session):
         transfer_uuid=TEST_UUID,
         recipient_creditor_id=1111,
         amount=1500,
-        transfer_info={},
+        transfer_notes={},
         issuing_transfer_id=666,
         started_at_ts=datetime(2000, 1, 1, tzinfo=timezone.utc)
     )

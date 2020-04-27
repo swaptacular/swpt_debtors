@@ -247,7 +247,7 @@ class InitiatedTransfer(db.Model):
         nullable=False,
         comment='The amount to be transferred. Must be positive.',
     )
-    transfer_info = db.Column(
+    transfer_notes = db.Column(
         pg.JSON,
         nullable=False,
         default={},
@@ -318,7 +318,7 @@ class RunningTransfer(db.Model):
         nullable=False,
         comment='The amount to be transferred. Must be positive.',
     )
-    transfer_info = db.Column(
+    transfer_notes = db.Column(
         pg.JSON,
         nullable=False,
         comment='Notes from the debtor. Can be any JSON object that the debtor wants the recipient '
@@ -510,9 +510,9 @@ class FinalizePreparedTransferSignal(Signal):
         transfer_flags = fields.Constant(0)
 
         def get_transfer_message(self, obj):
-            transfer_info_dict = obj.transfer_info
-            assert type(transfer_info_dict) is dict
-            return json.dumps(transfer_info_dict) if transfer_info_dict else ''
+            transfer_notes_dict = obj.transfer_notes
+            assert type(transfer_notes_dict) is dict
+            return json.dumps(transfer_notes_dict) if transfer_notes_dict else ''
 
     # TODO: Consider adding a `transfer_flags` column here and in
     #       `InitiatedTransfer`, update transfers WebAPI accordingly.
@@ -521,8 +521,8 @@ class FinalizePreparedTransferSignal(Signal):
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     sender_creditor_id = db.Column(db.BigInteger, nullable=False)
     transfer_id = db.Column(db.BigInteger, nullable=False)
+    transfer_notes = db.Column(pg.JSON, nullable=False)
     committed_amount = db.Column(db.BigInteger, nullable=False)
-    transfer_info = db.Column(pg.JSON, nullable=False)
     __table_args__ = (
         db.CheckConstraint(committed_amount >= 0),
     )

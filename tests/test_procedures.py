@@ -340,7 +340,7 @@ def test_initiate_transfer(db_session, debtor):
     assert t.transfer_uuid == TEST_UUID
     assert t.recipient_creditor_id == C_ID
     assert t.amount == 1000
-    assert t.transfer_info == {'note': 'test'}
+    assert t.transfer_notes == {'note': 'test'}
     assert not t.is_finalized
     running_transfers = RunningTransfer.query.all()
     assert len(running_transfers) == 1
@@ -349,7 +349,7 @@ def test_initiate_transfer(db_session, debtor):
     assert rt.transfer_uuid == TEST_UUID
     assert rt.recipient_creditor_id == C_ID
     assert rt.amount == 1000
-    assert rt.transfer_info == {'note': 'test'}
+    assert rt.transfer_notes == {'note': 'test'}
     assert not t.is_finalized
     with pytest.raises(p.TransferExistsError):
         p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, {'note': 'test'})
@@ -418,7 +418,7 @@ def test_successful_transfer(db_session, debtor):
     assert fpts.sender_creditor_id == ROOT_CREDITOR_ID
     assert fpts.transfer_id is not None
     assert fpts.committed_amount == 1000
-    assert fpts.transfer_info == {'note': 'test'}
+    assert fpts.transfer_notes == {'note': 'test'}
     assert fpts.__marshmallow_schema__.dump(fpts)['transfer_message'] == '{"note": "test"}'
 
     rt_list = RunningTransfer.query.all()

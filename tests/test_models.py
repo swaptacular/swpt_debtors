@@ -55,7 +55,7 @@ def test_initiated_transfer_attrs(debtor, db_session, current_ts):
     db_session.add(t)
     db_session.commit()
     t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one()
-    assert t.transfer_info == {}
+    assert t.transfer_notes == {}
     assert not t.is_finalized
     assert t.errors == []
     assert isinstance(t.initiated_at_ts, datetime)
@@ -72,11 +72,11 @@ def test_running_transfer_attrs(debtor, db_session, current_ts):
     debtor_id = debtor.debtor_id
     transfer_uuid = uuid.uuid4()
     t = RunningTransfer(debtor_id=debtor_id, transfer_uuid=transfer_uuid, recipient_creditor_id=C_ID,
-                        amount=1, transfer_info={'note': 'a test note'})
+                        amount=1, transfer_notes={'note': 'a test note'})
     db_session.add(t)
     db_session.commit()
     t = RunningTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one()
-    assert t.transfer_info == {'note': 'a test note'}
+    assert t.transfer_notes == {'note': 'a test note'}
     assert not t.is_finalized
     t.issuing_transfer_id = 666
     assert t.is_finalized
