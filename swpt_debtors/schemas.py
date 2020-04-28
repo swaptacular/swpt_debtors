@@ -198,6 +198,14 @@ class DebtorPolicyUpdateRequestSchema(Schema):
 
 
 class TransferErrorSchema(Schema):
+    type = fields.Function(
+        lambda obj: 'TransferError',
+        required=True,
+        dump_only=True,
+        type='string',
+        description='The type of this object.',
+        example='TransferError',
+    )
     errorCode = fields.String(
         required=True,
         dump_only=True,
@@ -205,7 +213,6 @@ class TransferErrorSchema(Schema):
         example='INSUFFICIENT_AVAILABLE_AMOUNT',
     )
     avlAmount = fields.Integer(
-        required=False,
         dump_only=True,
         format="int64",
         description='The amount currently available on the account.',
@@ -321,7 +328,8 @@ class TransferSchema(Schema):
         TransferErrorSchema(many=True),
         dump_only=True,
         required=True,
-        description='Errors that occurred during the transfer.'
+        description='Errors that have occurred during the execution of the transfer. If '
+                    'the transfer has been successful, this will be an empty array.',
     )
 
     def get_uri(self, obj):
