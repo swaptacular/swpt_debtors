@@ -63,7 +63,7 @@ def on_prepared_issuing_transfer_signal(
         coordinator_id: int,
         coordinator_request_id: int,
         sender_locked_amount: int,
-        recipient_creditor_id: int,
+        recipient_identity: str,
         prepared_at_ts: str,
         *args, **kwargs) -> None:
 
@@ -75,7 +75,7 @@ def on_prepared_issuing_transfer_signal(
         coordinator_id,
         coordinator_request_id,
         sender_locked_amount,
-        recipient_creditor_id,
+        recipient_identity,
     )
 
 
@@ -109,7 +109,7 @@ def on_finalized_issuing_transfer_signal(
         coordinator_type: str,
         coordinator_id: int,
         coordinator_request_id: int,
-        recipient_creditor_id: int,
+        recipient_identity: str,
         prepared_at_ts: str,
         finalized_at_ts: str,
         committed_amount: int,
@@ -123,7 +123,7 @@ def on_finalized_issuing_transfer_signal(
         transfer_id,
         coordinator_id,
         coordinator_request_id,
-        recipient_creditor_id,
+        recipient_identity,
         committed_amount,
         status_code,
     )

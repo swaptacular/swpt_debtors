@@ -48,7 +48,7 @@ def test_on_prepared_issuing_transfer_signal(db_session):
         coordinator_id=C_ID,
         coordinator_request_id=1,
         sender_locked_amount=1000,
-        recipient_creditor_id=C_ID,
+        recipient_identity=str(C_ID),
         prepared_at_ts='2019-10-01T00:00:00Z',
     )
 
@@ -73,7 +73,7 @@ def test_on_finalized_issuing_transfer_signal(db_session):
         coordinator_type='issuing',
         coordinator_id=D_ID,
         coordinator_request_id=678,
-        recipient_creditor_id=1234,
+        recipient_identity='1235',
         prepared_at_ts='2019-10-01T00:00:00Z',
         finalized_at_ts='2019-10-01T00:00:00Z',
         committed_amount=100,

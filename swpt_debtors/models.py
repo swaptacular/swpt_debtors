@@ -6,6 +6,7 @@ from marshmallow import Schema, fields
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import func, null, true, false, or_, and_
+from swpt_lib.utils import i64_to_u64
 from .lower_limits import lower_limits_property
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
 
@@ -479,10 +480,9 @@ class PrepareTransferSignal(Signal):
         max_amount = fields.Integer()
         debtor_id = fields.Integer()
         sender_creditor_id = fields.Integer()
-        recipient_creditor_id = fields.Integer()
+        recipient_identity = fields.Function(lambda obj: str(i64_to_u64(obj.recipient_creditor_id)))
         signal_ts = fields.DateTime(attribute='inserted_at_ts')
         minimum_account_balance = fields.Integer()
-        details = fields.Constant('')
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)

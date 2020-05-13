@@ -4,7 +4,7 @@ from typing import TypeVar, Optional, Callable, List
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import true
-from swpt_lib.utils import is_later_event
+from swpt_lib.utils import is_later_event, u64_to_i64
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedTransferSignal, \
@@ -290,14 +290,14 @@ def process_prepared_issuing_transfer_signal(
         coordinator_id: int,
         coordinator_request_id: int,
         sender_locked_amount: int,
-        recipient_creditor_id: int) -> None:
+        recipient_identity: str) -> None:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
     assert 0 < sender_locked_amount <= MAX_INT64
-    assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
 
+    recipient_creditor_id = u64_to_i64(int(recipient_identity))
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     rt_matches_the_signal = (
         rt is not None
@@ -344,17 +344,17 @@ def process_finalized_issuing_transfer_signal(
         transfer_id: int,
         coordinator_id: int,
         coordinator_request_id: int,
-        recipient_creditor_id: int,
+        recipient_identity: str,
         committed_amount: int,
         status_code: str) -> None:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
-    assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 <= committed_amount <= MAX_INT64
     assert 0 <= len(status_code.encode('ascii')) <= 30
 
+    recipient_creditor_id = u64_to_i64(int(recipient_identity))
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     rt_matches_the_signal = (
         rt is not None
