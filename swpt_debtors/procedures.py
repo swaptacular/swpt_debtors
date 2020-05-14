@@ -267,7 +267,7 @@ def process_rejected_issuing_transfer_signal(
         debtor_id: int,
         sender_creditor_id: int) -> None:
 
-    assert len(rejection_code) <= 30 and rejection_code.encode('ascii')
+    assert rejection_code == '' or len(rejection_code) <= 30 and rejection_code.encode('ascii')
     assert MIN_INT64 <= available_amount <= MAX_INT64
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
