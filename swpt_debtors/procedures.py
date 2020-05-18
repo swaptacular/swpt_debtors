@@ -4,7 +4,7 @@ from typing import TypeVar, Optional, Callable, List
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import true
-from swpt_lib.utils import is_later_event, u64_to_i64
+from swpt_lib.utils import Seqnum, u64_to_i64
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedTransferSignal, \
@@ -403,16 +403,12 @@ def process_account_change_signal(
 
     account = Account.lock_instance((debtor_id, creditor_id))
     if account:
-        prev_event = (account.change_ts, account.change_seqnum)
-        this_event = (change_ts, change_seqnum)
-        this_event_is_not_old = not is_later_event(prev_event, this_event)
-        this_event_is_not_new = not is_later_event(this_event, prev_event)
-        if this_event_is_not_old:
+        prev_event = (account.creation_date, account.change_ts, Seqnum(account.change_seqnum))
+        this_event = (creation_date, change_ts, Seqnum(change_seqnum))
+        if this_event >= prev_event:
             account.last_heartbeat_ts = signal_ts
-        if this_event_is_not_new:
+        if this_event <= prev_event:
             return
-        assert this_event_is_not_old
-        assert account.creation_date <= creation_date
         account.change_seqnum = change_seqnum
         account.change_ts = change_ts
         account.principal = principal
