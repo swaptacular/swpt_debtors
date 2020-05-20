@@ -508,6 +508,7 @@ class FinalizePreparedTransferSignal(Signal):
         committed_amount = fields.Integer()
         transfer_message = fields.Method('get_transfer_message')
         transfer_flags = fields.Constant(0)
+        inserted_at_ts = fields.DateTime(data_key='ts')
 
         def get_transfer_message(self, obj):
             transfer_notes_dict = obj.transfer_notes
