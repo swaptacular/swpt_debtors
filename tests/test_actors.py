@@ -47,7 +47,7 @@ def test_on_prepared_issuing_transfer_signal(db_session):
         coordinator_type='issuing',
         coordinator_id=C_ID,
         coordinator_request_id=1,
-        sender_locked_amount=1000,
+        locked_amount=1000,
         recipient_identity=str(C_ID),
         prepared_at='2019-10-01T00:00:00Z',
     )

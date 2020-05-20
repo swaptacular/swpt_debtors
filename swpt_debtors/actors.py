@@ -62,7 +62,7 @@ def on_prepared_issuing_transfer_signal(
         coordinator_type: str,
         coordinator_id: int,
         coordinator_request_id: int,
-        sender_locked_amount: int,
+        locked_amount: int,
         recipient_identity: str,
         *args, **kwargs) -> None:
 
@@ -73,7 +73,7 @@ def on_prepared_issuing_transfer_signal(
         transfer_id,
         coordinator_id,
         coordinator_request_id,
-        sender_locked_amount,
+        locked_amount,
         recipient_identity,
     )
 
