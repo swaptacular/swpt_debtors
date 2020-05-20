@@ -481,7 +481,7 @@ class PrepareTransferSignal(Signal):
         debtor_id = fields.Integer()
         sender_creditor_id = fields.Integer()
         recipient_identity = fields.Function(lambda obj: str(i64_to_u64(obj.recipient_creditor_id)))
-        ts = fields.DateTime(attribute='inserted_at_ts')
+        inserted_at_ts = fields.DateTime(data_key='ts')
         minimum_account_balance = fields.Integer()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
