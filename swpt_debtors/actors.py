@@ -64,7 +64,7 @@ def on_prepared_issuing_transfer_signal(
         coordinator_request_id: int,
         sender_locked_amount: int,
         recipient_identity: str,
-        prepared_at_ts: str,
+        prepared_at: str,
         *args, **kwargs) -> None:
 
     assert coordinator_type == 'issuing'
@@ -110,8 +110,8 @@ def on_finalized_issuing_transfer_signal(
         coordinator_id: int,
         coordinator_request_id: int,
         recipient_identity: str,
-        prepared_at_ts: str,
-        finalized_at_ts: str,
+        prepared_at: str,
+        finalized_at: str,
         committed_amount: int,
         status_code: str,
         *args, **kwargs) -> None:
