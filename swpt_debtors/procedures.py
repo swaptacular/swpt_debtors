@@ -290,14 +290,14 @@ def process_prepared_issuing_transfer_signal(
         coordinator_id: int,
         coordinator_request_id: int,
         sender_locked_amount: int,
-        recipient_identity: str) -> None:
+        recipient: str) -> None:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
     assert MIN_INT64 <= transfer_id <= MAX_INT64
     assert 0 < sender_locked_amount <= MAX_INT64
 
-    recipient_creditor_id = u64_to_i64(int(recipient_identity))
+    recipient_creditor_id = u64_to_i64(int(recipient))
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     rt_matches_the_signal = (
         rt is not None
@@ -344,7 +344,7 @@ def process_finalized_issuing_transfer_signal(
         transfer_id: int,
         coordinator_id: int,
         coordinator_request_id: int,
-        recipient_identity: str,
+        recipient: str,
         committed_amount: int,
         status_code: str) -> None:
 
@@ -354,7 +354,7 @@ def process_finalized_issuing_transfer_signal(
     assert 0 <= committed_amount <= MAX_INT64
     assert 0 <= len(status_code.encode('ascii')) <= 30
 
-    recipient_creditor_id = u64_to_i64(int(recipient_identity))
+    recipient_creditor_id = u64_to_i64(int(recipient))
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     rt_matches_the_signal = (
         rt is not None
