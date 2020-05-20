@@ -28,13 +28,13 @@ def on_account_change_signal(
         interest_rate: float,
         last_transfer_seqnum: int,
         last_outgoing_transfer_date: str,
-        last_config_signal_ts: str,
-        last_config_signal_seqnum: int,
+        last_config_ts: str,
+        last_config_seqnum: int,
         creation_date: str,
         negligible_amount: float,
         status: int,
-        signal_ts: str,
-        signal_ttl: float,
+        ts: str,
+        ttl: float,
         *args, **kwargs) -> None:
 
     procedures.process_account_change_signal(
@@ -49,8 +49,8 @@ def on_account_change_signal(
         iso8601.parse_date(creation_date).date(),
         negligible_amount,
         status,
-        iso8601.parse_date(signal_ts),
-        signal_ttl,
+        iso8601.parse_date(ts),
+        ttl,
     )
 
 

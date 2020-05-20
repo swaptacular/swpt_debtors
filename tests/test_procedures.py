@@ -70,8 +70,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
-        signal_ts=current_ts,
-        signal_ttl=1e30,
+        ts=current_ts,
+        ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
@@ -103,8 +103,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
-        signal_ts=current_ts + timedelta(seconds=12),
-        signal_ttl=1e30,
+        ts=current_ts + timedelta(seconds=12),
+        ttl=1e30,
     )
     a = Account.get_instance((D_ID, C_ID))
     assert 11.0 <= (a.last_heartbeat_ts - last_heartbeat_ts).total_seconds() <= 13.0
@@ -131,8 +131,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
-        signal_ts=current_ts,
-        signal_ttl=1e30,
+        ts=current_ts,
+        ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
@@ -153,8 +153,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
-        signal_ts=current_ts,
-        signal_ttl=1e30,
+        ts=current_ts,
+        ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
@@ -181,8 +181,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
-        signal_ts=current_ts - timedelta(seconds=1000),
-        signal_ttl=500,
+        ts=current_ts - timedelta(seconds=1000),
+        ttl=500,
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
@@ -208,8 +208,8 @@ def test_process_account_change_signal_no_debtor(db_session, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=2.0,
         status=0,
-        signal_ts=current_ts,
-        signal_ttl=1e30,
+        ts=current_ts,
+        ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, ROOT_CREDITOR_ID))
@@ -245,8 +245,8 @@ def test_process_root_account_change_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         status=0,
-        signal_ts=current_ts,
-        signal_ttl=1e30,
+        ts=current_ts,
+        ttl=1e30,
     )
     d = p.get_debtor(D_ID)
     assert d.balance == -9999
@@ -482,8 +482,8 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
         creation_date=creation_date,
         negligible_amount=2.0,
         status=0,
-        signal_ts=current_ts,
-        signal_ttl=1e30,
+        ts=current_ts,
+        ttl=1e30,
     )
     assert len(Account.query.all()) == 1
     p.process_account_purge_signal(D_ID, p.ROOT_CREDITOR_ID, creation_date)

@@ -385,8 +385,8 @@ def process_account_change_signal(
         creation_date: date,
         negligible_amount: float,
         status: int,
-        signal_ts: datetime,
-        signal_ttl: float) -> None:
+        ts: datetime,
+        ttl: float) -> None:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= creditor_id <= MAX_INT64
@@ -395,10 +395,10 @@ def process_account_change_signal(
     assert -100 < interest_rate <= 100.0
     assert negligible_amount >= 0.0
     assert MIN_INT32 <= status <= MAX_INT32
-    assert signal_ttl > 0.0
+    assert ttl > 0.0
 
     current_ts = datetime.now(tz=timezone.utc)
-    if (current_ts - signal_ts).total_seconds() > signal_ttl:
+    if (current_ts - ts).total_seconds() > ttl:
         return
 
     account = Account.lock_instance((debtor_id, creditor_id))
@@ -406,7 +406,7 @@ def process_account_change_signal(
         prev_event = (account.creation_date, account.change_ts, Seqnum(account.change_seqnum))
         this_event = (creation_date, change_ts, Seqnum(change_seqnum))
         if this_event >= prev_event:
-            account.last_heartbeat_ts = signal_ts
+            account.last_heartbeat_ts = ts
         if this_event <= prev_event:
             return
         account.change_seqnum = change_seqnum
@@ -578,5 +578,5 @@ def _finalize_initiated_transfer(
 def _insert_configure_account_signal(debtor_id: int) -> None:
     db.session.add(ConfigureAccountSignal(
         debtor_id=debtor_id,
-        change_ts=datetime.now(tz=timezone.utc),
+        ts=datetime.now(tz=timezone.utc),
     ))

@@ -457,15 +457,15 @@ class ConfigureAccountSignal(Signal):
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()
         creditor_id = fields.Constant(ROOT_CREDITOR_ID)
-        change_ts = fields.DateTime()
-        change_seqnum = fields.Constant(0)
+        ts = fields.DateTime()
+        seqnum = fields.Constant(0)
         status_flags = fields.Constant(0)
         negligible_amount = fields.Constant(0.0)
         config = fields.Constant('')
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+    ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
 class PrepareTransferSignal(Signal):
@@ -481,7 +481,7 @@ class PrepareTransferSignal(Signal):
         debtor_id = fields.Integer()
         sender_creditor_id = fields.Integer()
         recipient_identity = fields.Function(lambda obj: str(i64_to_u64(obj.recipient_creditor_id)))
-        signal_ts = fields.DateTime(attribute='inserted_at_ts')
+        ts = fields.DateTime(attribute='inserted_at_ts')
         minimum_account_balance = fields.Integer()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
