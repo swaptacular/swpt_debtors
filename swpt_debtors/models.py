@@ -459,8 +459,8 @@ class ConfigureAccountSignal(Signal):
         creditor_id = fields.Constant(ROOT_CREDITOR_ID)
         ts = fields.DateTime()
         seqnum = fields.Constant(0)
-        status_flags = fields.Constant(0)
         negligible_amount = fields.Constant(0.0)
+        config_flags = fields.Constant(0)
         config = fields.Constant('')
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
