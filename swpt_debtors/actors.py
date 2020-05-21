@@ -57,7 +57,7 @@ def on_account_change_signal(
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_prepared_issuing_transfer_signal(
         debtor_id: int,
-        sender_creditor_id: int,
+        creditor_id: int,
         transfer_id: int,
         coordinator_type: str,
         coordinator_id: int,
@@ -69,7 +69,7 @@ def on_prepared_issuing_transfer_signal(
     assert coordinator_type == 'issuing'
     procedures.process_prepared_issuing_transfer_signal(
         debtor_id,
-        sender_creditor_id,
+        creditor_id,
         transfer_id,
         coordinator_id,
         coordinator_request_id,
@@ -86,7 +86,7 @@ def on_rejected_issuing_transfer_signal(
         rejection_code: str,
         available_amount: int,
         debtor_id: int,
-        sender_creditor_id: int,
+        creditor_id: int,
         *args, **kwargs) -> None:
 
     assert coordinator_type == 'issuing'
@@ -96,14 +96,14 @@ def on_rejected_issuing_transfer_signal(
         rejection_code,
         available_amount,
         debtor_id,
-        sender_creditor_id,
+        creditor_id,
     )
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_finalized_issuing_transfer_signal(
         debtor_id: int,
-        sender_creditor_id: int,
+        creditor_id: int,
         transfer_id: int,
         coordinator_type: str,
         coordinator_id: int,
@@ -118,7 +118,7 @@ def on_finalized_issuing_transfer_signal(
     assert coordinator_type == 'issuing'
     procedures.process_finalized_issuing_transfer_signal(
         debtor_id,
-        sender_creditor_id,
+        creditor_id,
         transfer_id,
         coordinator_id,
         coordinator_request_id,

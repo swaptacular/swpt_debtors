@@ -479,7 +479,7 @@ class PrepareTransferSignal(Signal):
         min_amount = fields.Integer()
         max_amount = fields.Integer()
         debtor_id = fields.Integer()
-        sender_creditor_id = fields.Integer()
+        sender_creditor_id = fields.Integer(data_key='creditor_id')
         recipient = fields.Function(lambda obj: str(i64_to_u64(obj.recipient_creditor_id)))
         inserted_at_ts = fields.DateTime(data_key='ts')
         minimum_account_balance = fields.Integer()
@@ -503,7 +503,7 @@ class FinalizePreparedTransferSignal(Signal):
 
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()
-        sender_creditor_id = fields.Integer()
+        sender_creditor_id = fields.Integer(data_key='creditor_id')
         transfer_id = fields.Integer()
         committed_amount = fields.Integer()
         transfer_message = fields.Method('get_transfer_message')

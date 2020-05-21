@@ -42,7 +42,7 @@ def test_on_account_change_signal(db_session):
 def test_on_prepared_issuing_transfer_signal(db_session):
     a.on_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
-        sender_creditor_id=2,
+        creditor_id=2,
         transfer_id=1,
         coordinator_type='issuing',
         coordinator_id=C_ID,
@@ -61,14 +61,14 @@ def test_on_rejected_issuing_transfer_signal(db_session):
         rejection_code='TEST',
         available_amount=1000,
         debtor_id=D_ID,
-        sender_creditor_id=p.ROOT_CREDITOR_ID,
+        creditor_id=p.ROOT_CREDITOR_ID,
     )
 
 
 def test_on_finalized_issuing_transfer_signal(db_session):
     a.on_finalized_issuing_transfer_signal(
         debtor_id=D_ID,
-        sender_creditor_id=p.ROOT_CREDITOR_ID,
+        creditor_id=p.ROOT_CREDITOR_ID,
         transfer_id=123,
         coordinator_type='issuing',
         coordinator_id=D_ID,
