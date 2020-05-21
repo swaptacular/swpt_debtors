@@ -26,7 +26,7 @@ def on_account_change_signal(
         principal: int,
         interest: float,
         interest_rate: float,
-        last_transfer_seqnum: int,
+        last_transfer_number: int,
         last_outgoing_transfer_date: str,
         last_config_ts: str,
         last_config_seqnum: int,
