@@ -75,7 +75,7 @@ class AccountsScanner(TableScanner):
         current_balance = row[c.principal] + Decimal.from_float(row[c.interest])
         if current_balance > 0:
             k = math.log(1.0 + row[c.interest_rate] / 100.0) / SECONDS_IN_YEAR
-            passed_seconds = max(0.0, (current_ts - row[c.change_ts]).total_seconds())
+            passed_seconds = max(0.0, (current_ts - row[c.last_change_ts]).total_seconds())
             current_balance *= Decimal.from_float(math.exp(k * passed_seconds))
         return current_balance
 

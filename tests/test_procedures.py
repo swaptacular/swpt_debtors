@@ -61,8 +61,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     p.process_account_change_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
-        change_seqnum=change_seqnum,
-        change_ts=change_ts,
+        last_change_seqnum=change_seqnum,
+        last_change_ts=change_ts,
         principal=1000,
         interest=12.5,
         interest_rate=-0.5,
@@ -75,8 +75,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
-    assert a.change_seqnum == change_seqnum
-    assert a.change_ts == change_ts
+    assert a.last_change_seqnum == change_seqnum
+    assert a.last_change_ts == change_ts
     assert a.principal == 1000
     assert a.interest == 12.5
     assert a.interest_rate == -0.5
@@ -94,8 +94,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     p.process_account_change_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
-        change_seqnum=change_seqnum,
-        change_ts=change_ts,
+        last_change_seqnum=change_seqnum,
+        last_change_ts=change_ts,
         principal=1000,
         interest=12.5,
         interest_rate=-0.5,
@@ -108,8 +108,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     )
     a = Account.get_instance((D_ID, C_ID))
     assert 11.0 <= (a.last_heartbeat_ts - last_heartbeat_ts).total_seconds() <= 13.0
-    assert a.change_seqnum == change_seqnum
-    assert a.change_ts == change_ts
+    assert a.last_change_seqnum == change_seqnum
+    assert a.last_change_ts == change_ts
     assert a.principal == 1000
     assert a.interest == 12.5
     assert a.interest_rate == -0.5
@@ -122,8 +122,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     p.process_account_change_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
-        change_seqnum=change_seqnum - 1,
-        change_ts=change_ts,
+        last_change_seqnum=change_seqnum - 1,
+        last_change_ts=change_ts,
         principal=1001,
         interest=12.5,
         interest_rate=-0.5,
@@ -144,8 +144,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     p.process_account_change_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
-        change_seqnum=change_seqnum + 1,
-        change_ts=change_ts + timedelta(seconds=5),
+        last_change_seqnum=change_seqnum + 1,
+        last_change_ts=change_ts + timedelta(seconds=5),
         principal=1001,
         interest=12.6,
         interest_rate=-0.6,
@@ -158,8 +158,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
-    assert a.change_seqnum == change_seqnum + 1
-    assert a.change_ts == change_ts + timedelta(seconds=5)
+    assert a.last_change_seqnum == change_seqnum + 1
+    assert a.last_change_ts == change_ts + timedelta(seconds=5)
     assert a.principal == 1001
     assert a.interest == 12.6
     assert a.interest_rate == -0.6
@@ -172,8 +172,8 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     p.process_account_change_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
-        change_seqnum=change_seqnum + 2,
-        change_ts=change_ts + timedelta(seconds=5),
+        last_change_seqnum=change_seqnum + 2,
+        last_change_ts=change_ts + timedelta(seconds=5),
         principal=1002,
         interest=12.6,
         interest_rate=-0.6,
@@ -186,7 +186,7 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, C_ID))
-    assert a.change_seqnum == change_seqnum + 1
+    assert a.last_change_seqnum == change_seqnum + 1
     assert a.principal == 1001
 
 
@@ -199,8 +199,8 @@ def test_process_account_change_signal_no_debtor(db_session, current_ts):
     p.process_account_change_signal(
         debtor_id=D_ID,
         creditor_id=ROOT_CREDITOR_ID,
-        change_seqnum=change_seqnum,
-        change_ts=change_ts,
+        last_change_seqnum=change_seqnum,
+        last_change_ts=change_ts,
         principal=-1000,
         interest=0.0,
         interest_rate=0.0,
@@ -213,8 +213,8 @@ def test_process_account_change_signal_no_debtor(db_session, current_ts):
     )
     assert len(Account.query.all()) == 1
     a = Account.get_instance((D_ID, ROOT_CREDITOR_ID))
-    assert a.change_seqnum == change_seqnum
-    assert a.change_ts == change_ts
+    assert a.last_change_seqnum == change_seqnum
+    assert a.last_change_ts == change_ts
     assert a.principal == -1000
     assert a.interest == 0.0
     assert a.interest_rate == 0.0
@@ -236,8 +236,8 @@ def test_process_root_account_change_signal(db_session, debtor, current_ts):
     p.process_account_change_signal(
         debtor_id=D_ID,
         creditor_id=ROOT_CREDITOR_ID,
-        change_seqnum=change_seqnum,
-        change_ts=change_ts,
+        last_change_seqnum=change_seqnum,
+        last_change_ts=change_ts,
         principal=-9999,
         interest=0,
         interest_rate=0.0,
@@ -473,8 +473,8 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
     p.process_account_change_signal(
         debtor_id=D_ID,
         creditor_id=p.ROOT_CREDITOR_ID,
-        change_seqnum=1,
-        change_ts=current_ts,
+        last_change_seqnum=1,
+        last_change_ts=current_ts,
         principal=0,
         interest=0.0,
         interest_rate=0.0,
@@ -501,8 +501,8 @@ def test_process_account_maintenance_signal(db_session, debtor, current_ts):
     db_session.add(Account(
         debtor_id=D_ID,
         creditor_id=C_ID,
-        change_seqnum=0,
-        change_ts=current_ts,
+        last_change_seqnum=0,
+        last_change_ts=current_ts,
         principal=-10,
         interest=0.0,
         interest_rate=0.0,

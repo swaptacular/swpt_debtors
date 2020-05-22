@@ -21,8 +21,8 @@ def deactivate_debtor(debtor_id: int) -> None:
 def on_account_change_signal(
         debtor_id: int,
         creditor_id: int,
-        change_ts: str,
-        change_seqnum: int,
+        last_change_ts: str,
+        last_change_seqnum: int,
         principal: int,
         interest: float,
         interest_rate: float,
@@ -40,8 +40,8 @@ def on_account_change_signal(
     procedures.process_account_change_signal(
         debtor_id,
         creditor_id,
-        iso8601.parse_date(change_ts),
-        change_seqnum,
+        iso8601.parse_date(last_change_ts),
+        last_change_seqnum,
         principal,
         interest,
         interest_rate,

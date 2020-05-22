@@ -22,8 +22,8 @@ def test_on_account_change_signal(db_session):
     a.on_account_change_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
-        change_seqnum=0,
-        change_ts='2019-10-01T00:00:00Z',
+        last_change_seqnum=0,
+        last_change_ts='2019-10-01T00:00:00Z',
         principal=1000,
         interest=12.5,
         interest_rate=-0.5,

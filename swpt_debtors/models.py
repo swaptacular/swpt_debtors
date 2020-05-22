@@ -381,8 +381,8 @@ class Account(db.Model):
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     creditor_id = db.Column(db.BigInteger, primary_key=True)
-    change_seqnum = db.Column(db.Integer, nullable=False)
-    change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
+    last_change_seqnum = db.Column(db.Integer, nullable=False)
+    last_change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
     principal = db.Column(db.BigInteger, nullable=False)
     interest = db.Column(db.FLOAT, nullable=False)
     interest_rate = db.Column(db.REAL, nullable=False)

@@ -376,8 +376,8 @@ def process_finalized_issuing_transfer_signal(
 def process_account_change_signal(
         debtor_id: int,
         creditor_id: int,
-        change_ts: datetime,
-        change_seqnum: int,
+        last_change_ts: datetime,
+        last_change_seqnum: int,
         principal: int,
         interest: float,
         interest_rate: float,
@@ -390,7 +390,7 @@ def process_account_change_signal(
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= creditor_id <= MAX_INT64
-    assert MIN_INT32 <= change_seqnum <= MAX_INT32
+    assert MIN_INT32 <= last_change_seqnum <= MAX_INT32
     assert -MAX_INT64 <= principal <= MAX_INT64
     assert -100 < interest_rate <= 100.0
     assert negligible_amount >= 0.0
@@ -403,14 +403,14 @@ def process_account_change_signal(
 
     account = Account.lock_instance((debtor_id, creditor_id))
     if account:
-        prev_event = (account.creation_date, account.change_ts, Seqnum(account.change_seqnum))
-        this_event = (creation_date, change_ts, Seqnum(change_seqnum))
+        prev_event = (account.creation_date, account.last_change_ts, Seqnum(account.last_change_seqnum))
+        this_event = (creation_date, last_change_ts, Seqnum(last_change_seqnum))
         if this_event >= prev_event:
             account.last_heartbeat_ts = ts
         if this_event <= prev_event:
             return
-        account.change_seqnum = change_seqnum
-        account.change_ts = change_ts
+        account.last_change_seqnum = last_change_seqnum
+        account.last_change_ts = last_change_ts
         account.principal = principal
         account.interest = interest
         account.interest_rate = interest_rate
@@ -422,8 +422,8 @@ def process_account_change_signal(
         account = Account(
             debtor_id=debtor_id,
             creditor_id=creditor_id,
-            change_seqnum=change_seqnum,
-            change_ts=change_ts,
+            last_change_seqnum=last_change_seqnum,
+            last_change_ts=last_change_ts,
             principal=principal,
             interest=interest,
             interest_rate=interest_rate,
@@ -437,7 +437,7 @@ def process_account_change_signal(
 
     if account.creditor_id == ROOT_CREDITOR_ID:
         balance = MIN_INT64 if account.is_overflown else account.principal
-        balance_ts = account.change_ts
+        balance_ts = account.last_change_ts
         update_debtor_balance(debtor_id, balance, balance_ts)
     elif not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         debtor = Debtor.get_instance(debtor_id)
