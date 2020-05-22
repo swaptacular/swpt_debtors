@@ -7,7 +7,7 @@ from sqlalchemy.sql.expression import true
 from swpt_lib.utils import Seqnum, u64_to_i64
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
-from .models import Debtor, Account, ChangeInterestRateSignal, FinalizePreparedTransferSignal, \
+from .models import Debtor, Account, ChangeInterestRateSignal, FinalizeTransferSignal, \
     InitiatedTransfer, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
     MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
 
@@ -318,7 +318,7 @@ def process_prepared_issuing_transfer_signal(
             rt.issuing_transfer_id = transfer_id
 
         if rt.issuing_transfer_id == transfer_id:
-            db.session.add(FinalizePreparedTransferSignal(
+            db.session.add(FinalizeTransferSignal(
                 debtor_id=rt.debtor_id,
                 sender_creditor_id=ROOT_CREDITOR_ID,
                 transfer_id=transfer_id,
@@ -328,7 +328,7 @@ def process_prepared_issuing_transfer_signal(
             return
 
     # The newly prepared transfer is dismissed.
-    db.session.add(FinalizePreparedTransferSignal(
+    db.session.add(FinalizeTransferSignal(
         debtor_id=debtor_id,
         sender_creditor_id=sender_creditor_id,
         transfer_id=transfer_id,

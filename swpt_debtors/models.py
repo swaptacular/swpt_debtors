@@ -497,9 +497,9 @@ class PrepareTransferSignal(Signal):
     )
 
 
-class FinalizePreparedTransferSignal(Signal):
+class FinalizeTransferSignal(Signal):
     queue_name = 'swpt_accounts'
-    actor_name = 'finalize_prepared_transfer'
+    actor_name = 'finalize_transfer'
 
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()

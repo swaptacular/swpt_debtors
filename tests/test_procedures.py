@@ -3,8 +3,8 @@ import time
 from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
-from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, RunningTransfer, \
-    PrepareTransferSignal, FinalizePreparedTransferSignal, ConfigureAccountSignal, \
+from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, \
+    RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, ConfigureAccountSignal, \
     INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
@@ -411,7 +411,7 @@ def test_successful_transfer(db_session, debtor):
         coordinator_request_id=coordinator_request_id,
     )
     assert len(PrepareTransferSignal.query.all()) == 1
-    fpts_list = FinalizePreparedTransferSignal.query.all()
+    fpts_list = FinalizeTransferSignal.query.all()
     assert len(fpts_list) == 1
     fpts = fpts_list[0]
     assert fpts.debtor_id == D_ID
@@ -453,7 +453,7 @@ def test_failed_transfer(db_session, debtor):
     p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, {'note': 'test'})
     pts = PrepareTransferSignal.query.all()[0]
     p.process_rejected_issuing_transfer_signal(D_ID, pts.coordinator_request_id, 'TEST', 1000, D_ID, p.ROOT_CREDITOR_ID)
-    assert len(FinalizePreparedTransferSignal.query.all()) == 0
+    assert len(FinalizeTransferSignal.query.all()) == 0
 
     assert len(RunningTransfer.query.all()) == 0
     it_list = InitiatedTransfer.query.all()
