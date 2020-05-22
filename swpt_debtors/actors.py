@@ -34,7 +34,7 @@ def on_account_change_signal(
         negligible_amount: float,
         status: int,
         ts: str,
-        ttl: float,
+        ttl: int,
         *args, **kwargs) -> None:
 
     procedures.process_account_change_signal(

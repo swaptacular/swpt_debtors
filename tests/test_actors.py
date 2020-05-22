@@ -35,7 +35,7 @@ def test_on_account_change_signal(db_session):
         negligible_amount=2.0,
         status=0,
         ts=datetime.now(tz=timezone.utc).isoformat(),
-        ttl=1e30,
+        ttl=1000000,
     )
 
 

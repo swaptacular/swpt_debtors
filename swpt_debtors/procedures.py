@@ -386,7 +386,7 @@ def process_account_change_signal(
         negligible_amount: float,
         status: int,
         ts: datetime,
-        ttl: float) -> None:
+        ttl: int) -> None:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= creditor_id <= MAX_INT64
@@ -395,7 +395,7 @@ def process_account_change_signal(
     assert -100 < interest_rate <= 100.0
     assert negligible_amount >= 0.0
     assert MIN_INT32 <= status <= MAX_INT32
-    assert ttl > 0.0
+    assert ttl > 0
 
     current_ts = datetime.now(tz=timezone.utc)
     if (current_ts - ts).total_seconds() > ttl:
