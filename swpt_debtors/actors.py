@@ -18,7 +18,7 @@ def deactivate_debtor(debtor_id: int) -> None:
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
-def on_account_change_signal(
+def on_account_update_signal(
         debtor_id: int,
         creditor_id: int,
         last_change_ts: str,
@@ -37,7 +37,7 @@ def on_account_change_signal(
         ttl: int,
         *args, **kwargs) -> None:
 
-    procedures.process_account_change_signal(
+    procedures.process_account_update_signal(
         debtor_id,
         creditor_id,
         iso8601.parse_date(last_change_ts),

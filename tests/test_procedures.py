@@ -54,11 +54,11 @@ def test_deactivate_debtor(db_session, debtor):
     assert p.get_debtor(1234567890) is None
 
 
-def test_process_account_change_signal(db_session, debtor, current_ts):
+def test_process_account_update_signal(db_session, debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
     last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
-    p.process_account_change_signal(
+    p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
         last_change_seqnum=change_seqnum,
@@ -91,7 +91,7 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
 
     # Account heartbeat
     time.sleep(0.1)
-    p.process_account_change_signal(
+    p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
         last_change_seqnum=change_seqnum,
@@ -119,7 +119,7 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     assert len(ChangeInterestRateSignal.query.all()) == 1
 
     # Older message
-    p.process_account_change_signal(
+    p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
         last_change_seqnum=change_seqnum - 1,
@@ -141,7 +141,7 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     assert len(cirs) == 1
 
     # Newer message
-    p.process_account_change_signal(
+    p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
         last_change_seqnum=change_seqnum + 1,
@@ -169,7 +169,7 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     assert len(cirs) == 1
 
     # Ignored message
-    p.process_account_change_signal(
+    p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
         last_change_seqnum=change_seqnum + 2,
@@ -190,13 +190,13 @@ def test_process_account_change_signal(db_session, debtor, current_ts):
     assert a.principal == 1001
 
 
-def test_process_account_change_signal_no_debtor(db_session, current_ts):
+def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert len(Debtor.query.all()) == 0
 
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
     last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
-    p.process_account_change_signal(
+    p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=ROOT_CREDITOR_ID,
         last_change_seqnum=change_seqnum,
@@ -233,7 +233,7 @@ def test_process_root_account_change_signal(db_session, debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
     last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
-    p.process_account_change_signal(
+    p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=ROOT_CREDITOR_ID,
         last_change_seqnum=change_seqnum,
@@ -470,7 +470,7 @@ def test_failed_transfer(db_session, debtor):
 
 def test_process_account_purge_signal(db_session, debtor, current_ts):
     creation_date = date(2020, 1, 10)
-    p.process_account_change_signal(
+    p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=p.ROOT_CREDITOR_ID,
         last_change_seqnum=1,

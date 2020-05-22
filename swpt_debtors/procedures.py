@@ -373,7 +373,7 @@ def process_finalized_issuing_transfer_signal(
 
 
 @atomic
-def process_account_change_signal(
+def process_account_update_signal(
         debtor_id: int,
         creditor_id: int,
         last_change_ts: datetime,

@@ -18,8 +18,8 @@ def test_deactivate_debtor(db_session):
     )
 
 
-def test_on_account_change_signal(db_session):
-    a.on_account_change_signal(
+def test_on_account_update_signal(db_session):
+    a.on_account_update_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
         last_change_seqnum=0,
