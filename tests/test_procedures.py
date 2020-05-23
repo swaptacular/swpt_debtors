@@ -70,7 +70,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
-        status=0,
+        status_flags=0,
         ts=current_ts,
         ttl=1000000,
     )
@@ -83,7 +83,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
     assert a.interest_rate == -0.5
     assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
     assert a.negligible_amount == 5.5
-    assert a.status == 0
+    assert a.status_flags == 0
     cirs = ChangeInterestRateSignal.query.all()
     assert len(cirs) == 1
     assert cirs[0].debtor_id == D_ID
@@ -104,7 +104,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
-        status=0,
+        status_flags=0,
         ts=current_ts + timedelta(seconds=12),
         ttl=1000000,
     )
@@ -117,7 +117,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
     assert a.interest_rate == -0.5
     assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
     assert a.negligible_amount == 5.5
-    assert a.status == 0
+    assert a.status_flags == 0
     assert len(ChangeInterestRateSignal.query.all()) == 1
 
     # Older message
@@ -133,7 +133,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
-        status=0,
+        status_flags=0,
         ts=current_ts,
         ttl=1000000,
     )
@@ -156,7 +156,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
-        status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
+        status_flags=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
         ts=current_ts,
         ttl=1000000,
     )
@@ -168,7 +168,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
     assert a.interest == 12.6
     assert a.interest_rate == -0.6
     assert a.last_outgoing_transfer_date == last_outgoing_transfer_date + timedelta(days=1)
-    assert a.status == Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
+    assert a.status_flags == Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
     cirs = ChangeInterestRateSignal.query.all()
     assert len(cirs) == 1
 
@@ -185,7 +185,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
-        status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
+        status_flags=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
         ts=current_ts - timedelta(seconds=1000),
         ttl=500,
     )
@@ -213,7 +213,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=2.0,
         config_flags=0,
-        status=0,
+        status_flags=0,
         ts=current_ts,
         ttl=1000000,
     )
@@ -226,7 +226,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert a.interest_rate == 0.0
     assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
     assert a.negligible_amount == 2.0
-    assert a.status == 0
+    assert a.status_flags == 0
     assert len(ChangeInterestRateSignal.query.all()) == 0
     d = Debtor.query.filter_by(debtor_id=D_ID).one()
     assert d.deactivated_at_date is not None
@@ -251,7 +251,7 @@ def test_process_root_account_change_signal(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
-        status=0,
+        status_flags=0,
         ts=current_ts,
         ttl=1000000,
     )
@@ -489,7 +489,7 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
         creation_date=creation_date,
         negligible_amount=2.0,
         config_flags=0,
-        status=0,
+        status_flags=0,
         ts=current_ts,
         ttl=1000000,
     )
@@ -518,7 +518,7 @@ def test_process_account_maintenance_signal(db_session, debtor, current_ts):
         creation_date=current_ts.date(),
         negligible_amount=2.0,
         config_flags=0,
-        status=0,
+        status_flags=0,
         last_maintenance_request_ts=current_ts,
         is_muted=True,
     ))

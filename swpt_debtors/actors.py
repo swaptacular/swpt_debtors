@@ -34,7 +34,7 @@ def on_account_update_signal(
         negligible_amount: float,
         config: str,
         config_flags: int,
-        status: int,
+        status_flags: int,
         ts: str,
         ttl: int,
         *args, **kwargs) -> None:
@@ -51,7 +51,7 @@ def on_account_update_signal(
         iso8601.parse_date(creation_date).date(),
         negligible_amount,
         config_flags,
-        status,
+        status_flags,
         iso8601.parse_date(ts),
         ttl,
     )

@@ -385,7 +385,7 @@ def process_account_update_signal(
         creation_date: date,
         negligible_amount: float,
         config_flags: int,
-        status: int,
+        status_flags: int,
         ts: datetime,
         ttl: int) -> None:
 
@@ -396,7 +396,7 @@ def process_account_update_signal(
     assert -100 < interest_rate <= 100.0
     assert negligible_amount >= 0.0
     assert MIN_INT32 <= config_flags <= MAX_INT32
-    assert MIN_INT32 <= status <= MAX_INT32
+    assert MIN_INT32 <= status_flags <= MAX_INT32
     assert ttl > 0
 
     current_ts = datetime.now(tz=timezone.utc)
@@ -420,7 +420,7 @@ def process_account_update_signal(
         account.creation_date = creation_date
         account.negligible_amount = negligible_amount
         account.config_flags = config_flags
-        account.status = status
+        account.status_flags = status_flags
     else:
         account = Account(
             debtor_id=debtor_id,
@@ -434,7 +434,7 @@ def process_account_update_signal(
             creation_date=creation_date,
             negligible_amount=negligible_amount,
             config_flags=config_flags,
-            status=status,
+            status_flags=status_flags,
         )
         with db.retry_on_integrity_error():
             db.session.add(account)
@@ -443,7 +443,7 @@ def process_account_update_signal(
         balance = MIN_INT64 if account.is_overflown else account.principal
         balance_ts = account.last_change_ts
         update_debtor_balance(debtor_id, balance, balance_ts)
-    elif not account.status & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
+    elif not account.status_flags & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         debtor = Debtor.get_instance(debtor_id)
         if debtor:
             account.is_muted = True

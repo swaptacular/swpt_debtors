@@ -99,7 +99,7 @@ class AccountsScanner(TableScanner):
         debtor_account_rows = []
         deleted_flag = Account.STATUS_DELETED_FLAG
         for row in rows:
-            if row[c.status] & deleted_flag:
+            if row[c.status_flags] & deleted_flag:
                 deleted_account_rows.append(row)
             elif row[c.creditor_id] == ROOT_CREDITOR_ID:
                 debtor_account_rows.append(row)
@@ -168,7 +168,7 @@ class AccountsScanner(TableScanner):
         interest_rates = self._get_debtor_interest_rates(debtor_ids, current_ts)
         established_rate_flag = Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
         for row, interest_rate in zip(rows, interest_rates):
-            has_correct_interest_rate = row[c.status] & established_rate_flag and row[c.interest_rate] == interest_rate
+            has_correct_interest_rate = row[c.status_flags] & established_rate_flag and row[c.interest_rate] == interest_rate
             if not has_correct_interest_rate:
                 pk = (row[c.debtor_id], row[c.creditor_id])
                 pks.add(pk)

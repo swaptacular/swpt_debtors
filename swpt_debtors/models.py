@@ -391,7 +391,7 @@ class Account(db.Model):
     creation_date = db.Column(db.DATE, nullable=False)
     negligible_amount = db.Column(db.REAL, nullable=False)
     config_flags = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.Integer, nullable=False)
+    status_flags = db.Column(db.Integer, nullable=False)
     is_muted = db.Column(
         db.BOOLEAN,
         nullable=False,
@@ -449,7 +449,7 @@ class Account(db.Model):
 
     @property
     def is_overflown(self):
-        return bool(self.status & Account.STATUS_OVERFLOWN_FLAG)
+        return bool(self.status_flags & Account.STATUS_OVERFLOWN_FLAG)
 
 
 class ConfigureAccountSignal(Signal):
