@@ -374,7 +374,8 @@ class Account(db.Model):
     #       sharded independently from the debtor-related tables. If
     #       necessary, use signals to communicate between the two.
 
-    STATUS_SCHEDULED_FOR_DELETION_FLAG = 1 << 0
+    CONFIG_SCHEDULED_FOR_DELETION_FLAG = 1 << 0
+
     STATUS_DELETED_FLAG = 1 << 16
     STATUS_ESTABLISHED_INTEREST_RATE_FLAG = 1 << 17
     STATUS_OVERFLOWN_FLAG = 1 << 18
@@ -389,6 +390,7 @@ class Account(db.Model):
     last_outgoing_transfer_date = db.Column(db.DATE, nullable=False)
     creation_date = db.Column(db.DATE, nullable=False)
     negligible_amount = db.Column(db.REAL, nullable=False)
+    config_flags = db.Column(db.Integer, nullable=False)
     status = db.Column(db.Integer, nullable=False)
     is_muted = db.Column(
         db.BOOLEAN,

@@ -33,6 +33,8 @@ def test_on_account_update_signal(db_session):
         last_config_seqnum=0,
         creation_date='2018-10-1',
         negligible_amount=2.0,
+        config='',
+        config_flags=0,
         status=0,
         ts=datetime.now(tz=timezone.utc).isoformat(),
         ttl=1000000,

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 0e8aeec63983
+Revision ID: 6934e5ecd801
 Revises: 8d09bea9c7d1
-Create Date: 2020-05-22 14:46:28.422953
+Create Date: 2020-05-23 14:08:29.661526
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '0e8aeec63983'
+revision = '6934e5ecd801'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -29,6 +29,7 @@ def upgrade():
     sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=False),
     sa.Column('creation_date', sa.DATE(), nullable=False),
     sa.Column('negligible_amount', sa.REAL(), nullable=False),
+    sa.Column('config_flags', sa.Integer(), nullable=False),
     sa.Column('status', sa.Integer(), nullable=False),
     sa.Column('is_muted', sa.BOOLEAN(), nullable=False, comment='Whether the account is "muted" or not. Maintenance operation requests are not sent for muted accounts. This prevents flooding the signal bus with maintenance signals. It is set to `true` when a maintenance operation request is made, and set to back `false` when the matching `AccountMaintenanceSignal` is received. Important note: Accounts that have been muted a long time ago (this can be determined by checking the `last_maintenance_request_ts` column) are allowed to sent maintenance operation requests. (This is to avoid accounts staying muted forever when something went wrong with the awaited un-muting `AccountMaintenanceSignal`.'),
     sa.Column('last_heartbeat_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last `AccountChangeSignal` has been processed. It is used to detect "dead" accounts. A "dead" account is an account that have been removed from the `swpt_accounts` service, but still exist in this table.'),

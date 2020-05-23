@@ -70,6 +70,7 @@ def test_scan_accounts(app_unsafe_session):
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
+        config_flags=0,
         status=0,
     ))
     db.session.add(Account(
@@ -83,7 +84,8 @@ def test_scan_accounts(app_unsafe_session):
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
-        status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG,
+        config_flags=Account.CONFIG_SCHEDULED_FOR_DELETION_FLAG,
+        status=Account.STATUS_DELETED_FLAG,
     ))
     db.session.add(Account(
         debtor_id=11,
@@ -96,7 +98,8 @@ def test_scan_accounts(app_unsafe_session):
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
-        status=Account.STATUS_DELETED_FLAG | Account.STATUS_SCHEDULED_FOR_DELETION_FLAG,
+        config_flags=Account.CONFIG_SCHEDULED_FOR_DELETION_FLAG,
+        status=Account.STATUS_DELETED_FLAG,
     ))
     db.session.add(Account(
         debtor_id=111,
@@ -109,6 +112,7 @@ def test_scan_accounts(app_unsafe_session):
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
+        config_flags=0,
         status=0,
         last_interest_capitalization_ts=current_ts,
     ))
@@ -123,6 +127,7 @@ def test_scan_accounts(app_unsafe_session):
         last_outgoing_transfer_date=current_ts,
         creation_date=some_date,
         negligible_amount=2.0,
+        config_flags=0,
         status=0,
         last_interest_capitalization_ts=current_ts,
     ))
@@ -137,7 +142,8 @@ def test_scan_accounts(app_unsafe_session):
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=50.0,
-        status=Account.STATUS_SCHEDULED_FOR_DELETION_FLAG | Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
+        config_flags=Account.CONFIG_SCHEDULED_FOR_DELETION_FLAG,
+        status=Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG,
     ))
     db.session.commit()
     db.engine.execute('ANALYZE account')
@@ -200,6 +206,7 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
+        config_flags=0,
         status=0,
     ))
     db.session.add(Account(
@@ -213,6 +220,7 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
         last_outgoing_transfer_date=current_ts,
         creation_date=some_date,
         negligible_amount=2.0,
+        config_flags=0,
         status=0,
     ))
     db.session.commit()
@@ -270,6 +278,7 @@ def test_scan_accounts_zero_out(app_unsafe_session):
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
+        config_flags=0,
         status=0,
     ))
     db.session.commit()
@@ -317,6 +326,7 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
         last_outgoing_transfer_date=past_ts,
         creation_date=date(2018, 10, 20),
         negligible_amount=2.0,
+        config_flags=0,
         status=Account.STATUS_DELETED_FLAG,
         last_heartbeat_ts=past_ts,
     ))

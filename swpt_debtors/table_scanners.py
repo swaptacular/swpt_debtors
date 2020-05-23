@@ -241,12 +241,12 @@ class AccountsScanner(TableScanner):
 
         pks = set()
         c = self.table.c
-        scheduled_for_deletion_flag = Account.STATUS_SCHEDULED_FOR_DELETION_FLAG
+        scheduled_for_deletion_flag = Account.CONFIG_SCHEDULED_FOR_DELETION_FLAG
         cutoff_ts = current_ts - self.min_deletion_attempt_interval
         for row in rows:
             if row[c.last_deletion_attempt_ts] > cutoff_ts:
                 continue
-            if (row[c.status] & scheduled_for_deletion_flag
+            if (row[c.config_flags] & scheduled_for_deletion_flag
                     and 0 <= self._calc_current_balance(row, current_ts) <= max(2.0, row[c.negligible_amount])):
                 pk = (row[c.debtor_id], row[c.creditor_id])
                 pks.add(pk)
