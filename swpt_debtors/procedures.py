@@ -434,6 +434,7 @@ def process_account_update_signal(
             negligible_amount=negligible_amount,
             config_flags=config_flags,
             status_flags=status_flags,
+            last_heartbeat_ts=ts,
         )
         with db.retry_on_integrity_error():
             db.session.add(account)
