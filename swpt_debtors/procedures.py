@@ -405,10 +405,9 @@ def process_account_update_signal(
 
     account = Account.lock_instance((debtor_id, creditor_id))
     if account:
+        account.last_heartbeat_ts = max(ts, account.last_heartbeat_ts)
         prev_event = (account.creation_date, account.last_change_ts, Seqnum(account.last_change_seqnum))
         this_event = (creation_date, last_change_ts, Seqnum(last_change_seqnum))
-        if this_event >= prev_event:
-            account.last_heartbeat_ts = ts
         if this_event <= prev_event:
             return
         account.last_change_seqnum = last_change_seqnum
