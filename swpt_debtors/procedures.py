@@ -400,6 +400,7 @@ def process_account_update_signal(
     assert ttl > 0
 
     current_ts = datetime.now(tz=timezone.utc)
+    ts = min(ts, current_ts)
     if (current_ts - ts).total_seconds() > ttl:
         return
 

@@ -71,7 +71,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         negligible_amount=5.5,
         config_flags=0,
         status_flags=0,
-        ts=current_ts,
+        ts=current_ts - timedelta(seconds=12),
         ttl=1000000,
     )
     assert len(Account.query.all()) == 1
@@ -105,7 +105,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         negligible_amount=5.5,
         config_flags=0,
         status_flags=0,
-        ts=current_ts + timedelta(seconds=12),
+        ts=current_ts,
         ttl=1000000,
     )
     a = Account.get_instance((D_ID, C_ID))
