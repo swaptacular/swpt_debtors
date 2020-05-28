@@ -28,6 +28,7 @@ def test_on_account_update_signal(db_session):
         interest=12.5,
         interest_rate=-0.5,
         last_transfer_number=0,
+        last_transfer_committed_at='1970-01-01T00:00:00+00:00',
         last_outgoing_transfer_date='2018-10-01',
         last_config_ts='1970-01-01T00:00:00Z',
         last_config_seqnum=0,
