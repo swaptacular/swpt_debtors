@@ -53,12 +53,14 @@ class AccountsScanner(TableScanner):
         super().__init__()
         self.interval = timedelta(days=days)
         self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
-        self.pending_transfers_max_delay = timedelta(days=current_app.config['APP_PENDING_TRANSFERS_MAX_DELAY_DAYS'])
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])
         self.max_interest_to_principal_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
-        self.min_deletion_attempt_interval = self.signalbus_max_delay + self.pending_transfers_max_delay
         self.account_unmute_interval = 2 * self.signalbus_max_delay
+        self.deletion_attempts_min_interval = max(
+            timedelta(days=current_app.config['APP_DELETION_ATTEMPTS_MIN_DAYS']),
+            self.signalbus_max_delay,
+        )
         self.min_interest_cap_interval = max(
             timedelta(days=current_app.config['APP_MIN_INTEREST_CAPITALIZATION_DAYS']),
 
@@ -242,7 +244,7 @@ class AccountsScanner(TableScanner):
         pks = set()
         c = self.table.c
         scheduled_for_deletion_flag = Account.CONFIG_SCHEDULED_FOR_DELETION_FLAG
-        cutoff_ts = current_ts - self.min_deletion_attempt_interval
+        cutoff_ts = current_ts - self.deletion_attempts_min_interval
         for row in rows:
             if row[c.last_deletion_attempt_ts] > cutoff_ts:
                 continue
