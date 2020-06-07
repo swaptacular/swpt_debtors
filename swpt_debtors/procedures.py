@@ -322,6 +322,8 @@ def process_prepared_issuing_transfer_signal(
                 debtor_id=rt.debtor_id,
                 sender_creditor_id=ROOT_CREDITOR_ID,
                 transfer_id=transfer_id,
+                coordinator_id=coordinator_id,
+                coordinator_request_id=coordinator_request_id,
                 committed_amount=rt.amount,
                 transfer_notes=rt.transfer_notes,
             ))
@@ -332,6 +334,8 @@ def process_prepared_issuing_transfer_signal(
         debtor_id=debtor_id,
         sender_creditor_id=sender_creditor_id,
         transfer_id=transfer_id,
+        coordinator_id=coordinator_id,
+        coordinator_request_id=coordinator_request_id,
         committed_amount=0,
         transfer_notes={},
     ))

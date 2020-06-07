@@ -508,6 +508,9 @@ class FinalizeTransferSignal(Signal):
         debtor_id = fields.Integer()
         sender_creditor_id = fields.Integer(data_key='creditor_id')
         transfer_id = fields.Integer()
+        coordinator_type = fields.String(default='issuing')
+        coordinator_id = fields.Integer()
+        coordinator_request_id = fields.Integer()
         committed_amount = fields.Integer()
         transfer_message = fields.Method('get_transfer_message')
         inserted_at_ts = fields.DateTime(data_key='ts')
@@ -517,12 +520,11 @@ class FinalizeTransferSignal(Signal):
             assert type(transfer_notes_dict) is dict
             return json.dumps(transfer_notes_dict) if transfer_notes_dict else ''
 
-    # TODO: Consider adding a `transfer_flags` column here and in
-    #       `InitiatedTransfer`, update transfers WebAPI accordingly.
-
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     sender_creditor_id = db.Column(db.BigInteger, nullable=False)
+    coordinator_id = db.Column(db.BigInteger, nullable=False)
+    coordinator_request_id = db.Column(db.BigInteger, nullable=False)
     transfer_id = db.Column(db.BigInteger, nullable=False)
     transfer_notes = db.Column(pg.JSON, nullable=False)
     committed_amount = db.Column(db.BigInteger, nullable=False)
