@@ -141,7 +141,7 @@ class TransfersCollectionEndpoint(MethodView):
                 transfer_uuid=transfer_uuid,
                 recipient_creditor_id=recipient_creditor_id,
                 amount=transfer_creation_request['amount'],
-                transfer_notes=transfer_creation_request['transfer_notes'],
+                transfer_note=transfer_creation_request['transfer_note'],
             )
         except procedures.TooManyManagementActionsError:
             abort(403)

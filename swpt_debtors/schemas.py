@@ -241,10 +241,10 @@ class IssuingTransferCreationRequestSchema(Schema):
         description=InitiatedTransfer.amount.comment,
         example=1000,
     )
-    transfer_notes = fields.Dict(
+    transfer_note = fields.Dict(
         missing={},
-        data_key='notes',
-        description=InitiatedTransfer.transfer_notes.comment,
+        data_key='note',
+        description=InitiatedTransfer.transfer_note.comment,
     )
 
 
@@ -289,11 +289,11 @@ class TransferSchema(Schema):
         description=InitiatedTransfer.amount.comment,
         example=1000,
     )
-    transfer_notes = fields.Dict(
+    transfer_note = fields.Dict(
         required=True,
         dump_only=True,
-        data_key='notes',
-        description=InitiatedTransfer.transfer_notes.comment,
+        data_key='note',
+        description=InitiatedTransfer.transfer_note.comment,
     )
     initiated_at_ts = fields.DateTime(
         required=True,

@@ -248,12 +248,12 @@ class InitiatedTransfer(db.Model):
         nullable=False,
         comment='The amount to be transferred. Must be positive.',
     )
-    transfer_notes = db.Column(
+    transfer_note = db.Column(
         pg.JSON,
         nullable=False,
         default={},
-        comment='Notes from the debtor. Can be any JSON object that the debtor wants the recipient '
-                'to see.',
+        comment='A note from the debtor. Can be any JSON object that the debtor wants the '
+                'recipient to see.',
     )
     initiated_at_ts = db.Column(
         db.TIMESTAMP(timezone=True),
@@ -319,11 +319,11 @@ class RunningTransfer(db.Model):
         nullable=False,
         comment='The amount to be transferred. Must be positive.',
     )
-    transfer_notes = db.Column(
+    transfer_note = db.Column(
         pg.JSON,
         nullable=False,
-        comment='Notes from the debtor. Can be any JSON object that the debtor wants the recipient '
-                'to see.',
+        comment='A note from the debtor. Can be any JSON object that the debtor wants the '
+                'recipient to see.',
     )
     started_at_ts = db.Column(
         db.TIMESTAMP(timezone=True),
@@ -512,13 +512,13 @@ class FinalizeTransferSignal(Signal):
         coordinator_id = fields.Integer()
         coordinator_request_id = fields.Integer()
         committed_amount = fields.Integer()
-        transfer_message = fields.Method('get_transfer_message')
+        transfer_note = fields.Method('get_transfer_note')
         inserted_at_ts = fields.DateTime(data_key='ts')
 
-        def get_transfer_message(self, obj):
-            transfer_notes_dict = obj.transfer_notes
-            assert type(transfer_notes_dict) is dict
-            return json.dumps(transfer_notes_dict) if transfer_notes_dict else ''
+        def get_transfer_note(self, obj):
+            transfer_note_dict = obj.transfer_note
+            assert type(transfer_note_dict) is dict
+            return json.dumps(transfer_note_dict) if transfer_note_dict else ''
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
@@ -526,7 +526,7 @@ class FinalizeTransferSignal(Signal):
     coordinator_id = db.Column(db.BigInteger, nullable=False)
     coordinator_request_id = db.Column(db.BigInteger, nullable=False)
     transfer_id = db.Column(db.BigInteger, nullable=False)
-    transfer_notes = db.Column(pg.JSON, nullable=False)
+    transfer_note = db.Column(pg.JSON, nullable=False)
     committed_amount = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
         db.CheckConstraint(committed_amount >= 0),
