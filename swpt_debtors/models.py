@@ -512,6 +512,7 @@ class FinalizeTransferSignal(Signal):
         coordinator_id = fields.Integer()
         coordinator_request_id = fields.Integer()
         committed_amount = fields.Integer()
+        finalization_flags = fields.Constant(0)
         transfer_note = fields.Method('get_transfer_note')
         inserted_at_ts = fields.DateTime(data_key='ts')
 
