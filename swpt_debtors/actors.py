@@ -90,6 +90,7 @@ def on_rejected_issuing_transfer_signal(
         coordinator_request_id: int,
         rejection_code: str,
         available_amount: int,
+        total_locked_amount: int,
         debtor_id: int,
         creditor_id: int,
         *args, **kwargs) -> None:
@@ -100,6 +101,7 @@ def on_rejected_issuing_transfer_signal(
         coordinator_request_id,
         rejection_code,
         available_amount,
+        total_locked_amount,
         debtor_id,
         creditor_id,
     )

@@ -264,18 +264,24 @@ def process_rejected_issuing_transfer_signal(
         coordinator_request_id: int,
         rejection_code: str,
         available_amount: int,
+        total_locked_amount: int,
         debtor_id: int,
         sender_creditor_id: int) -> None:
 
     assert rejection_code == '' or len(rejection_code) <= 30 and rejection_code.encode('ascii')
     assert MIN_INT64 <= available_amount <= MAX_INT64
+    assert 0 <= total_locked_amount <= MAX_INT64
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and not rt.is_finalized:
         if rt.debtor_id == debtor_id and ROOT_CREDITOR_ID == sender_creditor_id:
-            error = {'errorCode': rejection_code, 'avlAmount': available_amount}
+            error = {
+                'errorCode': rejection_code,
+                'availableAmount': available_amount,
+                'lockedAmount': total_locked_amount,
+            }
         else:  # pragma:  no cover
             error = {'errorCode': 'UNEXPECTED_ERROR'}
         _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=error)
