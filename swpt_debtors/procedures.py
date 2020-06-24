@@ -518,7 +518,7 @@ def _insert_running_transfer_or_raise_conflict_error(
         max_amount=amount,
         sender_creditor_id=ROOT_CREDITOR_ID,
         recipient_creditor_id=recipient_creditor_id,
-        minimum_account_balance=debtor.minimum_account_balance,
+        min_account_balance=debtor.min_account_balance,
     ))
     return running_transfer
 

@@ -217,12 +217,12 @@ class Debtor(db.Model):
         assert INTEREST_RATE_FLOOR <= interest_rate <= INTEREST_RATE_CEIL
         return interest_rate
 
-    def calc_minimum_account_balance(self, on_day: date) -> int:
+    def calc_min_account_balance(self, on_day: date) -> int:
         # Apply debtor's enforced balance limits.
-        minimum_account_balance = self.balance_lower_limits.current_limits(on_day).apply_to_value(MIN_INT64)
+        min_account_balance = self.balance_lower_limits.current_limits(on_day).apply_to_value(MIN_INT64)
 
-        assert MIN_INT64 <= minimum_account_balance <= MAX_INT64
-        return minimum_account_balance
+        assert MIN_INT64 <= min_account_balance <= MAX_INT64
+        return min_account_balance
 
     @property
     def interest_rate(self):
@@ -230,9 +230,9 @@ class Debtor(db.Model):
         return self.calc_interest_rate(current_ts.date())
 
     @property
-    def minimum_account_balance(self):
+    def min_account_balance(self):
         current_ts = datetime.now(tz=timezone.utc)
-        return self.calc_minimum_account_balance(current_ts.date())
+        return self.calc_min_account_balance(current_ts.date())
 
     @property
     def is_active(self):
@@ -492,7 +492,8 @@ class PrepareTransferSignal(Signal):
         sender_creditor_id = fields.Integer(data_key='creditor_id')
         recipient = fields.Function(lambda obj: str(i64_to_u64(obj.recipient_creditor_id)))
         inserted_at_ts = fields.DateTime(data_key='ts')
-        minimum_account_balance = fields.Integer()
+        commit_period = fields.Constant(MAX_INT32)
+        min_account_balance = fields.Integer()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
@@ -500,7 +501,7 @@ class PrepareTransferSignal(Signal):
     max_amount = db.Column(db.BigInteger, nullable=False)
     sender_creditor_id = db.Column(db.BigInteger, nullable=False)
     recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
-    minimum_account_balance = db.Column(db.BigInteger, nullable=False)
+    min_account_balance = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
         db.CheckConstraint(min_amount > 0),
         db.CheckConstraint(max_amount >= min_amount),

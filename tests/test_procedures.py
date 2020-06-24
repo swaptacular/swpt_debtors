@@ -405,7 +405,7 @@ def test_successful_transfer(db_session, debtor):
     assert pts.min_amount == pts.max_amount == 1000
     assert pts.sender_creditor_id == ROOT_CREDITOR_ID
     assert pts.recipient_creditor_id == C_ID
-    assert pts.minimum_account_balance == debtor.minimum_account_balance
+    assert pts.min_account_balance == debtor.min_account_balance
     coordinator_request_id = pts.coordinator_request_id
 
     p.process_prepared_issuing_transfer_signal(
