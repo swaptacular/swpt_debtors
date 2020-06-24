@@ -170,7 +170,8 @@ class AccountsScanner(TableScanner):
         interest_rates = self._get_debtor_interest_rates(debtor_ids, current_ts)
         established_rate_flag = Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
         for row, interest_rate in zip(rows, interest_rates):
-            has_correct_interest_rate = row[c.status_flags] & established_rate_flag and row[c.interest_rate] == interest_rate
+            has_correct_interest_rate = (row[c.status_flags] & established_rate_flag
+                                         and row[c.interest_rate] == interest_rate)
             if not has_correct_interest_rate:
                 pk = (row[c.debtor_id], row[c.creditor_id])
                 pks.add(pk)
