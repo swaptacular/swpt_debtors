@@ -415,6 +415,13 @@ class Account(db.Model):
                 'used to detect "dead" accounts. A "dead" account is an account that have been '
                 'removed from the `swpt_accounts` service, but still exist in this table.',
     )
+    last_interest_rate_change_ts = db.Column(
+        db.TIMESTAMP(timezone=True),
+        nullable=False,
+        default=BEGINNING_OF_TIME,
+        comment='The moment at which the last interest rate change has happened. It is '
+                'used to avoid changing the interest rate too often.',
+    )
     last_interest_capitalization_ts = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,

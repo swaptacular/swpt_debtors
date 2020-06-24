@@ -460,6 +460,7 @@ def process_account_update_signal(
         if debtor:
             account.is_muted = True
             account.last_maintenance_request_ts = current_ts
+            account.last_interest_rate_change_ts = current_ts
             insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate, current_ts)
 
 
