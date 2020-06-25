@@ -593,7 +593,7 @@ class TryToDeleteAccountSignal(Signal):
 
 class ChangeInterestRateSignal(Signal):
     queue_name = 'swpt_accounts'
-    actor_name = 'change_interest_rate'
+    actor_name = 'try_to_change_interest_rate'
 
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()

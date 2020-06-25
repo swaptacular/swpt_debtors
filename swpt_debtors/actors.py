@@ -27,6 +27,7 @@ def on_account_update_signal(
         interest: float,
         interest_rate: float,
         min_interest_rate: float,
+        last_interest_rate_change_ts: str,
         last_transfer_number: int,
         last_transfer_committed_at: str,
         last_outgoing_transfer_date: str,
