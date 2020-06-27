@@ -1,8 +1,9 @@
 from __future__ import annotations
 import json
 from typing import Optional
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
 from marshmallow import Schema, fields
+from flask import current_app
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import func, null, true, false, or_, and_
@@ -388,6 +389,7 @@ class Account(db.Model):
     principal = db.Column(db.BigInteger, nullable=False)
     interest = db.Column(db.FLOAT, nullable=False)
     interest_rate = db.Column(db.REAL, nullable=False)
+    last_interest_rate_change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
     last_outgoing_transfer_date = db.Column(db.DATE, nullable=False)
     creation_date = db.Column(db.DATE, nullable=False)
     negligible_amount = db.Column(db.REAL, nullable=False)
@@ -414,13 +416,6 @@ class Account(db.Model):
         comment='The moment at which the last `AccountChangeSignal` has been processed. It is '
                 'used to detect "dead" accounts. A "dead" account is an account that have been '
                 'removed from the `swpt_accounts` service, but still exist in this table.',
-    )
-    last_interest_rate_change_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=BEGINNING_OF_TIME,
-        comment='The moment at which the last interest rate change has happened. It is '
-                'used to avoid changing the interest rate too often.',
     )
     last_interest_capitalization_ts = db.Column(
         db.TIMESTAMP(timezone=True),
@@ -458,6 +453,10 @@ class Account(db.Model):
     @property
     def is_overflown(self):
         return bool(self.status_flags & Account.STATUS_OVERFLOWN_FLAG)
+
+    @classmethod
+    def get_interest_rate_change_min_interval(cls):
+        return timedelta(days=current_app.config['APP_INTEREST_RATE_CHANGE_MIN_DAYS'] + 0.01)
 
 
 class ConfigureAccountSignal(Signal):

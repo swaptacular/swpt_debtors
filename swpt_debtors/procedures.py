@@ -391,6 +391,7 @@ def process_account_update_signal(
         principal: int,
         interest: float,
         interest_rate: float,
+        last_interest_rate_change_ts: datetime,
         last_outgoing_transfer_date: date,
         creation_date: date,
         negligible_amount: float,
@@ -427,6 +428,7 @@ def process_account_update_signal(
         account.principal = principal
         account.interest = interest
         account.interest_rate = interest_rate
+        account.last_interest_rate_change_ts = last_interest_rate_change_ts
         account.last_outgoing_transfer_date = last_outgoing_transfer_date
         account.creation_date = creation_date
         account.negligible_amount = negligible_amount
@@ -441,6 +443,7 @@ def process_account_update_signal(
             principal=principal,
             interest=interest,
             interest_rate=interest_rate,
+            last_interest_rate_change_ts=last_interest_rate_change_ts,
             last_outgoing_transfer_date=last_outgoing_transfer_date,
             creation_date=creation_date,
             negligible_amount=negligible_amount,
@@ -456,11 +459,11 @@ def process_account_update_signal(
         balance_ts = account.last_change_ts
         update_debtor_balance(debtor_id, balance, balance_ts)
     elif not account.status_flags & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
+        cutoff_ts = current_ts - Account.get_interest_rate_change_min_interval()
         debtor = Debtor.get_instance(debtor_id)
-        if debtor:
+        if debtor and account.last_interest_rate_change_ts < cutoff_ts:
             account.is_muted = True
             account.last_maintenance_request_ts = current_ts
-            account.last_interest_rate_change_ts = current_ts
             insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate, current_ts)
 
 

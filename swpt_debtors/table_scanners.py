@@ -53,7 +53,7 @@ class AccountsScanner(TableScanner):
         super().__init__()
         self.interval = timedelta(days=days)
         self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
-        self.interest_rate_change_min_interval = timedelta(days=current_app.config['APP_INTEREST_RATE_CHANGE_MIN_DAYS'])
+        self.interest_rate_change_min_interval = Account.get_interest_rate_change_min_interval()
         self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])
         self.max_interest_to_principal_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
@@ -172,9 +172,9 @@ class AccountsScanner(TableScanner):
         established_rate_flag = Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
         cutoff_ts = current_ts - self.interest_rate_change_min_interval
         for row, interest_rate in zip(rows, interest_rates):
-            lacks_interest_rate = not row[c.status_flags] & established_rate_flag
-            needs_update = row[c.last_interest_rate_change_ts] < cutoff_ts and row[c.interest_rate] != interest_rate
-            if lacks_interest_rate or needs_update:
+            has_established_interest_rate = row[c.status_flags] & established_rate_flag
+            has_incorrect_interest_rate = not has_established_interest_rate or row[c.interest_rate] != interest_rate
+            if row[c.last_interest_rate_change_ts] < cutoff_ts and has_incorrect_interest_rate:
                 pk = (row[c.debtor_id], row[c.creditor_id])
                 pks.add(pk)
                 db.session.add(ChangeInterestRateSignal(
@@ -262,8 +262,7 @@ class AccountsScanner(TableScanner):
                 ))
         return pks
 
-    def _mute_accounts(self, pks_to_mute, current_ts,
-                       changed_interest_rate=False, capitalized=False, for_deletion=False):
+    def _mute_accounts(self, pks_to_mute, current_ts, capitalized=False, for_deletion=False):
         """Mute the accounts refered by `pks_to_mute`."""
 
         if pks_to_mute:
@@ -271,8 +270,6 @@ class AccountsScanner(TableScanner):
                 Account.is_muted: True,
                 Account.last_maintenance_request_ts: current_ts,
             }
-            if changed_interest_rate:
-                new_values[Account.last_interest_rate_change_ts] = current_ts
             if capitalized:
                 new_values[Account.last_interest_capitalization_ts] = current_ts
             if for_deletion:
@@ -366,5 +363,4 @@ class AccountsScanner(TableScanner):
         #       operation requests.
         self._mute_accounts(for_deletion_pks, current_ts, for_deletion=True)
         self._mute_accounts(capitalized_pks, current_ts, capitalized=True)
-        self._mute_accounts(changed_rate_pks, current_ts, changed_interest_rate=True)
-        self._mute_accounts(zeroed_out_pks, current_ts)
+        self._mute_accounts(changed_rate_pks | zeroed_out_pks, current_ts)

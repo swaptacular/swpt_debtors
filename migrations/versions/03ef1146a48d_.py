@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9e57984cfa6d
+Revision ID: 03ef1146a48d
 Revises: 8d09bea9c7d1
-Create Date: 2020-06-24 14:47:24.874404
+Create Date: 2020-06-27 13:21:37.181256
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '9e57984cfa6d'
+revision = '03ef1146a48d'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -26,6 +26,7 @@ def upgrade():
     sa.Column('principal', sa.BigInteger(), nullable=False),
     sa.Column('interest', sa.FLOAT(), nullable=False),
     sa.Column('interest_rate', sa.REAL(), nullable=False),
+    sa.Column('last_interest_rate_change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=False),
     sa.Column('creation_date', sa.DATE(), nullable=False),
     sa.Column('negligible_amount', sa.REAL(), nullable=False),
@@ -33,7 +34,6 @@ def upgrade():
     sa.Column('status_flags', sa.Integer(), nullable=False),
     sa.Column('is_muted', sa.BOOLEAN(), nullable=False, comment='Whether the account is "muted" or not. Maintenance operation requests are not sent for muted accounts. This prevents flooding the signal bus with maintenance signals. It is set to `true` when a maintenance operation request is made, and set to back `false` when the matching `AccountMaintenanceSignal` is received. Important note: Accounts that have been muted a long time ago (this can be determined by checking the `last_maintenance_request_ts` column) are allowed to sent maintenance operation requests. (This is to avoid accounts staying muted forever when something went wrong with the awaited un-muting `AccountMaintenanceSignal`.'),
     sa.Column('last_heartbeat_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last `AccountChangeSignal` has been processed. It is used to detect "dead" accounts. A "dead" account is an account that have been removed from the `swpt_accounts` service, but still exist in this table.'),
-    sa.Column('last_interest_rate_change_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last interest rate change has happened. It is used to avoid changing the interest rate too often.'),
     sa.Column('last_interest_capitalization_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last interest capitalization was triggered. It is used to avoid capitalizing interest too often.'),
     sa.Column('last_deletion_attempt_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last deletion attempt was made. It is used to avoid trying to delete the account too often.'),
     sa.Column('last_maintenance_request_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the last account maintenance operation request was made. It is used to avoid triggering account maintenance operations too often.'),

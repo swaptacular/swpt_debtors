@@ -50,6 +50,7 @@ def on_account_update_signal(
         principal,
         interest,
         interest_rate,
+        iso8601.parse_date(last_interest_rate_change_ts),
         iso8601.parse_date(last_outgoing_transfer_date).date(),
         iso8601.parse_date(creation_date).date(),
         negligible_amount,

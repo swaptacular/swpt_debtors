@@ -1,7 +1,7 @@
 import pytest
 from uuid import UUID
 from datetime import datetime, timezone, timedelta, date
-from swpt_debtors.models import RunningTransfer, Account, InitiatedTransfer, ROOT_CREDITOR_ID
+from swpt_debtors.models import RunningTransfer, Account, InitiatedTransfer, ROOT_CREDITOR_ID, BEGINNING_OF_TIME
 from swpt_debtors.extensions import db
 from swpt_debtors import procedures
 
@@ -67,6 +67,7 @@ def test_scan_accounts(app_unsafe_session):
         principal=-10,
         interest=0.0,
         interest_rate=0.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
@@ -81,6 +82,7 @@ def test_scan_accounts(app_unsafe_session):
         principal=0,
         interest=0.0,
         interest_rate=0.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
@@ -95,6 +97,7 @@ def test_scan_accounts(app_unsafe_session):
         principal=0,
         interest=0.0,
         interest_rate=0.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
@@ -109,6 +112,7 @@ def test_scan_accounts(app_unsafe_session):
         principal=0,
         interest=100.0,
         interest_rate=10.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
@@ -124,6 +128,7 @@ def test_scan_accounts(app_unsafe_session):
         principal=10,
         interest=-20.0,
         interest_rate=10.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=current_ts,
         creation_date=some_date,
         negligible_amount=2.0,
@@ -139,6 +144,7 @@ def test_scan_accounts(app_unsafe_session):
         principal=50,
         interest=0.0,
         interest_rate=0.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=50.0,
@@ -203,6 +209,7 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
         principal=0,
         interest=100.0,
         interest_rate=10.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
@@ -217,6 +224,7 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
         principal=10,
         interest=-20.0,
         interest_rate=10.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=current_ts,
         creation_date=some_date,
         negligible_amount=2.0,
@@ -275,6 +283,7 @@ def test_scan_accounts_zero_out(app_unsafe_session):
         principal=10,
         interest=-20.0,
         interest_rate=10.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=past_ts,
         creation_date=some_date,
         negligible_amount=2.0,
@@ -323,6 +332,7 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
         principal=0,
         interest=0.0,
         interest_rate=0.0,
+        last_interest_rate_change_ts=BEGINNING_OF_TIME,
         last_outgoing_transfer_date=past_ts,
         creation_date=date(2018, 10, 20),
         negligible_amount=2.0,
