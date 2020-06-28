@@ -28,6 +28,7 @@ def on_account_update_signal(
         interest_rate: float,
         demurrage_rate: float,
         gratis_period: int,
+        commit_period: int,
         last_interest_rate_change_ts: str,
         last_transfer_number: int,
         last_transfer_committed_at: str,
