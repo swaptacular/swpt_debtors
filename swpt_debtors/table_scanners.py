@@ -252,7 +252,7 @@ class AccountsScanner(TableScanner):
             if row[c.last_deletion_attempt_ts] > cutoff_ts:
                 continue
             if (row[c.config_flags] & scheduled_for_deletion_flag
-                    and 0 <= self._calc_current_balance(row, current_ts) <= max(2.0, row[c.negligible_amount])):
+                    and -2.0 <= self._calc_current_balance(row, current_ts) <= max(2.0, row[c.negligible_amount])):
                 pk = (row[c.debtor_id], row[c.creditor_id])
                 pks.add(pk)
                 db.session.add(TryToDeleteAccountSignal(
