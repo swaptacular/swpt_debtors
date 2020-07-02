@@ -8,7 +8,7 @@ from sqlalchemy.sql.functions import coalesce
 from flask import current_app
 from .extensions import db
 from .models import Debtor, RunningTransfer, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
-    ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, InitiatedTransfer, MAX_INT64, ROOT_CREDITOR_ID, \
+    TryToDeleteAccountSignal, InitiatedTransfer, MAX_INT64, ROOT_CREDITOR_ID, \
     BEGINNING_OF_TIME
 
 T = TypeVar('T')
@@ -54,7 +54,6 @@ class AccountsScanner(TableScanner):
         self.interval = timedelta(days=days)
         self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
         self.interest_rate_change_min_interval = Account.get_interest_rate_change_min_interval()
-        self.zero_out_negative_balance_delay = timedelta(days=current_app.config['APP_ZERO_OUT_NEGATIVE_BALANCE_DAYS'])
         self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])
         self.max_interest_to_principal_ratio = current_app.config['APP_MAX_INTEREST_TO_PRINCIPAL_RATIO']
         self.account_unmute_interval = 2 * self.signalbus_max_delay
@@ -212,31 +211,6 @@ class AccountsScanner(TableScanner):
                 ))
         return pks
 
-    def _check_negative_balances(self, rows, current_ts):
-        """Send `ZeroOutNegativeBalanceSignal` if necessary. Return a set of
-        primary keys, for the accounts for which a signal has been
-        sent.
-
-        """
-
-        pks = set()
-        c = self.table.c
-        cutoff_date = (current_ts - self.zero_out_negative_balance_delay).date()
-        for row in rows:
-            balance = math.floor(self._calc_current_balance(row, current_ts))
-            transfer_date = row[c.last_outgoing_transfer_date]
-            transfer_date_is_old = transfer_date is None or transfer_date <= cutoff_date
-            if balance < 0 and transfer_date_is_old:
-                pk = (row[c.debtor_id], row[c.creditor_id])
-                pks.add(pk)
-                db.session.add(ZeroOutNegativeBalanceSignal(
-                    debtor_id=pk[0],
-                    creditor_id=pk[1],
-                    last_outgoing_transfer_date=cutoff_date,
-                    request_ts=current_ts,
-                ))
-        return pks
-
     def _check_scheduled_for_deletion(self, rows, current_ts):
         """Send `TryToDeleteAccountSignal` if necessary. Return a set of
         primary keys, for the accounts for which a signal has been
@@ -252,7 +226,7 @@ class AccountsScanner(TableScanner):
             if row[c.last_deletion_attempt_ts] > cutoff_ts:
                 continue
             if (row[c.config_flags] & scheduled_for_deletion_flag
-                    and -2.0 <= self._calc_current_balance(row, current_ts) <= max(2.0, row[c.negligible_amount])):
+                    and self._calc_current_balance(row, current_ts) <= max(2.0, row[c.negligible_amount])):
                 pk = (row[c.debtor_id], row[c.creditor_id])
                 pks.add(pk)
                 db.session.add(TryToDeleteAccountSignal(
@@ -343,19 +317,15 @@ class AccountsScanner(TableScanner):
         regular_rows, _, _ = self._separate_accounts_by_type(alive_rows)
         nonmuted_regular_rows = self._remove_muted_accounts(regular_rows, current_ts)
 
-        # 1) Send `ZeroOutNegativeBalanceSignal`s:
-        zeroed_out_pks = self._check_negative_balances(nonmuted_regular_rows, current_ts)
-        nonmuted_regular_rows = self._remove_pks(nonmuted_regular_rows, zeroed_out_pks)
-
-        # 2) Send `TryToDeleteAccountSignal`s:
+        # 1) Send `TryToDeleteAccountSignal`s:
         for_deletion_pks = self._check_scheduled_for_deletion(nonmuted_regular_rows, current_ts)
         nonmuted_regular_rows = self._remove_pks(nonmuted_regular_rows, for_deletion_pks)
 
-        # 3) Send `CapitalizeInterestSignal`s:
+        # 2) Send `CapitalizeInterestSignal`s:
         capitalized_pks = self._check_accumulated_interests(nonmuted_regular_rows, current_ts)
         nonmuted_regular_rows = self._remove_pks(nonmuted_regular_rows, capitalized_pks)
 
-        # 4) Send `ChangeInterestRateSignal`s:
+        # 3) Send `ChangeInterestRateSignal`s:
         changed_rate_pks = self._check_interest_rates(nonmuted_regular_rows, current_ts)
 
         # TODO: Try to execute the three updates in one database
@@ -363,4 +333,4 @@ class AccountsScanner(TableScanner):
         #       operation requests.
         self._mute_accounts(for_deletion_pks, current_ts, for_deletion=True)
         self._mute_accounts(capitalized_pks, current_ts, capitalized=True)
-        self._mute_accounts(changed_rate_pks | zeroed_out_pks, current_ts)
+        self._mute_accounts(changed_rate_pks, current_ts)

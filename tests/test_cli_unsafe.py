@@ -11,7 +11,7 @@ TEST_UUID = UUID('123e4567-e89b-12d3-a456-426655440000')
 @pytest.fixture(scope='function')
 def app_unsafe_session(app_unsafe_session):
     from swpt_debtors.models import Debtor, CapitalizeInterestSignal, ChangeInterestRateSignal, \
-        ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal, RunningTransfer, PrepareTransferSignal
+        TryToDeleteAccountSignal, RunningTransfer, PrepareTransferSignal
 
     try:
         yield app_unsafe_session
@@ -21,7 +21,6 @@ def app_unsafe_session(app_unsafe_session):
         Account.query.delete()
         ChangeInterestRateSignal.query.delete()
         CapitalizeInterestSignal.query.delete()
-        ZeroOutNegativeBalanceSignal.query.delete()
         TryToDeleteAccountSignal.query.delete()
         RunningTransfer.query.delete()
         PrepareTransferSignal.query.delete()
@@ -51,7 +50,7 @@ def test_collect_running_transfers(app_unsafe_session):
 
 def test_scan_accounts(app_unsafe_session):
     from swpt_debtors.models import Debtor, ChangeInterestRateSignal, \
-        CapitalizeInterestSignal, ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
+        CapitalizeInterestSignal, TryToDeleteAccountSignal
 
     some_date = date(2018, 10, 20)
     current_ts = datetime.now(tz=timezone.utc)
@@ -156,7 +155,6 @@ def test_scan_accounts(app_unsafe_session):
     assert len(Account.query.all()) == 6
     assert len(ChangeInterestRateSignal.query.all()) == 0
     assert len(CapitalizeInterestSignal.query.all()) == 0
-    assert len(ZeroOutNegativeBalanceSignal.query.all()) == 0
     runner = app.test_cli_runner()
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
@@ -170,9 +168,6 @@ def test_scan_accounts(app_unsafe_session):
 
     capitalize_interest_signals = CapitalizeInterestSignal.query.all()
     assert len(capitalize_interest_signals) == 0
-
-    zero_out_negative_balance_signals = ZeroOutNegativeBalanceSignal.query.all()
-    assert len(zero_out_negative_balance_signals) == 0
 
     try_to_delete_account_signals = TryToDeleteAccountSignal.query.all()
     assert len(try_to_delete_account_signals) == 1
@@ -195,7 +190,7 @@ def test_scan_accounts(app_unsafe_session):
 
 def test_scan_accounts_capitalize_interest(app_unsafe_session):
     from swpt_debtors.models import CapitalizeInterestSignal, ChangeInterestRateSignal, \
-        ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
+        TryToDeleteAccountSignal
 
     some_date = date(2018, 10, 20)
     current_ts = datetime.now(tz=timezone.utc)
@@ -243,9 +238,6 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
     change_interest_rate_signals = ChangeInterestRateSignal.query.all()
     assert len(change_interest_rate_signals) == 0
 
-    zero_out_negative_balance_signals = ZeroOutNegativeBalanceSignal.query.all()
-    assert len(zero_out_negative_balance_signals) == 0
-
     try_to_delete_account_signals = TryToDeleteAccountSignal.query.all()
     assert len(try_to_delete_account_signals) == 0
 
@@ -265,55 +257,6 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
     assert len(CapitalizeInterestSignal.query.all()) == 2
-
-
-def test_scan_accounts_zero_out(app_unsafe_session):
-    from swpt_debtors.models import CapitalizeInterestSignal, ChangeInterestRateSignal, \
-        ZeroOutNegativeBalanceSignal, TryToDeleteAccountSignal
-
-    some_date = date(2018, 10, 20)
-    current_ts = datetime.now(tz=timezone.utc)
-    past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
-    app = app_unsafe_session
-    db.session.add(Account(
-        debtor_id=1111,
-        creditor_id=2222,
-        last_change_seqnum=0,
-        last_change_ts=current_ts - timedelta(days=3653),
-        principal=10,
-        interest=-20.0,
-        interest_rate=10.0,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=past_ts,
-        creation_date=some_date,
-        negligible_amount=2.0,
-        config_flags=0,
-        status_flags=0,
-    ))
-    db.session.commit()
-    db.engine.execute('ANALYZE account')
-    assert len(Account.query.all()) == 1
-    assert len(CapitalizeInterestSignal.query.all()) == 0
-    runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
-    assert result.exit_code == 0
-    assert len(Account.query.all()) == 1
-
-    change_interest_rate_signals = ChangeInterestRateSignal.query.all()
-    assert len(change_interest_rate_signals) == 0
-
-    zero_out_negative_balance_signals = ZeroOutNegativeBalanceSignal.query.all()
-    assert len(zero_out_negative_balance_signals) == 1
-    zonbs = zero_out_negative_balance_signals[0]
-    assert zonbs.debtor_id == 1111
-    assert zonbs.creditor_id == 2222
-    assert zonbs.last_outgoing_transfer_date < (current_ts - timedelta(days=7)).date()
-
-    try_to_delete_account_signals = TryToDeleteAccountSignal.query.all()
-    assert len(try_to_delete_account_signals) == 0
-
-    capitalize_interest_signals = CapitalizeInterestSignal.query.all()
-    assert len(capitalize_interest_signals) == 0
 
 
 def test_scan_accounts_deactivate_debtor(app_unsafe_session):
