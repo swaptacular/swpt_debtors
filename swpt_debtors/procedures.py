@@ -262,14 +262,12 @@ def process_account_purge_signal(debtor_id: int, creditor_id: int, creation_date
 def process_rejected_issuing_transfer_signal(
         coordinator_id: int,
         coordinator_request_id: int,
-        rejection_code: str,
-        available_amount: int,
+        status_code: str,
         total_locked_amount: int,
         debtor_id: int,
         sender_creditor_id: int) -> None:
 
-    assert rejection_code == '' or len(rejection_code) <= 30 and rejection_code.encode('ascii')
-    assert MIN_INT64 <= available_amount <= MAX_INT64
+    assert status_code == '' or len(status_code) <= 30 and status_code.encode('ascii')
     assert 0 <= total_locked_amount <= MAX_INT64
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
@@ -278,12 +276,14 @@ def process_rejected_issuing_transfer_signal(
     if rt and not rt.is_finalized:
         if rt.debtor_id == debtor_id and ROOT_CREDITOR_ID == sender_creditor_id:
             error = {
-                'errorCode': rejection_code,
-                'availableAmount': available_amount,
-                'lockedAmount': total_locked_amount,
+                'errorCode': status_code,
+                'totalLockedAmount': total_locked_amount,
             }
         else:  # pragma:  no cover
-            error = {'errorCode': 'UNEXPECTED_ERROR'}
+            error = {
+                'errorCode': 'UNEXPECTED_ERROR',
+                'totalLockedAmount': 0,
+            }
         _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=error)
         db.session.delete(rt)
 

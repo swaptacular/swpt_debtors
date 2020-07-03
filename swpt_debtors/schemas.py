@@ -212,13 +212,8 @@ class TransferErrorSchema(Schema):
         description='The error code.',
         example='INSUFFICIENT_AVAILABLE_AMOUNT',
     )
-    availableAmount = fields.Integer(
-        dump_only=True,
-        format="int64",
-        description='The amount currently available on the account.',
-        example=100,
-    )
-    lockedAmount = fields.Integer(
+    totalLockedAmount = fields.Integer(
+        required=True,
         dump_only=True,
         format="int64",
         description='The total amount secured (locked) for prepared transfers on the account.',
