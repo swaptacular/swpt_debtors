@@ -32,7 +32,6 @@ def test_on_account_update_signal(db_session):
         commit_period=30 * 24 * 60 * 60,
         last_transfer_number=0,
         last_transfer_committed_at='1970-01-01T00:00:00+00:00',
-        last_outgoing_transfer_date='2018-10-01',
         last_config_ts='1970-01-01T00:00:00Z',
         last_config_seqnum=0,
         creation_date='2018-10-1',

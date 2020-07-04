@@ -390,7 +390,6 @@ class Account(db.Model):
     interest = db.Column(db.FLOAT, nullable=False)
     interest_rate = db.Column(db.REAL, nullable=False)
     last_interest_rate_change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-    last_outgoing_transfer_date = db.Column(db.DATE, nullable=False)
     creation_date = db.Column(db.DATE, nullable=False)
     negligible_amount = db.Column(db.REAL, nullable=False)
     config_flags = db.Column(db.Integer, nullable=False)

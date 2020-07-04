@@ -392,7 +392,6 @@ def process_account_update_signal(
         interest: float,
         interest_rate: float,
         last_interest_rate_change_ts: datetime,
-        last_outgoing_transfer_date: date,
         creation_date: date,
         negligible_amount: float,
         config_flags: int,
@@ -429,7 +428,6 @@ def process_account_update_signal(
         account.interest = interest
         account.interest_rate = interest_rate
         account.last_interest_rate_change_ts = last_interest_rate_change_ts
-        account.last_outgoing_transfer_date = last_outgoing_transfer_date
         account.creation_date = creation_date
         account.negligible_amount = negligible_amount
         account.config_flags = config_flags
@@ -444,7 +442,6 @@ def process_account_update_signal(
             interest=interest,
             interest_rate=interest_rate,
             last_interest_rate_change_ts=last_interest_rate_change_ts,
-            last_outgoing_transfer_date=last_outgoing_transfer_date,
             creation_date=creation_date,
             negligible_amount=negligible_amount,
             config_flags=config_flags,

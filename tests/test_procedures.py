@@ -57,7 +57,6 @@ def test_deactivate_debtor(db_session, debtor):
 def test_process_account_update_signal(db_session, debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
-    last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
     p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=C_ID,
@@ -67,7 +66,6 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         interest=12.5,
         interest_rate=-0.5,
         last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=last_outgoing_transfer_date,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -82,7 +80,6 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
     assert a.principal == 1000
     assert a.interest == 12.5
     assert a.interest_rate == -0.5
-    assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
     assert a.negligible_amount == 5.5
     assert a.status_flags == 0
     cirs = ChangeInterestRateSignal.query.all()
@@ -102,7 +99,6 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         interest=12.5,
         interest_rate=-0.5,
         last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=last_outgoing_transfer_date,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -117,7 +113,6 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
     assert a.principal == 1000
     assert a.interest == 12.5
     assert a.interest_rate == -0.5
-    assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
     assert a.negligible_amount == 5.5
     assert a.status_flags == 0
     assert len(ChangeInterestRateSignal.query.all()) == 1
@@ -132,7 +127,6 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         interest=12.5,
         interest_rate=-0.5,
         last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=last_outgoing_transfer_date,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -156,7 +150,6 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         interest=12.6,
         interest_rate=-0.6,
         last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=last_outgoing_transfer_date + timedelta(days=1),
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -171,7 +164,6 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
     assert a.principal == 1001
     assert a.interest == 12.6
     assert a.interest_rate == -0.6
-    assert a.last_outgoing_transfer_date == last_outgoing_transfer_date + timedelta(days=1)
     assert a.status_flags == Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG
     cirs = ChangeInterestRateSignal.query.all()
     assert len(cirs) == 1
@@ -186,7 +178,6 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         interest=12.6,
         interest_rate=-0.6,
         last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=last_outgoing_transfer_date + timedelta(days=1),
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -205,7 +196,6 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
 
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
-    last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
     p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=ROOT_CREDITOR_ID,
@@ -215,7 +205,6 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
         interest=0.0,
         interest_rate=0.0,
         last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=last_outgoing_transfer_date,
         creation_date=date(2018, 10, 20),
         negligible_amount=2.0,
         config_flags=0,
@@ -230,7 +219,6 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert a.principal == -1000
     assert a.interest == 0.0
     assert a.interest_rate == 0.0
-    assert a.last_outgoing_transfer_date == last_outgoing_transfer_date
     assert a.negligible_amount == 2.0
     assert a.status_flags == 0
     assert len(ChangeInterestRateSignal.query.all()) == 0
@@ -244,7 +232,6 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
 def test_process_root_account_change_signal(db_session, debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
-    last_outgoing_transfer_date = date.fromisoformat('2019-10-01')
     p.process_account_update_signal(
         debtor_id=D_ID,
         creditor_id=ROOT_CREDITOR_ID,
@@ -254,7 +241,6 @@ def test_process_root_account_change_signal(db_session, debtor, current_ts):
         interest=0,
         interest_rate=0.0,
         last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=last_outgoing_transfer_date,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -495,7 +481,6 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
         interest=0.0,
         interest_rate=0.0,
         last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=current_ts.date(),
         creation_date=creation_date,
         negligible_amount=2.0,
         config_flags=0,
@@ -525,7 +510,6 @@ def test_process_account_maintenance_signal(db_session, debtor, current_ts):
         interest=0.0,
         interest_rate=0.0,
         last_interest_rate_change_ts=BEGINNING_OF_TIME,
-        last_outgoing_transfer_date=current_ts,
         creation_date=current_ts.date(),
         negligible_amount=2.0,
         config_flags=0,
