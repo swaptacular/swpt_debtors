@@ -514,8 +514,8 @@ def _insert_running_transfer_or_raise_conflict_error(
     db.session.add(PrepareTransferSignal(
         debtor_id=debtor.debtor_id,
         coordinator_request_id=running_transfer.issuing_coordinator_request_id,
-        min_amount=amount,
-        max_amount=amount,
+        min_locked_amount=amount,
+        max_locked_amount=amount,
         sender_creditor_id=ROOT_CREDITOR_ID,
         recipient_creditor_id=recipient_creditor_id,
         min_account_balance=debtor.min_account_balance,

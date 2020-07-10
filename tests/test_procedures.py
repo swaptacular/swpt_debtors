@@ -395,7 +395,7 @@ def test_successful_transfer(db_session, debtor):
     pts = pts_list[0]
     assert pts.debtor_id == D_ID
     assert pts.coordinator_request_id is not None
-    assert pts.min_amount == pts.max_amount == 1000
+    assert pts.min_locked_amount == pts.max_locked_amount == 1000
     assert pts.sender_creditor_id == ROOT_CREDITOR_ID
     assert pts.recipient_creditor_id == C_ID
     assert pts.min_account_balance == debtor.min_account_balance

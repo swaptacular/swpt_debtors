@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 84ebe3d5c9ba
+Revision ID: ad2d21b0d928
 Revises: 8d09bea9c7d1
-Create Date: 2020-07-02 23:49:35.324164
+Create Date: 2020-07-10 21:04:19.910195
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '84ebe3d5c9ba'
+revision = 'ad2d21b0d928'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -27,7 +27,6 @@ def upgrade():
     sa.Column('interest', sa.FLOAT(), nullable=False),
     sa.Column('interest_rate', sa.REAL(), nullable=False),
     sa.Column('last_interest_rate_change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.Column('last_outgoing_transfer_date', sa.DATE(), nullable=False),
     sa.Column('creation_date', sa.DATE(), nullable=False),
     sa.Column('negligible_amount', sa.REAL(), nullable=False),
     sa.Column('config_flags', sa.Integer(), nullable=False),
@@ -109,13 +108,13 @@ def upgrade():
     sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
-    sa.Column('min_amount', sa.BigInteger(), nullable=False),
-    sa.Column('max_amount', sa.BigInteger(), nullable=False),
+    sa.Column('min_locked_amount', sa.BigInteger(), nullable=False),
+    sa.Column('max_locked_amount', sa.BigInteger(), nullable=False),
     sa.Column('sender_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('min_account_balance', sa.BigInteger(), nullable=False),
-    sa.CheckConstraint('max_amount >= min_amount'),
-    sa.CheckConstraint('min_amount > 0'),
+    sa.CheckConstraint('max_locked_amount >= min_locked_amount'),
+    sa.CheckConstraint('min_locked_amount > 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'coordinator_request_id')
     )
     op.create_table('running_transfer',

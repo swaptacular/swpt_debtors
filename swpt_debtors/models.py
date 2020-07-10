@@ -484,8 +484,8 @@ class PrepareTransferSignal(Signal):
         coordinator_type = fields.String(default='issuing')
         coordinator_id = fields.Integer(attribute='debtor_id', dump_only=True)
         coordinator_request_id = fields.Integer()
-        min_amount = fields.Integer()
-        max_amount = fields.Integer()
+        min_locked_amount = fields.Integer()
+        max_locked_amount = fields.Integer()
         debtor_id = fields.Integer()
         sender_creditor_id = fields.Integer(data_key='creditor_id')
         recipient = fields.Function(lambda obj: str(i64_to_u64(obj.recipient_creditor_id)))
@@ -496,14 +496,14 @@ class PrepareTransferSignal(Signal):
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
-    min_amount = db.Column(db.BigInteger, nullable=False)
-    max_amount = db.Column(db.BigInteger, nullable=False)
+    min_locked_amount = db.Column(db.BigInteger, nullable=False)
+    max_locked_amount = db.Column(db.BigInteger, nullable=False)
     sender_creditor_id = db.Column(db.BigInteger, nullable=False)
     recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
     min_account_balance = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
-        db.CheckConstraint(min_amount > 0),
-        db.CheckConstraint(max_amount >= min_amount),
+        db.CheckConstraint(min_locked_amount > 0),
+        db.CheckConstraint(max_locked_amount >= min_locked_amount),
     )
 
 
