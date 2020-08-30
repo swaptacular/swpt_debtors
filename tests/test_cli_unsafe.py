@@ -188,7 +188,6 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
 
     some_date = date(2018, 10, 20)
     current_ts = datetime.now(tz=timezone.utc)
-    past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     db.session.add(Account(
         debtor_id=111,
