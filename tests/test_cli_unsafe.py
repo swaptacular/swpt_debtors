@@ -34,7 +34,7 @@ def test_collect_running_transfers(app_unsafe_session):
         transfer_uuid=TEST_UUID,
         recipient_creditor_id=1111,
         amount=1500,
-        transfer_note={},
+        transfer_note='',
         issuing_transfer_id=666,
         started_at_ts=datetime(2000, 1, 1, tzinfo=timezone.utc)
     )
@@ -256,7 +256,7 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     db.session.add(Debtor(debtor_id=1, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
-    procedures.initiate_transfer(1, TEST_UUID, 1, 50, {})
+    procedures.initiate_transfer(1, TEST_UUID, 1, 50, '')
     db.session.add(Debtor(debtor_id=2, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
     db.session.add(Account(
         debtor_id=1,

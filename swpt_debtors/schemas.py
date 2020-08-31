@@ -1,10 +1,10 @@
 from datetime import datetime, timezone, timedelta
 from typing import NamedTuple, List
-from marshmallow import Schema, fields, validate, post_load
+from marshmallow import Schema, fields, validate, post_load, validates, ValidationError
 from flask import url_for, current_app
 from .lower_limits import LowerLimit
 from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
-    Debtor, InitiatedTransfer
+    TRANSFER_NOTE_MAX_BYTES, Debtor, InitiatedTransfer
 from swpt_lib import endpoints
 
 
@@ -242,11 +242,18 @@ class IssuingTransferCreationRequestSchema(Schema):
         description=InitiatedTransfer.amount.comment,
         example=1000,
     )
-    transfer_note = fields.Dict(
-        missing={},
+    transfer_note = fields.String(
+        missing='',
+        validate=validate.Length(max=TRANSFER_NOTE_MAX_BYTES),
         data_key='note',
         description=InitiatedTransfer.transfer_note.comment,
+        example='Hello, World!',
     )
+
+    @validates('transfer_note')
+    def validate_transfer_note(self, value):
+        if len(value.encode('utf8')) > TRANSFER_NOTE_MAX_BYTES:
+            raise ValidationError(f'The total byte-length of the note exceeds {TRANSFER_NOTE_MAX_BYTES} bytes.')
 
 
 class TransferSchema(Schema):
@@ -290,7 +297,7 @@ class TransferSchema(Schema):
         description=InitiatedTransfer.amount.comment,
         example=1000,
     )
-    transfer_note = fields.Dict(
+    transfer_note = fields.String(
         required=True,
         dump_only=True,
         data_key='note',

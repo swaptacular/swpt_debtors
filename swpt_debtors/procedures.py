@@ -216,12 +216,11 @@ def initiate_transfer(
         transfer_uuid: UUID,
         recipient_creditor_id: int,
         amount: int,
-        transfer_note: dict) -> InitiatedTransfer:
+        transfer_note: str) -> InitiatedTransfer:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
-    assert type(transfer_note) is dict
 
     _raise_error_if_transfer_exists(debtor_id, transfer_uuid, recipient_creditor_id, amount, transfer_note)
     debtor = _throttle_debtor_actions(debtor_id)
@@ -343,7 +342,7 @@ def process_prepared_issuing_transfer_signal(
         coordinator_id=coordinator_id,
         coordinator_request_id=coordinator_request_id,
         committed_amount=0,
-        transfer_note={},
+        transfer_note='',
     ))
 
 
@@ -496,7 +495,7 @@ def _insert_running_transfer_or_raise_conflict_error(
         transfer_uuid: UUID,
         recipient_creditor_id: int,
         amount: int,
-        transfer_note: dict) -> RunningTransfer:
+        transfer_note: str) -> RunningTransfer:
 
     running_transfer = RunningTransfer(
         debtor_id=debtor.debtor_id,
@@ -528,7 +527,7 @@ def _raise_error_if_transfer_exists(
         transfer_uuid: UUID,
         recipient_creditor_id: int,
         amount: int,
-        transfer_note: dict) -> None:
+        transfer_note: str) -> None:
 
     t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one_or_none()
     if t:

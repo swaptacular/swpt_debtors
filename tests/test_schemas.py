@@ -1,8 +1,9 @@
 import pytest
 from datetime import date
+from marshmallow import ValidationError
 from swpt_debtors import schemas
 from swpt_debtors.lower_limits import LowerLimit
-from swpt_debtors.models import Debtor
+from swpt_debtors.models import Debtor, TRANSFER_NOTE_MAX_BYTES
 
 
 def test_interest_rate_lower_limit_schema():
@@ -57,3 +58,14 @@ def test_debtor_schema(db_session):
     assert 'example.com' in obj['uri']
     assert obj['type'] == 'Debtor'
     assert 'example.com' in obj['accountingAuthorityUri']
+
+
+def test_deserialize_transfer_creation_request(db_session):
+    s = schemas.IssuingTransferCreationRequestSchema()
+    with pytest.raises(ValidationError, match='The total byte-length of the note exceeds'):
+        s.load({
+            'recipientCreditorId': 1,
+            'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
+            'amount': 1000,
+            'note': TRANSFER_NOTE_MAX_BYTES * 'Щ',
+        })

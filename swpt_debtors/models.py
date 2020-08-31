@@ -1,5 +1,4 @@
 from __future__ import annotations
-import json
 from typing import Optional
 from datetime import datetime, date, timezone, timedelta
 from marshmallow import Schema, fields
@@ -21,6 +20,7 @@ MAX_UINT64 = (1 << 64) - 1
 BEGINNING_OF_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
 INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
+TRANSFER_NOTE_MAX_BYTES = 500
 ROOT_CREDITOR_ID = 0
 
 
@@ -250,10 +250,10 @@ class InitiatedTransfer(db.Model):
         comment='The amount to be transferred. Must be positive.',
     )
     transfer_note = db.Column(
-        pg.JSON,
+        db.String,
         nullable=False,
-        default={},
-        comment='A note from the debtor. Can be any JSON object that the debtor wants the '
+        default='',
+        comment='A note from the debtor. Can be any string that the debtor wants the '
                 'recipient to see.',
     )
     initiated_at_ts = db.Column(
@@ -321,9 +321,9 @@ class RunningTransfer(db.Model):
         comment='The amount to be transferred. Must be positive.',
     )
     transfer_note = db.Column(
-        pg.JSON,
+        db.String,
         nullable=False,
-        comment='A note from the debtor. Can be any JSON object that the debtor wants the '
+        comment='A note from the debtor. Can be any string that the debtor wants the '
                 'recipient to see.',
     )
     started_at_ts = db.Column(
@@ -521,13 +521,8 @@ class FinalizeTransferSignal(Signal):
         committed_amount = fields.Integer()
         finalization_flags = fields.Constant(0)
         transfer_note_format = fields.Constant('')
-        transfer_note = fields.Method('get_transfer_note')
+        transfer_note = fields.String()
         inserted_at_ts = fields.DateTime(data_key='ts')
-
-        def get_transfer_note(self, obj):
-            transfer_note_dict = obj.transfer_note
-            assert type(transfer_note_dict) is dict
-            return json.dumps(transfer_note_dict) if transfer_note_dict else ''
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
@@ -535,7 +530,7 @@ class FinalizeTransferSignal(Signal):
     coordinator_id = db.Column(db.BigInteger, nullable=False)
     coordinator_request_id = db.Column(db.BigInteger, nullable=False)
     transfer_id = db.Column(db.BigInteger, nullable=False)
-    transfer_note = db.Column(pg.JSON, nullable=False)
+    transfer_note = db.Column(db.String, nullable=False)
     committed_amount = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
         db.CheckConstraint(committed_amount >= 0),
