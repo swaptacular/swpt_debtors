@@ -424,7 +424,7 @@ def test_successful_transfer(db_session, debtor):
     rt_list = RunningTransfer.query.all()
     assert len(rt_list) == 1
     rt = rt_list[0]
-    assert rt.is_finalized
+    assert rt.is_settled
     assert rt.issuing_transfer_id is not None
     it_list = InitiatedTransfer.query.all()
     assert len(it_list) == 1

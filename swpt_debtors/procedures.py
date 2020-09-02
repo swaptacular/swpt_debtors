@@ -185,7 +185,7 @@ def cancel_transfer(debtor_id: int, transfer_uuid: UUID) -> InitiatedTransfer:
         # removed, the `InitiatedTransfer` gets finalizad.
         assert rt
 
-        if rt.is_finalized:
+        if rt.is_settled:
             raise TransferUpdateConflictError()
         initiated_transfer.finalized_at_ts = datetime.now(tz=timezone.utc)
         initiated_transfer.error = {'errorCode': 'CANCELED_TRANSFER'}
@@ -272,7 +272,7 @@ def process_rejected_issuing_transfer_signal(
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
-    if rt and not rt.is_finalized:
+    if rt and not rt.is_settled:
         if rt.debtor_id == debtor_id and ROOT_CREDITOR_ID == sender_creditor_id:
             error = {
                 'errorCode': status_code,
@@ -313,13 +313,11 @@ def process_prepared_issuing_transfer_signal(
     )
     if rt_matches_the_signal:
         assert rt is not None
-        if not rt.is_finalized:
-            # We finalize the `RunningTransfer` record here, but we
-            # deliberately do not finalize the corresponding
-            # `InitiatedTransfer` record yet (it will be finalized
-            # when the `FinalizedTransferSignal` is received). We do
-            # this to avoid reporting a success too early, or even
-            # incorrectly.
+        if not rt.is_settled:
+            # We settle the `RunningTransfer` record here, but we do
+            # not finalize the corresponding `InitiatedTransfer`
+            # record yet (it will be finalized when the
+            # `FinalizedTransferSignal` is received).
             rt.issuing_transfer_id = transfer_id
 
         if rt.issuing_transfer_id == transfer_id:

@@ -356,16 +356,12 @@ class RunningTransfer(db.Model):
         ),
         db.CheckConstraint(amount > 0),
         {
-            'comment': 'Represents a running issuing transfer. Important note: The records for the '
-                       'successfully finalized issuing transfers (those for which `issuing_transfer_id` '
-                       'is not `null`), must not be deleted right away. Instead, after they have been '
-                       'finalized, they should stay in the database until the corresponding '
-                       '`FinalizedTransferSignal` is received.',
+            'comment': 'Represents a running issuing transfer.',
         }
     )
 
     @property
-    def is_finalized(self):
+    def is_settled(self):
         return self.issuing_transfer_id is not None
 
 
