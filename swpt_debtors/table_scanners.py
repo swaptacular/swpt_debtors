@@ -39,7 +39,9 @@ class RunningTransfersCollector(TableScanner):
         cutoff_ts = datetime.now(tz=timezone.utc) - self.abandon_interval
         pks_to_delete = [(row[0], row[1]) for row in rows if row[2] < cutoff_ts]
         if pks_to_delete:
-            db.engine.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
+            connection = db.engine
+            with connection.begin():
+                connection.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
 
 
 class AccountsScanner(TableScanner):
