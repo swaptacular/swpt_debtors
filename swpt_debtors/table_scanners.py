@@ -35,13 +35,12 @@ class RunningTransfersCollector(TableScanner):
         super().__init__()
         self.abandon_interval = timedelta(days=current_app.config['APP_RUNNING_TRANSFERS_ABANDON_DAYS'])
 
+    @atomic
     def process_rows(self, rows):
         cutoff_ts = datetime.now(tz=timezone.utc) - self.abandon_interval
         pks_to_delete = [(row[0], row[1]) for row in rows if row[2] < cutoff_ts]
         if pks_to_delete:
-            connection = db.engine
-            with connection.begin():
-                connection.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
+            db.session.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
 
 
 class AccountsScanner(TableScanner):
