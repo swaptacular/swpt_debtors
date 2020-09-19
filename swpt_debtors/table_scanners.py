@@ -50,9 +50,9 @@ class AccountsScanner(TableScanner):
     old_interest_rate = CachedInterestRate(0.0, BEGINNING_OF_TIME)
     pk = tuple_(Account.debtor_id, Account.creditor_id)
 
-    def __init__(self, days: float):
+    def __init__(self, hours: float):
         super().__init__()
-        self.interval = timedelta(days=days)
+        self.interval = timedelta(hours=hours)
         self.signalbus_max_delay = timedelta(days=current_app.config['APP_SIGNALBUS_MAX_DELAY_DAYS'])
         self.interest_rate_change_min_interval = Account.get_interest_rate_change_min_interval()
         self.dead_accounts_abandon_delay = timedelta(days=current_app.config['APP_DEAD_ACCOUNTS_ABANDON_DAYS'])

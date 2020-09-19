@@ -27,7 +27,7 @@ def app_unsafe_session(app_unsafe_session):
         db.session.commit()
 
 
-def test_collect_running_transfers(app_unsafe_session):
+def test_scan_running_transfers(app_unsafe_session):
     app = app_unsafe_session
     running_transfer = RunningTransfer(
         debtor_id=1,
@@ -43,7 +43,7 @@ def test_collect_running_transfers(app_unsafe_session):
     db.engine.execute('ANALYZE running_transfer')
     assert len(RunningTransfer.query.all()) == 1
     runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'collect_running_transfers', '--days', '0.000001', '--quit-early'])
+    result = runner.invoke(args=['swpt_debtors', 'scan_running_transfers', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
     assert len(RunningTransfer.query.all()) == 0
 
@@ -150,7 +150,7 @@ def test_scan_accounts(app_unsafe_session):
     assert len(ChangeInterestRateSignal.query.all()) == 0
     assert len(CapitalizeInterestSignal.query.all()) == 0
     runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--hours', '0.000024', '--quit-early'])
     assert result.exit_code == 0
     assert len(Account.query.all()) == 6
 
@@ -177,7 +177,7 @@ def test_scan_accounts(app_unsafe_session):
     db.session.commit()
     db.engine.execute('ANALYZE account')
     runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--hours', '0.000024', '--quit-early'])
     assert result.exit_code == 0
     assert len(TryToDeleteAccountSignal.query.all()) == 1
 
@@ -222,7 +222,7 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
     assert len(Account.query.all()) == 2
     assert len(CapitalizeInterestSignal.query.all()) == 0
     runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--hours', '0.000024', '--quit-early'])
     assert result.exit_code == 0
     assert len(Account.query.all()) == 2
 
@@ -245,7 +245,7 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
     db.session.commit()
     db.engine.execute('ANALYZE account')
     runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--hours', '0.000024', '--quit-early'])
     assert result.exit_code == 0
     assert len(CapitalizeInterestSignal.query.all()) == 2
 
@@ -278,7 +278,7 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     assert len(Debtor.query.all()) == 2
     assert len(Account.query.all()) == 1
     runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--days', '0.000001', '--quit-early'])
+    result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--hours', '0.000024', '--quit-early'])
     assert result.exit_code == 0
     assert len(Debtor.query.all()) == 2
     d = Debtor.query.filter_by(debtor_id=1).one()
