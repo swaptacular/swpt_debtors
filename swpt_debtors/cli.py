@@ -4,7 +4,7 @@ from os import environ
 from flask import current_app
 from flask.cli import with_appcontext
 from .extensions import db
-from .table_scanners import RunningTransfersCollector, AccountsScanner
+from .table_scanners import RunningTransfersScanner, AccountsScanner
 
 
 @click.group('swpt_debtors')
@@ -67,7 +67,7 @@ def scan_running_transfers(days, quit_early):
     click.echo('Scanning running transfers...')
     days = days or float(current_app.config['APP_RUNNING_TRANSFERS_SCAN_DAYS'])
     assert days > 0.0
-    collector = RunningTransfersCollector()
+    collector = RunningTransfersScanner()
     collector.run(db.engine, timedelta(days=days), quit_early=quit_early)
 
 

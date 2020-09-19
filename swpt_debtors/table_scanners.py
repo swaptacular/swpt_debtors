@@ -24,7 +24,7 @@ class CachedInterestRate(NamedTuple):
     timestamp: datetime
 
 
-class RunningTransfersCollector(TableScanner):
+class RunningTransfersScanner(TableScanner):
     """Garbage-collects staled running transfers."""
 
     table = RunningTransfer.__table__
