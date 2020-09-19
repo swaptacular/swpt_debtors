@@ -67,8 +67,8 @@ def scan_running_transfers(days, quit_early):
     click.echo('Scanning running transfers...')
     days = days or float(current_app.config['APP_RUNNING_TRANSFERS_SCAN_DAYS'])
     assert days > 0.0
-    collector = RunningTransfersScanner()
-    collector.run(db.engine, timedelta(days=days), quit_early=quit_early)
+    scanner = RunningTransfersScanner()
+    scanner.run(db.engine, timedelta(days=days), quit_early=quit_early)
 
 
 @swpt_debtors.command('scan_accounts')
