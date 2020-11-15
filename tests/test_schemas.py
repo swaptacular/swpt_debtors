@@ -24,12 +24,15 @@ def test_balance_lower_limit_schema():
     assert s.dump(data) == {'type': 'BalanceLowerLimit', 'value': 1000, 'enforcedUntil': '2020-10-25'}
 
 
-def test_debtor_policy_update_request_schema():
-    s = schemas.DebtorPolicyUpdateRequestSchema()
+def test_debtor_policy_schema():
+    s = schemas.DebtorPolicySchema()
+    with pytest.raises(ValidationError):
+        data = s.load({'type': 'INVALID_TYPE'})
+
     data = s.load({})
     assert data['balance_lower_limits'] == []
     assert data['interest_rate_lower_limits'] == []
-    assert data['interest_rate_target'] is None
+    assert 'interest_rate_target' not in data
     data = s.load({
         'balanceLowerLimits': [{'value': 1000, 'enforcedUntil': '2020-10-25'}],
         'interestRateLowerLimits': [{'value': 5.6, 'enforcedUntil': '2020-10-25'}],

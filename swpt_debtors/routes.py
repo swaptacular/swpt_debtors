@@ -2,8 +2,8 @@ from flask import redirect, url_for
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib.utils import u64_to_i64
-from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
-    DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, IssuingTransferCreationRequestSchema, \
+from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicySchema, \
+    TransferSchema, TransfersCollectionSchema, IssuingTransferCreationRequestSchema, \
     TransfersCollection, TransferUpdateRequestSchema
 from . import specs
 from . import procedures
@@ -68,11 +68,11 @@ class DebtorPolicyEndpoint(MethodView):
     @policies_api.response(DebtorPolicySchema(context=context))
     @policies_api.doc(operationId='getDebtorPolicy', security=specs.SCOPE_ACCESS)
     def get(self, debtorId):
-        """Return information about debtor's policy."""
+        """Return debtor's policy."""
 
         return procedures.get_debtor(debtorId) or abort(404)
 
-    @policies_api.arguments(DebtorPolicyUpdateRequestSchema)
+    @policies_api.arguments(DebtorPolicySchema)
     @policies_api.response(DebtorPolicySchema(context=context))
     @policies_api.doc(operationId='updateDebtorPolicy',
                       security=specs.SCOPE_ACCESS,
@@ -88,7 +88,7 @@ class DebtorPolicyEndpoint(MethodView):
         try:
             debtor = procedures.update_debtor_policy(
                 debtor_id=debtorId,
-                interest_rate_target=policy_update_request['interest_rate_target'],
+                interest_rate_target=policy_update_request.get('interest_rate_target'),
                 new_interest_rate_limits=policy_update_request['interest_rate_lower_limits'],
                 new_balance_limits=policy_update_request['balance_lower_limits'],
             )

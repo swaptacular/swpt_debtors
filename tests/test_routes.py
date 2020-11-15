@@ -50,7 +50,6 @@ def test_change_debtor_policy(client, debtor):
     assert data['balanceLowerLimits'] == []
 
     r = client.patch('/debtors/123/policy', json={
-        'interestRateTarget': None,
         'interestRateLowerLimits': [
             {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
             {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},

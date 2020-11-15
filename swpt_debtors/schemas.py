@@ -123,14 +123,20 @@ class DebtorSchema(Schema):
         required=True,
         dump_only=True,
         data_key='balanceLowerLimits',
-        description='Enforced lower limits for the `balance` field.',
+        description='Enforced lower limits for the `balance` field.'
+                    '\n\n'
+                    '**Note:** Established limits can not be removed. They will '
+                    'continue to be enforced until the specified expiration date.',
     )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
         required=True,
         dump_only=True,
         data_key='interestRateLowerLimits',
-        description='Enforced interest rate lower limits.',
+        description='Enforced interest rate lower limits.'
+                    '\n\n'
+                    '**Note:** Established limits can not be removed. They will '
+                    'continue to be enforced until the specified expiration date.',
     )
     interest_rate = fields.Float(
         required=True,
@@ -150,17 +156,7 @@ class DebtorSchema(Schema):
         return url_for(self.context['Debtor'], _external=True, debtorId=obj.debtor_id)
 
 
-class DebtorPolicySchema(DebtorSchema):
-    class Meta:
-        fields = [
-            'uri',
-            'type',
-            'debtorUri',
-            'balance_lower_limits',
-            'interest_rate_lower_limits',
-            'interest_rate_target',
-        ]
-
+class DebtorPolicySchema(ValidateTypeMixin, Schema):
     uri = fields.Method(
         'get_uri',
         required=True,
@@ -169,10 +165,9 @@ class DebtorPolicySchema(DebtorSchema):
         description="The URI of this object.",
         example='https://example.com/debtors/1/policy',
     )
-    type = fields.Function(
-        lambda obj: 'DebtorPolicy',
-        required=True,
-        type='string',
+    type = fields.String(
+        missing='DebtorPolicy',
+        default='DebtorPolicy',
         description='The type of this object.',
         example='DebtorPolicy',
     )
@@ -184,38 +179,36 @@ class DebtorPolicySchema(DebtorSchema):
         description="The debtor's URI.",
         example='https://example.com/debtors/1/',
     )
-    interest_rate_target = fields.Float(
-        required=True,
-        dump_only=True,
-        data_key='interestRateTarget',
-        description=Debtor.interest_rate_target.comment,
-        example=0,
-    )
-
-    def get_uri(self, obj):
-        return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
-
-
-class DebtorPolicyUpdateRequestSchema(Schema):
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
         missing=[],
         data_key='balanceLowerLimits',
-        description='Additional balance lower limits to enforce.',
-    )
-    interest_rate_target = fields.Float(
-        missing=None,
-        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
-        data_key='interestRateTarget',
-        description=Debtor.interest_rate_target.comment,
-        example=0,
+        description='Enforced balance lower limits.'
+                    '\n\n'
+                    '**Note:** When the policy gets updated, this field should contain '
+                    'only the additional limits that need to be added to the existing ones.',
     )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
         missing=[],
         data_key='interestRateLowerLimits',
-        description='Additional interest rate lower limits to enforce.',
+        description='Enforced interest rate lower limits.'
+                    '\n\n'
+                    '**Note:** When the policy gets updated, this field should contain '
+                    'only the additional limits that need to be added to the existing ones.',
     )
+    interest_rate_target = fields.Float(
+        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
+        data_key='interestRateTarget',
+        description=f'{Debtor.interest_rate_target.comment}'
+                    '\n\n'
+                    '**Note:** If this field is not present when the policy gets '
+                    'updated, the current `interestRateTarget` will remain unchanged.',
+        example=0,
+    )
+
+    def get_uri(self, obj):
+        return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
 
 
 class TransferErrorSchema(Schema):
