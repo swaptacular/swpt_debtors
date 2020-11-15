@@ -52,12 +52,12 @@ def test_change_debtor_policy(client, debtor):
     r = client.patch('/debtors/123/policy', json={
         'interestRateTarget': None,
         'interestRateLowerLimits': [
-            {'enforcedUntil': '2100-12-31', 'value': -10.0},
-            {'enforcedUntil': '2050-12-31', 'value': 0.0},
+            {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
+            {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
         ],
         'balanceLowerLimits': [
-            {'enforcedUntil': '2100-12-31', 'value': -1000},
-            {'enforcedUntil': '2050-12-31', 'value': -500},
+            {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
+            {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
         ],
     })
     assert r.status_code == 200
@@ -67,31 +67,31 @@ def test_change_debtor_policy(client, debtor):
     data = r.get_json()
     assert data['interestRateTarget'] == 0.0
     assert data['interestRateLowerLimits'] == [
-        {'enforcedUntil': '2050-12-31', 'value': 0.0},
-        {'enforcedUntil': '2100-12-31', 'value': -10.0},
+        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
+        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
     ]
     assert data['balanceLowerLimits'] == [
-        {'enforcedUntil': '2050-12-31', 'value': -500},
-        {'enforcedUntil': '2100-12-31', 'value': -1000},
+        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
+        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
     ]
 
     r = client.patch('/debtors/123/policy', json={
         'interestRateTarget': 5.0,
         'balanceLowerLimits': [
-            {'enforcedUntil': '2030-12-31', 'value': -200},
+            {'type': 'BalanceLowerLimit', 'enforcedUntil': '2030-12-31', 'value': -200},
         ],
     })
     assert r.status_code == 200
     data = r.get_json()
     assert data['interestRateTarget'] == 5.0
     assert data['interestRateLowerLimits'] == [
-        {'enforcedUntil': '2050-12-31', 'value': 0.0},
-        {'enforcedUntil': '2100-12-31', 'value': -10.0},
+        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
+        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
     ]
     assert data['balanceLowerLimits'] == [
-        {'enforcedUntil': '2030-12-31', 'value': -200},
-        {'enforcedUntil': '2050-12-31', 'value': -500},
-        {'enforcedUntil': '2100-12-31', 'value': -1000},
+        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2030-12-31', 'value': -200},
+        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
+        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
     ]
 
     r = client.patch('/debtors/666/policy', json={})
@@ -104,7 +104,7 @@ def test_change_debtor_policy(client, debtor):
 
     r = client.patch('/debtors/123/policy', json={
         'balanceLowerLimits': 100 * [
-            {'enforcedUntil': '2030-12-31', 'value': -200},
+            {'type': 'BalanceLowerLimit', 'enforcedUntil': '2030-12-31', 'value': -200},
         ],
     })
     assert r.status_code == 409

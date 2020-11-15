@@ -12,7 +12,7 @@ def test_interest_rate_lower_limit_schema():
     assert isinstance(data, LowerLimit)
     assert data.value == 5.6
     assert data.cutoff == date(2020, 10, 25)
-    assert s.dump(data) == {'value': 5.6, 'enforcedUntil': '2020-10-25'}
+    assert s.dump(data) == {'type': 'InterestRateLowerLimit', 'value': 5.6, 'enforcedUntil': '2020-10-25'}
 
 
 def test_balance_lower_limit_schema():
@@ -21,7 +21,7 @@ def test_balance_lower_limit_schema():
     assert isinstance(data, LowerLimit)
     assert data.value == 1000
     assert data.cutoff == date(2020, 10, 25)
-    assert s.dump(data) == {'value': 1000, 'enforcedUntil': '2020-10-25'}
+    assert s.dump(data) == {'type': 'BalanceLowerLimit', 'value': 1000, 'enforcedUntil': '2020-10-25'}
 
 
 def test_debtor_policy_update_request_schema():

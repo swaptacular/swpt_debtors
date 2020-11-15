@@ -7,12 +7,25 @@ from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT6
     TRANSFER_NOTE_MAX_BYTES, Debtor, InitiatedTransfer
 
 
+class ValidateTypeMixin:
+    @validates('type')
+    def validate_type(self, value):
+        if f'{value}Schema' != type(self).__name__:
+            raise ValidationError('Invalid type.')
+
+
 class TransfersCollection(NamedTuple):
     debtor_id: int
     items: List[str]
 
 
-class InterestRateLowerLimitSchema(Schema):
+class InterestRateLowerLimitSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='InterestRateLowerLimit',
+        default='InterestRateLowerLimit',
+        description='The type of this object.',
+        example='InterestRateLowerLimit',
+    )
     value = fields.Float(
         required=True,
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
@@ -29,7 +42,13 @@ class InterestRateLowerLimitSchema(Schema):
         return LowerLimit(value=data['value'], cutoff=data['cutoff'])
 
 
-class BalanceLowerLimitSchema(Schema):
+class BalanceLowerLimitSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='BalanceLowerLimit',
+        default='BalanceLowerLimit',
+        description='The type of this object.',
+        example='BalanceLowerLimit',
+    )
     value = fields.Int(
         required=True,
         validate=validate.Range(min=MIN_INT64, max=MAX_INT64),
@@ -47,8 +66,13 @@ class BalanceLowerLimitSchema(Schema):
         return LowerLimit(value=data['value'], cutoff=data['cutoff'])
 
 
-class DebtorCreationOptionsSchema(Schema):
-    pass
+class DebtorCreationOptionsSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='DebtorCreationOptions',
+        default='DebtorCreationOptions',
+        description='The type of this object.',
+        example='DebtorCreationOptions',
+    )
 
 
 class DebtorSchema(Schema):
@@ -63,7 +87,6 @@ class DebtorSchema(Schema):
     type = fields.Function(
         lambda obj: 'Debtor',
         required=True,
-        dump_only=True,
         type='string',
         description='The type of this object.',
         example='Debtor',
@@ -149,7 +172,6 @@ class DebtorPolicySchema(DebtorSchema):
     type = fields.Function(
         lambda obj: 'DebtorPolicy',
         required=True,
-        dump_only=True,
         type='string',
         description='The type of this object.',
         example='DebtorPolicy',
@@ -200,7 +222,6 @@ class TransferErrorSchema(Schema):
     type = fields.Function(
         lambda obj: 'TransferError',
         required=True,
-        dump_only=True,
         type='string',
         description='The type of this object.',
         example='TransferError',
@@ -220,7 +241,13 @@ class TransferErrorSchema(Schema):
     )
 
 
-class IssuingTransferCreationRequestSchema(Schema):
+class IssuingTransferCreationRequestSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='IssuingTransferCreationRequest',
+        default='IssuingTransferCreationRequest',
+        description='The type of this object.',
+        example='IssuingTransferCreationRequest',
+    )
     transfer_uuid = fields.UUID(
         required=True,
         data_key='transferUuid',
@@ -267,7 +294,6 @@ class TransferSchema(Schema):
     type = fields.Function(
         lambda obj: 'Transfer',
         required=True,
-        dump_only=True,
         type='string',
         description='The type of this object.',
         example='Transfer',
@@ -353,7 +379,13 @@ class TransferSchema(Schema):
         return finalized_at_ts.isoformat()
 
 
-class TransferUpdateRequestSchema(Schema):
+class TransferUpdateRequestSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='TransferUpdateRequest',
+        default='TransferUpdateRequest',
+        description='The type of this object.',
+        example='TransferUpdateRequest',
+    )
     is_finalized = fields.Boolean(
         required=True,
         data_key='isFinalized',
@@ -380,7 +412,6 @@ class TransfersCollectionSchema(Schema):
     type = fields.Function(
         lambda obj: 'TransfersCollection',
         required=True,
-        dump_only=True,
         type='string',
         description='The type of this object.',
         example='TransfersCollection',
