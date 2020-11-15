@@ -34,36 +34,71 @@ LOCATION_HEADER = {
     },
 }
 
+ERROR_CONTENT = {
+    'application/json': {
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'code': {
+                    'type': 'integer',
+                    'format': 'int32',
+                    'description': 'Error code',
+                },
+                'errors': {
+                    'type': 'object',
+                    'description': 'Errors',
+                },
+                'status': {
+                    'type': 'string',
+                    'description': 'Error name',
+                },
+                'message': {
+                    'type': 'string',
+                    'description': 'Error message',
+                }
+            }
+        }
+    }
+}
+
 DEBTOR_DOES_NOT_EXIST = {
     'description': 'The debtor does not exist.',
+    'content': ERROR_CONTENT,
 }
 
 CONFLICTING_DEBTOR = {
     'description': 'A debtor with the same ID already exists.',
+    'content': ERROR_CONTENT,
 }
 
 CONFLICTING_POLICY = {
     'description': 'The new policy is in conflict with the old one.',
+    'content': ERROR_CONTENT,
 }
 
 TRANSFER_DOES_NOT_EXIST = {
     'description': 'The transfer entry does not exist.',
+    'content': ERROR_CONTENT,
 }
 
 TRANSFER_CONFLICT = {
     'description': 'A different transfer entry with the same UUID already exists.',
+    'content': ERROR_CONTENT,
 }
 
 TRANSFER_UPDATE_CONFLICT = {
     'description': 'The requested transfer update is not possible.',
+    'content': ERROR_CONTENT,
 }
 
 TOO_MANY_TRANSFERS = {
     'description': 'Too many issuing transfers.',
+    'content': ERROR_CONTENT,
 }
 
 TOO_MANY_POLICY_CHANGES = {
     'description': 'Too many policy changes.',
+    'content': ERROR_CONTENT,
 }
 
 TRANSFER_EXISTS = {
