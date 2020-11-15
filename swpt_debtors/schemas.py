@@ -210,10 +210,11 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
         BalanceLowerLimitSchema(many=True),
         missing=[],
         data_key='balanceLowerLimits',
-        description='Enforced balance lower limits.'
+        description='Enforced lower limits for the debtor\'s balance.'
                     '\n\n'
-                    '**Note:** When the policy is being updated, this field should contain '
-                    'only the additional limits that have to be added to the existing ones.',
+                    '**Note:** Established limits can not be removed. When the policy is '
+                    'being updated, this field should contain only the additional limits '
+                    'that have to be added to the existing ones.',
     )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
@@ -221,8 +222,9 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.'
                     '\n\n'
-                    '**Note:** When the policy is being updated, this field should contain '
-                    'only the additional limits that have to be added to the existing ones.',
+                    '**Note:** Established limits can not be removed. When the policy is '
+                    'being updated, this field should contain only the additional limits '
+                    'that have to be added to the existing ones.',
     )
     interest_rate_target = fields.Float(
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
