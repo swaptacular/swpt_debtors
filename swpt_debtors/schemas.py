@@ -1,10 +1,14 @@
+from copy import copy
 from datetime import datetime, timezone, timedelta
-from typing import NamedTuple, List
-from marshmallow import Schema, fields, validate, post_load, validates, ValidationError
+from marshmallow import Schema, fields, validate, pre_dump, post_dump, post_load, \
+    validates, ValidationError
 from flask import url_for, current_app
 from .lower_limits import LowerLimit
 from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
     TRANSFER_NOTE_MAX_BYTES, Debtor, InitiatedTransfer
+
+URI_DESCRIPTION = '\
+The URI of this object. Can be a relative URI.'
 
 
 class ValidateTypeMixin:
@@ -14,9 +18,24 @@ class ValidateTypeMixin:
             raise ValidationError('Invalid type.')
 
 
-class TransfersCollection(NamedTuple):
-    debtor_id: int
-    items: List[str]
+class TransfersCollection:
+    def __init__(self, debtor_id, items):
+        self.debtor_id = debtor_id
+        self.items = items
+
+
+class ObjectReferenceSchema(Schema):
+    uri = fields.String(
+        required=True,
+        format='uri-reference',
+        description="The URI of the object. Can be a relative URI.",
+        example='https://example.com/objects/1',
+    )
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'uri' in obj
+        return obj
 
 
 class InterestRateLowerLimitSchema(ValidateTypeMixin, Schema):
@@ -77,13 +96,12 @@ class DebtorCreationOptionsSchema(ValidateTypeMixin, Schema):
 
 
 class DebtorSchema(Schema):
-    uri = fields.Method(
-        'get_uri',
+    uri = fields.String(
         required=True,
-        type='string',
-        format='uri',
-        description="The URI of this object.",
-        example='https://example.com/debtors/1/',
+        dump_only=True,
+        format='uri-reference',
+        description=URI_DESCRIPTION,
+        example='/debtors/1/',
     )
     type = fields.Function(
         lambda obj: 'Debtor',
@@ -153,18 +171,22 @@ class DebtorSchema(Schema):
         description="Whether the debtor is currently active or not."
     )
 
-    def get_uri(self, obj):
-        return url_for(self.context['Debtor'], _external=True, debtorId=obj.debtor_id)
+    @pre_dump
+    def process_debtor_instance(self, obj, many):
+        assert isinstance(obj, Debtor)
+        obj = copy(obj)
+        obj.uri = url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)
+
+        return obj
 
 
 class DebtorPolicySchema(ValidateTypeMixin, Schema):
-    uri = fields.Method(
-        'get_uri',
+    uri = fields.String(
         required=True,
-        type='string',
-        format='uri',
-        description="The URI of this object.",
-        example='https://example.com/debtors/1/policy',
+        dump_only=True,
+        format='uri-reference',
+        description=URI_DESCRIPTION,
+        example='/debtors/1/',
     )
     type = fields.String(
         missing='DebtorPolicy',
@@ -172,13 +194,12 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
         description='The type of this object.',
         example='DebtorPolicy',
     )
-    debtorUri = fields.Function(
-        lambda obj: url_for('debtors.DebtorEndpoint', _external=True, debtorId=obj.debtor_id),
+    debtor = fields.Nested(
+        ObjectReferenceSchema,
         required=True,
-        type='string',
-        format="uri",
-        description="The debtor's URI.",
-        example='https://example.com/debtors/1/',
+        dump_only=True,
+        description="The URI of the corresponding `Debtor`.",
+        example={'uri': '/debtors/1/'},
     )
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
@@ -208,8 +229,14 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
         example=0,
     )
 
-    def get_uri(self, obj):
-        return url_for(self.context['DebtorPolicy'], _external=True, debtorId=obj.debtor_id)
+    @pre_dump
+    def process_debtor_instance(self, obj, many):
+        assert isinstance(obj, Debtor)
+        obj = copy(obj)
+        obj.uri = url_for(self.context['DebtorPolicy'], _external=False, debtorId=obj.debtor_id)
+        obj.debtor = {'uri': url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)}
+
+        return obj
 
 
 class TransferErrorSchema(Schema):
@@ -277,13 +304,12 @@ class IssuingTransferCreationRequestSchema(ValidateTypeMixin, Schema):
 
 
 class TransferSchema(Schema):
-    uri = fields.Method(
-        'get_uri',
+    uri = fields.String(
         required=True,
-        type='string',
-        format='uri',
-        description="The URI of this object.",
-        example='https://example.com/debtors/1/transfers/123e4567-e89b-12d3-a456-426655440000',
+        dump_only=True,
+        format='uri-reference',
+        description=URI_DESCRIPTION,
+        example='/debtors/1/transfers/123e4567-e89b-12d3-a456-426655440000',
     )
     type = fields.Function(
         lambda obj: 'Transfer',
@@ -292,13 +318,12 @@ class TransferSchema(Schema):
         description='The type of this object.',
         example='Transfer',
     )
-    debtorUri = fields.Function(
-        lambda obj: url_for('debtors.DebtorEndpoint', _external=True, debtorId=obj.debtor_id),
+    debtor = fields.Nested(
+        ObjectReferenceSchema,
         required=True,
-        type='string',
-        format="uri",
-        description="The debtor's URI.",
-        example='https://example.com/debtors/1/',
+        dump_only=True,
+        description="The URI of the corresponding `Debtor`.",
+        example={'uri': '/debtors/1/'},
     )
     recipient_creditor_id = fields.Integer(
         required=True,
@@ -359,8 +384,18 @@ class TransferSchema(Schema):
                     'the transfer has been successful, this will be an empty array.',
     )
 
-    def get_uri(self, obj):
-        return url_for(self.context['Transfer'], _external=True, debtorId=obj.debtor_id, transferUuid=obj.transfer_uuid)
+    @pre_dump
+    def process_initiated_transfer_instance(self, obj, many):
+        assert isinstance(obj, InitiatedTransfer)
+        obj = copy(obj)
+        obj.uri = url_for(
+            self.context['Transfer'],
+            _external=False,
+            debtorId=obj.debtor_id,
+            transferUuid=obj.transfer_uuid,
+        )
+        obj.debtor = {'uri': url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)}
+        return obj
 
     def get_finalized_at_string(self, obj):
         if obj.is_finalized:
@@ -395,13 +430,12 @@ class TransferUpdateRequestSchema(ValidateTypeMixin, Schema):
 
 
 class TransfersCollectionSchema(Schema):
-    uri = fields.Method(
-        'get_uri',
+    uri = fields.String(
         required=True,
-        type='string',
-        format='uri',
-        description="The URI of this object.",
-        example='https://example.com/debtors/1/transfers/',
+        dump_only=True,
+        format='uri-reference',
+        description=URI_DESCRIPTION,
+        example='/debtors/1/transfers/123e4567-e89b-12d3-a456-426655440000',
     )
     type = fields.Function(
         lambda obj: 'TransfersCollection',
@@ -410,13 +444,12 @@ class TransfersCollectionSchema(Schema):
         description='The type of this object.',
         example='TransfersCollection',
     )
-    debtorUri = fields.Function(
-        lambda obj: url_for('debtors.DebtorEndpoint', _external=True, debtorId=obj.debtor_id),
+    debtor = fields.Nested(
+        ObjectReferenceSchema,
         required=True,
-        type='string',
-        format="uri",
-        description="The debtor's URI.",
-        example='https://example.com/debtors/1/',
+        dump_only=True,
+        description="The URI of the corresponding `Debtor`.",
+        example={'uri': '/debtors/1/'},
     )
     totalItems = fields.Function(
         lambda obj: len(obj.items),
@@ -454,5 +487,11 @@ class TransfersCollectionSchema(Schema):
         example='',
     )
 
-    def get_uri(self, obj):
-        return url_for(self.context['TransfersCollection'], _external=True, debtorId=obj.debtor_id)
+    @pre_dump
+    def process_transfers_collection_instance(self, obj, many):
+        assert isinstance(obj, TransfersCollection)
+        obj = copy(obj)
+        obj.uri = url_for(self.context['TransfersCollection'], _external=False, debtorId=obj.debtor_id)
+        obj.debtor = {'uri': url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)}
+
+        return obj

@@ -24,7 +24,7 @@ def test_create_debtor(client):
     assert data['balance'] == 0
     assert data['isActive'] is False
     assert data['type'] == 'Debtor'
-    assert data['uri'] == 'http://example.com/debtors/123/'
+    assert data['uri'] == '/debtors/123/'
 
     r = client.post('/debtors/123/', json={})
     assert r.status_code == 409
@@ -36,7 +36,7 @@ def test_create_debtor(client):
     assert data['balance'] == 0
     assert data['isActive'] is False
     assert data['type'] == 'Debtor'
-    assert data['uri'] == 'http://example.com/debtors/123/'
+    assert data['uri'] == '/debtors/123/'
 
 
 def test_change_debtor_policy(client, debtor):
@@ -44,7 +44,7 @@ def test_change_debtor_policy(client, debtor):
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'DebtorPolicy'
-    assert data['uri'] == 'http://example.com/debtors/123/policy'
+    assert data['uri'] == '/debtors/123/policy'
     assert data['interestRateTarget'] == 0.0
     assert data['interestRateLowerLimits'] == []
     assert data['balanceLowerLimits'] == []
@@ -122,9 +122,9 @@ def test_initiate_transfer(client, debtor):
     r = client.get('/debtors/123/transfers/')
     assert r.status_code == 200
     data = r.get_json()
-    assert data['debtorUri'] == 'http://example.com/debtors/123/'
+    assert data['debtor'] == {'uri': '/debtors/123/'}
     assert data['type'] == 'TransfersCollection'
-    assert data['uri'] == 'http://example.com/debtors/123/transfers/'
+    assert data['uri'] == '/debtors/123/transfers/'
     assert data['totalItems'] == 0
     assert data['items'] == []
 
@@ -144,9 +144,9 @@ def test_initiate_transfer(client, debtor):
     assert data['errors'] == []
     assert data['recipientCreditorId'] == 1111
     assert data['type'] == 'Transfer'
-    assert data['uri'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
+    assert data['uri'] == '/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
     assert data['note'] == 'test'
-    assert data['debtorUri'] == 'http://example.com/debtors/123/'
+    assert data['debtor'] == {'uri': '/debtors/123/'}
     assert data['isSuccessful'] is False
     assert r.headers['Location'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
 
@@ -154,7 +154,7 @@ def test_initiate_transfer(client, debtor):
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'Transfer'
-    assert data['uri'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
+    assert data['uri'] == '/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
     assert data['amount'] == 1000
 
     r = client.post('/debtors/123/transfers/', json=json_request_body)

@@ -289,11 +289,6 @@ class InitiatedTransfer(db.Model):
         }
     )
 
-    debtor = db.relationship(
-        'Debtor',
-        backref=db.backref('initiated_transfers', cascade="all, delete-orphan", passive_deletes=True),
-    )
-
     @property
     def is_finalized(self):
         return bool(self.finalized_at_ts)
