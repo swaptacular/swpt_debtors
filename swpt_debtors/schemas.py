@@ -207,7 +207,7 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
         data_key='balanceLowerLimits',
         description='Enforced balance lower limits.'
                     '\n\n'
-                    '**Note:** When the policy gets updated, this field should contain '
+                    '**Note:** When the policy gets updated, this field may contain '
                     'only the additional limits that need to be added to the existing ones.',
     )
     interest_rate_lower_limits = fields.Nested(
@@ -216,7 +216,7 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.'
                     '\n\n'
-                    '**Note:** When the policy gets updated, this field should contain '
+                    '**Note:** When the policy gets updated, this field may contain '
                     'only the additional limits that need to be added to the existing ones.',
     )
     interest_rate_target = fields.Float(
@@ -406,6 +406,15 @@ class TransferSchema(Schema):
             average_delay = timedelta(seconds=current_app.config['APP_TRANSFERS_FINALIZATION_AVG_SECONDS'])
             finalized_at_ts = current_ts + max(current_delay, average_delay)
         return finalized_at_ts.isoformat()
+
+
+class TransferCancelationRequestSchema(Schema):
+    type = fields.String(
+        missing='TransferCancelationRequest',
+        default='TransferCancelationRequest',
+        description='The type of this object.',
+        example='TransferCancelationRequest',
+    )
 
 
 class TransferUpdateRequestSchema(ValidateTypeMixin, Schema):

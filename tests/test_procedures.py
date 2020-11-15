@@ -567,9 +567,9 @@ def test_cancel_transfer_failure(db_session, debtor):
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,
     )
-    with pytest.raises(p.TransferUpdateConflictError):
+    with pytest.raises(p.ForbiddenTransferCancellation):
         p.cancel_transfer(D_ID, TEST_UUID)
-    with pytest.raises(p.TransferUpdateConflictError):
+    with pytest.raises(p.ForbiddenTransferCancellation):
         p.cancel_transfer(D_ID, TEST_UUID)
 
     p.process_finalized_issuing_transfer_signal(
@@ -582,7 +582,7 @@ def test_cancel_transfer_failure(db_session, debtor):
         committed_amount=1000,
         status_code='OK',
     )
-    with pytest.raises(p.TransferUpdateConflictError):
+    with pytest.raises(p.ForbiddenTransferCancellation):
         p.cancel_transfer(D_ID, TEST_UUID)
-    with pytest.raises(p.TransferUpdateConflictError):
+    with pytest.raises(p.ForbiddenTransferCancellation):
         p.cancel_transfer(D_ID, TEST_UUID)

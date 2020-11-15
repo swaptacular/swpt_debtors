@@ -4,7 +4,7 @@ from flask_smorest import Blueprint, abort
 from swpt_lib.utils import u64_to_i64
 from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicySchema, \
     TransferSchema, TransfersCollectionSchema, IssuingTransferCreationRequestSchema, \
-    TransfersCollection, TransferUpdateRequestSchema
+    TransfersCollection, TransferCancelationRequestSchema
 from . import specs
 from . import procedures
 
@@ -79,11 +79,7 @@ class DebtorPolicyEndpoint(MethodView):
                       responses={403: specs.FORBIDDEN_OPERATION,
                                  409: specs.CONFLICTING_POLICY})
     def patch(self, policy_update_request, debtorId):
-        """Update debtor's policy.
-
-        This operation is **idempotent**!
-
-        """
+        """Update debtor's policy."""
 
         try:
             debtor = procedures.update_debtor_policy(
@@ -133,7 +129,7 @@ class TransfersCollectionEndpoint(MethodView):
                                   403: specs.FORBIDDEN_OPERATION,
                                   409: specs.TRANSFER_CONFLICT})
     def post(self, transfer_creation_request, debtorId):
-        """Create a new credit-issuing transfer."""
+        """Initiate a credit-issuing transfer."""
 
         transfer_uuid = transfer_creation_request['transfer_uuid']
         recipient_creditor_id = u64_to_i64(transfer_creation_request['recipient_creditor_id'])
@@ -162,30 +158,29 @@ class TransferEndpoint(MethodView):
     @transfers_api.response(TransferSchema(context=context))
     @transfers_api.doc(operationId='getTransfer', security=specs.SCOPE_ACCESS)
     def get(self, debtorId, transferUuid):
-        """Return information about a credit-issuing transfer."""
+        """Return a credit-issuing transfer."""
 
         return procedures.get_initiated_transfer(debtorId, transferUuid) or abort(404)
 
-    @transfers_api.arguments(TransferUpdateRequestSchema)
+    @transfers_api.arguments(TransferCancelationRequestSchema)
     @transfers_api.response(TransferSchema(context=context))
-    @transfers_api.doc(operationId='updateTransfer',
+    @transfers_api.doc(operationId='cancelTransfer',
                        security=specs.SCOPE_ACCESS,
-                       responses={409: specs.TRANSFER_UPDATE_CONFLICT})
-    def patch(self, transfer_update_request, debtorId, transferUuid):
-        """Cancel a credit-issuing transfer, if possible.
+                       responses={403: specs.TRANSFER_CANCELLATION_FAILURE})
+    def post(self, cancel_transfer_request, debtorId, transferUuid):
+        """Try to cancel a credit-issuing transfer.
 
-        This operation is **idempotent**!
+        **Note:** This is an idempotent operation.
 
         """
 
         try:
-            if not (transfer_update_request['is_finalized'] and not transfer_update_request['is_successful']):
-                raise procedures.TransferUpdateConflictError()
             transfer = procedures.cancel_transfer(debtorId, transferUuid)
+        except procedures.ForbiddenTransferCancellation:  # pragma: no cover
+            abort(403)
         except procedures.TransferDoesNotExistError:
             abort(404)
-        except procedures.TransferUpdateConflictError:
-            abort(409)
+
         return transfer
 
     @transfers_api.response(code=204)

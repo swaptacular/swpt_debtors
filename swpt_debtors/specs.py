@@ -76,8 +76,8 @@ TRANSFER_CONFLICT = {
     'content': ERROR_CONTENT,
 }
 
-TRANSFER_UPDATE_CONFLICT = {
-    'description': 'The requested transfer update is not possible.',
+TRANSFER_CANCELLATION_FAILURE = {
+    'description': 'The transfer can not be canceled.',
     'content': ERROR_CONTENT,
 }
 

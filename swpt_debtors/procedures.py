@@ -40,8 +40,8 @@ class TransfersConflictError(Exception):
     """A different transfer with conflicting UUID already exists."""
 
 
-class TransferUpdateConflictError(Exception):
-    """The requested transfer update is not possible."""
+class ForbiddenTransferCancellation(Exception):
+    """The transfer can not be canceled."""
 
 
 class TooManyManagementActionsError(Exception):
@@ -175,7 +175,7 @@ def cancel_transfer(debtor_id: int, transfer_uuid: UUID) -> InitiatedTransfer:
         raise TransferDoesNotExistError()
 
     if initiated_transfer.is_successful:
-        raise TransferUpdateConflictError()
+        raise ForbiddenTransferCancellation()
 
     if not initiated_transfer.is_finalized:
         rt = RunningTransfer.lock_instance((debtor_id, transfer_uuid))
@@ -186,7 +186,7 @@ def cancel_transfer(debtor_id: int, transfer_uuid: UUID) -> InitiatedTransfer:
         assert rt
 
         if rt.is_settled:
-            raise TransferUpdateConflictError()
+            raise ForbiddenTransferCancellation()
         initiated_transfer.finalized_at_ts = datetime.now(tz=timezone.utc)
         initiated_transfer.error = {'errorCode': 'CANCELED_TRANSFER'}
         db.session.delete(rt)
