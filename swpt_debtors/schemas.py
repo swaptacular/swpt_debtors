@@ -23,7 +23,7 @@ class ValidateTypeMixin:
             raise ValidationError('Invalid type.')
 
 
-class TransfersCollection:
+class TransfersList:
     def __init__(self, debtor_id, items):
         self.debtor_id = debtor_id
         self.items = items
@@ -462,7 +462,7 @@ class TransferUpdateRequestSchema(ValidateTypeMixin, Schema):
     )
 
 
-class TransfersCollectionSchema(Schema):
+class TransfersListSchema(Schema):
     uri = fields.String(
         required=True,
         dump_only=True,
@@ -471,11 +471,11 @@ class TransfersCollectionSchema(Schema):
         example='/debtors/1/transfers/',
     )
     type = fields.Function(
-        lambda obj: 'TransfersCollection',
+        lambda obj: 'TransfersList',
         required=True,
         type='string',
         description='The type of this object.',
-        example='TransfersCollection',
+        example='TransfersList',
     )
     debtor = fields.Nested(
         ObjectReferenceSchema,
@@ -484,40 +484,43 @@ class TransfersCollectionSchema(Schema):
         description="The URI of the corresponding `Debtor`.",
         example={'uri': '/debtors/1/'},
     )
-    items = fields.List(
-        fields.Str(format='uri-reference'),
+    items = fields.Nested(
+        ObjectReferenceSchema(many=True),
         dump_only=True,
-        description="When the total number of items in the collection is small enough, this field "
+        description="When the total number of items in the list is small enough, this field "
                     "will contain all of them (in an array), so that in such cases it would be "
                     "unnecessary to follow the `first` link.",
-        example=['123e4567-e89b-12d3-a456-426655440000', '183ea7c7-7a96-4ed7-a50a-a2b069687d23'],
+        example=[{'uri': i} for i in [
+            '123e4567-e89b-12d3-a456-426655440000',
+            '183ea7c7-7a96-4ed7-a50a-a2b069687d23',
+        ]],
     )
     itemsType = fields.Function(
-        lambda obj: 'string',
+        lambda obj: 'ObjectReference',
         required=True,
         type='string',
-        description='The type of the items in the collection. In this particular case the items '
-                    'are relative URIs, so the type will be `"string"`.',
-        example='string',
+        description='The type of the items in the list.',
+        example='ObjectReference',
     )
     first = fields.Function(
         lambda obj: '',
         required=True,
         type='string',
         format="uri-reference",
-        description='The URI of the first page in the paginated collection. The object retrieved '
+        description='The URI of the first page in the paginated list. The object retrieved '
                     'from this URI will have: 1) An `items` property (an array), which will contain '
-                    'the first items of the collection; 2) May have a `next` property (a string), '
-                    'which would contain the URI of the next page in the collection. This can be '
+                    'the first items of the list; 2) May have a `next` property (a string), '
+                    'which would contain the URI of the next page in the list. This can be '
                     'a relative URI.',
         example='',
     )
 
     @pre_dump
     def process_transfers_collection_instance(self, obj, many):
-        assert isinstance(obj, TransfersCollection)
+        assert isinstance(obj, TransfersList)
         obj = copy(obj)
-        obj.uri = url_for(self.context['TransfersCollection'], _external=False, debtorId=obj.debtor_id)
+        obj.uri = url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)
         obj.debtor = {'uri': url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)}
+        obj.items = [{'uri': uri} for uri in obj.items]
 
         return obj

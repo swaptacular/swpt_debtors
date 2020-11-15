@@ -123,7 +123,7 @@ def test_initiate_transfer(client, debtor):
     assert r.status_code == 200
     data = r.get_json()
     assert data['debtor'] == {'uri': '/debtors/123/'}
-    assert data['type'] == 'TransfersCollection'
+    assert data['type'] == 'TransfersList'
     assert data['uri'] == '/debtors/123/transfers/'
     assert data['items'] == []
 
@@ -173,7 +173,7 @@ def test_initiate_transfer(client, debtor):
     assert r.status_code == 200
     data = r.get_json()
     assert sorted(data['items']) == [
-        '123e4567-e89b-12d3-a456-426655440000',
+        {'uri': '123e4567-e89b-12d3-a456-426655440000'},
     ]
 
     r = client.delete('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001')
@@ -183,7 +183,7 @@ def test_initiate_transfer(client, debtor):
     assert r.status_code == 200
     data = r.get_json()
     assert sorted(data['items']) == [
-        '123e4567-e89b-12d3-a456-426655440000',
+        {'uri': '123e4567-e89b-12d3-a456-426655440000'},
     ]
 
     for i in range(2, 12):

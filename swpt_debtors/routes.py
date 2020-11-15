@@ -3,15 +3,15 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib.utils import u64_to_i64
 from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicySchema, \
-    TransferSchema, TransfersCollectionSchema, IssuingTransferCreationRequestSchema, \
-    TransfersCollection, TransferCancelationRequestSchema
+    TransferSchema, TransfersListSchema, IssuingTransferCreationRequestSchema, \
+    TransfersList, TransferCancelationRequestSchema
 from . import specs
 from . import procedures
 
 context = {
     'Debtor': 'debtors.DebtorEndpoint',
     'DebtorPolicy': 'policies.DebtorPolicyEndpoint',
-    'TransfersCollection': 'transfers.TransfersCollectionEndpoint',
+    'TransfersList': 'transfers.TransfersListEndpoint',
     'Transfer': 'transfers.TransferEndpoint'
 }
 
@@ -106,20 +106,20 @@ transfers_api = Blueprint(
 
 
 @transfers_api.route('/<i64:debtorId>/transfers/', parameters=[specs.DEBTOR_ID])
-class TransfersCollectionEndpoint(MethodView):
+class TransfersListEndpoint(MethodView):
     # TODO: Consider implementing pagination. This might be needed in
     #       case the executed a query turns out to be too costly.
 
-    @transfers_api.response(TransfersCollectionSchema(context=context))
-    @transfers_api.doc(operationId='getTransfers', security=specs.SCOPE_ACCESS)
+    @transfers_api.response(TransfersListSchema(context=context))
+    @transfers_api.doc(operationId='getTransfersList', security=specs.SCOPE_ACCESS)
     def get(self, debtorId):
-        """Return the debtor's collection of credit-issuing transfers."""
+        """Return the debtor's list of credit-issuing transfers."""
 
         try:
             transfer_uuids = procedures.get_debtor_transfer_uuids(debtorId)
         except procedures.DebtorDoesNotExistError:
             abort(404)
-        return TransfersCollection(debtor_id=debtorId, items=transfer_uuids)
+        return TransfersList(debtor_id=debtorId, items=transfer_uuids)
 
     @transfers_api.arguments(IssuingTransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=context), code=201, headers=specs.LOCATION_HEADER)
