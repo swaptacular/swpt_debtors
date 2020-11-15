@@ -70,3 +70,60 @@ TRANSFER_EXISTS = {
     'description': 'The same transfer entry already exists.',
     'headers': LOCATION_HEADER,
 }
+
+SCOPE_ACCESS = [
+    {'oauth2': ['access']},
+]
+
+SCOPE_ACTIVATE = [
+    {'oauth2': ['activate']},
+]
+
+SCOPE_DEACTIVATE = [
+    {'oauth2': ['deactivate']},
+]
+
+API_DESCRIPTION = """This API can be used to:
+1. Obtain public information about debtors and create new debtors.
+2. Change individual debtor's policies.
+3. Make credit-issuing transfers.
+"""
+
+API_SPEC_OPTIONS = {
+    'info': {
+        'description': API_DESCRIPTION,
+    },
+    'servers': [
+        {'url': '/'},
+        {'url': '$API_ROOT', 'description': 'Production server (uses live data)'},
+    ],
+    'consumes': ['application/json'],
+    'produces': ['application/json'],
+    'components': {
+        'securitySchemes': {
+            'oauth2': {
+                'type': 'oauth2',
+                'description': 'This API uses OAuth 2. [More info](https://oauth.net/2/).',
+                'flows': {
+                    'authorizationCode': {
+                        'authorizationUrl': '$OAUTH2_AUTHORIZATION_URL',
+                        'tokenUrl': '$OAUTH2_TOKEN_URL',
+                        'refreshUrl': '$OAUTH2_REFRESH_URL',
+                        'scopes': {
+                            'access': 'read-write access',
+                        },
+                    },
+                    'clientCredentials': {
+                        'tokenUrl': '$OAUTH2_TOKEN_URL',
+                        'refreshUrl': '$OAUTH2_REFRESH_URL',
+                        'scopes': {
+                            'access': 'read-write access',
+                            'activate': 'activate new debtors',
+                            'deactivate': 'deactivate existing debtors',
+                        },
+                    },
+                },
+            },
+        },
+    },
+}

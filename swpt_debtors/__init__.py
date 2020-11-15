@@ -19,13 +19,6 @@ else:
     logging.basicConfig(level=logging.WARNING)
 
 
-API_DESCRIPTION = """This API can be used to:
-1. Obtain public information about debtors and create new debtors.
-2. Change individual debtor's policies.
-3. Make credit-issuing transfers.
-"""
-
-
 class Configuration(metaclass=MetaFlaskEnv):
     SECRET_KEY = 'dummy-secret'
     SQLALCHEMY_DATABASE_URI = ''
@@ -39,11 +32,6 @@ class Configuration(metaclass=MetaFlaskEnv):
     DRAMATIQ_BROKER_URL = 'amqp://guest:guest@localhost:5672'
     API_TITLE = 'Debtors API'
     API_VERSION = 'v1'
-    API_SPEC_OPTIONS = {
-        'info': {
-            'description': API_DESCRIPTION,
-        }
-    }
     OPENAPI_VERSION = '3.0.2'
     OPENAPI_URL_PREFIX = '/docs'
     OPENAPI_REDOC_PATH = 'redoc'
@@ -69,7 +57,7 @@ def create_app(config_dict={}):
     from flask import Flask
     from swpt_lib.utils import Int64Converter
     from .extensions import db, migrate, broker, api
-    from .routes import debtors_api, policies_api, transfers_api
+    from .routes import debtors_api, policies_api, transfers_api, specs
     from .cli import swpt_debtors
     from . import models  # noqa
 
@@ -77,6 +65,7 @@ def create_app(config_dict={}):
     app.url_map.converters['i64'] = Int64Converter
     app.config.from_object(Configuration)
     app.config.from_mapping(config_dict)
+    app.config['API_SPEC_OPTIONS'] = specs.API_SPEC_OPTIONS
     db.init_app(app)
     migrate.init_app(app, db)
     broker.init_app(app)

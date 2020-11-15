@@ -8,7 +8,7 @@ from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicyUpda
 from . import specs
 from . import procedures
 
-CONTEXT = {
+context = {
     'Debtor': 'debtors.DebtorEndpoint',
     'DebtorPolicy': 'policies.DebtorPolicyEndpoint',
     'TransfersCollection': 'transfers.TransfersCollectionEndpoint',
@@ -26,8 +26,8 @@ debtors_api = Blueprint(
 
 @debtors_api.route('/<i64:debtorId>/', parameters=[specs.DEBTOR_ID])
 class DebtorEndpoint(MethodView):
-    @debtors_api.response(DebtorSchema(context=CONTEXT))
-    @debtors_api.doc(responses={404: specs.DEBTOR_DOES_NOT_EXIST})
+    @debtors_api.response(DebtorSchema(context=context))
+    @debtors_api.doc(operationId='getDebtor', responses={404: specs.DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
         """Return public information about a debtor."""
 
@@ -37,8 +37,9 @@ class DebtorEndpoint(MethodView):
         return debtor, {'Cache-Control': 'max-age=86400'}
 
     @debtors_api.arguments(DebtorCreationOptionsSchema)
-    @debtors_api.response(DebtorSchema(context=CONTEXT), code=201, headers=specs.LOCATION_HEADER)
-    @debtors_api.doc(responses={409: specs.CONFLICTING_DEBTOR})
+    @debtors_api.response(DebtorSchema(context=context), code=201, headers=specs.LOCATION_HEADER)
+    @debtors_api.doc(operationId='createDebtor',
+                     responses={409: specs.CONFLICTING_DEBTOR})
     def post(self, debtor_creation_options, debtorId):
         """Try to create a new debtor. Requires special privileges
 
@@ -64,16 +65,20 @@ policies_api = Blueprint(
 
 @policies_api.route('/<i64:debtorId>/policy', parameters=[specs.DEBTOR_ID])
 class DebtorPolicyEndpoint(MethodView):
-    @policies_api.response(DebtorPolicySchema(context=CONTEXT))
-    @policies_api.doc(responses={404: specs.DEBTOR_DOES_NOT_EXIST})
+    @policies_api.response(DebtorPolicySchema(context=context))
+    @policies_api.doc(operationId='getDebtorPolicy',
+                      security=specs.SCOPE_ACCESS,
+                      responses={404: specs.DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
         """Return information about debtor's policy."""
 
         return procedures.get_debtor(debtorId) or abort(404)
 
     @policies_api.arguments(DebtorPolicyUpdateRequestSchema)
-    @policies_api.response(DebtorPolicySchema(context=CONTEXT))
-    @policies_api.doc(responses={404: specs.DEBTOR_DOES_NOT_EXIST,
+    @policies_api.response(DebtorPolicySchema(context=context))
+    @policies_api.doc(operationId='updateDebtorPolicy',
+                      security=specs.SCOPE_ACCESS,
+                      responses={404: specs.DEBTOR_DOES_NOT_EXIST,
                                  403: specs.TOO_MANY_POLICY_CHANGES,
                                  409: specs.CONFLICTING_POLICY})
     def patch(self, policy_update_request, debtorId):
@@ -112,8 +117,10 @@ class TransfersCollectionEndpoint(MethodView):
     # TODO: Consider implementing pagination. This might be needed in
     #       case the executed a query turns out to be too costly.
 
-    @transfers_api.response(TransfersCollectionSchema(context=CONTEXT))
-    @transfers_api.doc(responses={404: specs.DEBTOR_DOES_NOT_EXIST})
+    @transfers_api.response(TransfersCollectionSchema(context=context))
+    @transfers_api.doc(operationId='getTransfers',
+                       security=specs.SCOPE_ACCESS,
+                       responses={404: specs.DEBTOR_DOES_NOT_EXIST})
     def get(self, debtorId):
         """Return the debtor's collection of credit-issuing transfers."""
 
@@ -124,8 +131,10 @@ class TransfersCollectionEndpoint(MethodView):
         return TransfersCollection(debtor_id=debtorId, items=transfer_uuids)
 
     @transfers_api.arguments(IssuingTransferCreationRequestSchema)
-    @transfers_api.response(TransferSchema(context=CONTEXT), code=201, headers=specs.LOCATION_HEADER)
-    @transfers_api.doc(responses={303: specs.TRANSFER_EXISTS,
+    @transfers_api.response(TransferSchema(context=context), code=201, headers=specs.LOCATION_HEADER)
+    @transfers_api.doc(operationId='createTransfer',
+                       security=specs.SCOPE_ACCESS,
+                       responses={303: specs.TRANSFER_EXISTS,
                                   403: specs.TOO_MANY_TRANSFERS,
                                   404: specs.DEBTOR_DOES_NOT_EXIST,
                                   409: specs.TRANSFER_CONFLICT})
@@ -156,16 +165,20 @@ class TransfersCollectionEndpoint(MethodView):
 
 @transfers_api.route('/<i64:debtorId>/transfers/<uuid:transferUuid>', parameters=[specs.DEBTOR_ID, specs.TRANSFER_UUID])
 class TransferEndpoint(MethodView):
-    @transfers_api.response(TransferSchema(context=CONTEXT))
-    @transfers_api.doc(responses={404: specs.TRANSFER_DOES_NOT_EXIST})
+    @transfers_api.response(TransferSchema(context=context))
+    @transfers_api.doc(operationId='getTransfer',
+                       security=specs.SCOPE_ACCESS,
+                       responses={404: specs.TRANSFER_DOES_NOT_EXIST})
     def get(self, debtorId, transferUuid):
         """Return information about a credit-issuing transfer."""
 
         return procedures.get_initiated_transfer(debtorId, transferUuid) or abort(404)
 
     @transfers_api.arguments(TransferUpdateRequestSchema)
-    @transfers_api.response(TransferSchema(context=CONTEXT))
-    @transfers_api.doc(responses={404: specs.TRANSFER_DOES_NOT_EXIST,
+    @transfers_api.response(TransferSchema(context=context))
+    @transfers_api.doc(operationId='updateTransfer',
+                       security=specs.SCOPE_ACCESS,
+                       responses={404: specs.TRANSFER_DOES_NOT_EXIST,
                                   409: specs.TRANSFER_UPDATE_CONFLICT})
     def patch(self, transfer_update_request, debtorId, transferUuid):
         """Cancel a credit-issuing transfer, if possible.
@@ -185,6 +198,7 @@ class TransferEndpoint(MethodView):
         return transfer
 
     @transfers_api.response(code=204)
+    @transfers_api.doc(operationId='deleteTransfer', security=specs.SCOPE_ACCESS)
     def delete(self, debtorId, transferUuid):
         """Delete a credit-issuing transfer.
 
