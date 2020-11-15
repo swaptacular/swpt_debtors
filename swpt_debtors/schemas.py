@@ -212,8 +212,8 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
         data_key='balanceLowerLimits',
         description='Enforced balance lower limits.'
                     '\n\n'
-                    '**Note:** When the policy gets updated, this field may contain '
-                    'only the additional limits that need to be added to the existing ones.',
+                    '**Note:** When the policy is being updated, this field should contain '
+                    'only the additional limits that have to be added to the existing ones.',
     )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
@@ -221,15 +221,15 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
         data_key='interestRateLowerLimits',
         description='Enforced interest rate lower limits.'
                     '\n\n'
-                    '**Note:** When the policy gets updated, this field may contain '
-                    'only the additional limits that need to be added to the existing ones.',
+                    '**Note:** When the policy is being updated, this field should contain '
+                    'only the additional limits that have to be added to the existing ones.',
     )
     interest_rate_target = fields.Float(
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
         data_key='interestRateTarget',
         description=f'{Debtor.interest_rate_target.comment}'
                     '\n\n'
-                    '**Note:** If this field is not present when the policy gets '
+                    '**Note:** If this field is not present when the policy is being '
                     'updated, the current `interestRateTarget` will remain unchanged.',
         example=0,
     )
