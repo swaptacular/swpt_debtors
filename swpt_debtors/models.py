@@ -249,6 +249,12 @@ class InitiatedTransfer(db.Model):
         nullable=False,
         comment='The amount to be transferred. Must be positive.',
     )
+    transfer_note_format = db.Column(
+        db.String,
+        nullable=False,
+        default='',
+        comment='The format used for the `note` field. An empty string signifies unstructured text.'
+    )
     transfer_note = db.Column(
         db.String,
         nullable=False,
@@ -314,6 +320,11 @@ class RunningTransfer(db.Model):
         db.BigInteger,
         nullable=False,
         comment='The amount to be transferred. Must be positive.',
+    )
+    transfer_note_format = db.Column(
+        db.String,
+        nullable=False,
+        comment='The format used for the `note` field. An empty string signifies unstructured text.'
     )
     transfer_note = db.Column(
         db.String,
@@ -511,7 +522,7 @@ class FinalizeTransferSignal(Signal):
         coordinator_request_id = fields.Integer()
         committed_amount = fields.Integer()
         finalization_flags = fields.Constant(0)
-        transfer_note_format = fields.Constant('')
+        transfer_note_format = fields.String()
         transfer_note = fields.String()
         inserted_at_ts = fields.DateTime(data_key='ts')
 
@@ -521,6 +532,7 @@ class FinalizeTransferSignal(Signal):
     coordinator_id = db.Column(db.BigInteger, nullable=False)
     coordinator_request_id = db.Column(db.BigInteger, nullable=False)
     transfer_id = db.Column(db.BigInteger, nullable=False)
+    transfer_note_format = db.Column(db.String, nullable=False)
     transfer_note = db.Column(db.String, nullable=False)
     committed_amount = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (

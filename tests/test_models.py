@@ -72,10 +72,11 @@ def test_running_transfer_attrs(debtor, db_session, current_ts):
     debtor_id = debtor.debtor_id
     transfer_uuid = uuid.uuid4()
     t = RunningTransfer(debtor_id=debtor_id, transfer_uuid=transfer_uuid, recipient_creditor_id=C_ID,
-                        amount=1, transfer_note='a test note')
+                        amount=1, transfer_note_format='fmt', transfer_note='a test note')
     db_session.add(t)
     db_session.commit()
     t = RunningTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one()
+    assert t.transfer_note_format == 'fmt'
     assert t.transfer_note == 'a test note'
     assert not t.is_settled
     t.issuing_transfer_id = 666

@@ -130,8 +130,9 @@ def test_initiate_transfer(client, debtor):
 
     json_request_body = {
         'amount': 1000,
+        'noteFormat': 'fmt',
         'note': 'test',
-        'recipientCreditorId': 1111,
+        'creditorId': 1111,
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
     r = client.post('/debtors/123/transfers/', json=json_request_body)
@@ -142,9 +143,10 @@ def test_initiate_transfer(client, debtor):
     assert iso8601.parse_date(data['finalizedAt'])
     assert data['isFinalized'] is False
     assert data['errors'] == []
-    assert data['recipientCreditorId'] == 1111
+    assert data['creditorId'] == 1111
     assert data['type'] == 'Transfer'
     assert data['uri'] == '/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
+    assert data['noteFormat'] == 'fmt'
     assert data['note'] == 'test'
     assert data['debtor'] == {'uri': '/debtors/123/'}
     assert data['isSuccessful'] is False
@@ -191,7 +193,7 @@ def test_initiate_transfer(client, debtor):
         suffix = '{:0>4}'.format(i)
         json_request_body = {
             'amount': 1,
-            'recipientCreditorId': 1111,
+            'creditorId': 1111,
             'transferUuid': f'123e4567-e89b-12d3-a456-42665544{suffix}',
         }
         r = client.post('/debtors/123/transfers/', json=json_request_body)
@@ -205,7 +207,7 @@ def test_cancel_transfer(client, debtor):
     json_request_body = {
         'amount': 1000,
         'note': 'test',
-        'recipientCreditorId': 1111,
+        'creditorId': 1111,
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
     r = client.post('/debtors/123/transfers/', json=json_request_body)

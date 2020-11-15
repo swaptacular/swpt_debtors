@@ -10,6 +10,11 @@ from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT6
 URI_DESCRIPTION = '\
 The URI of this object. Can be a relative URI.'
 
+TRANSFER_NOTE_FORMAT_REGEX = r'^[0-9A-Za-z.-]{0,8}$'
+
+TRANSFER_NOTE_FORMAT_DESCRIPTION = '\
+The format used for the `note` field. An empty string signifies unstructured text.'
+
 
 class ValidateTypeMixin:
     @validates('type')
@@ -278,7 +283,8 @@ class IssuingTransferCreationRequestSchema(ValidateTypeMixin, Schema):
     recipient_creditor_id = fields.Integer(
         required=True,
         validate=validate.Range(min=0, max=MAX_UINT64),
-        data_key='recipientCreditorId',
+        format='int64',
+        data_key='creditorId',
         description="The recipient's creditor ID.",
         example=1111,
     )
@@ -288,6 +294,13 @@ class IssuingTransferCreationRequestSchema(ValidateTypeMixin, Schema):
         format="int64",
         description=InitiatedTransfer.amount.comment,
         example=1000,
+    )
+    transfer_note_format = fields.String(
+        missing='',
+        validate=validate.Regexp(TRANSFER_NOTE_FORMAT_REGEX),
+        data_key='noteFormat',
+        description=TRANSFER_NOTE_FORMAT_DESCRIPTION,
+        example='',
     )
     transfer_note = fields.String(
         missing='',
@@ -329,7 +342,8 @@ class TransferSchema(Schema):
         required=True,
         dump_only=True,
         validate=validate.Range(min=0, max=MAX_UINT64),
-        data_key='recipientCreditorId',
+        format='int64',
+        data_key='creditorId',
         description="The recipient's creditor ID.",
         example=1111,
     )
@@ -340,6 +354,14 @@ class TransferSchema(Schema):
         format="int64",
         description=InitiatedTransfer.amount.comment,
         example=1000,
+    )
+    transfer_note_format = fields.String(
+        required=True,
+        dump_only=True,
+        data_key='noteFormat',
+        pattern=TRANSFER_NOTE_FORMAT_REGEX,
+        description=TRANSFER_NOTE_FORMAT_DESCRIPTION,
+        example='',
     )
     transfer_note = fields.String(
         required=True,

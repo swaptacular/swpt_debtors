@@ -140,6 +140,7 @@ class TransfersCollectionEndpoint(MethodView):
                 transfer_uuid=transfer_uuid,
                 recipient_creditor_id=recipient_creditor_id,
                 amount=transfer_creation_request['amount'],
+                transfer_note_format=transfer_creation_request['transfer_note_format'],
                 transfer_note=transfer_creation_request['transfer_note'],
             )
         except procedures.TooManyManagementActionsError:

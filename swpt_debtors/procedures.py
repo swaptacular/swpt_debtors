@@ -216,13 +216,21 @@ def initiate_transfer(
         transfer_uuid: UUID,
         recipient_creditor_id: int,
         amount: int,
+        transfer_note_format: str,
         transfer_note: str) -> InitiatedTransfer:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
 
-    _raise_error_if_transfer_exists(debtor_id, transfer_uuid, recipient_creditor_id, amount, transfer_note)
+    _raise_error_if_transfer_exists(
+        debtor_id,
+        transfer_uuid,
+        recipient_creditor_id,
+        amount,
+        transfer_note_format,
+        transfer_note,
+    )
     debtor = _throttle_debtor_actions(debtor_id)
     _increment_initiated_transfers_count(debtor)
 
@@ -231,6 +239,7 @@ def initiate_transfer(
         transfer_uuid=transfer_uuid,
         recipient_creditor_id=recipient_creditor_id,
         amount=amount,
+        transfer_note_format=transfer_note_format,
         transfer_note=transfer_note,
     )
 
@@ -239,6 +248,7 @@ def initiate_transfer(
         transfer_uuid=transfer_uuid,
         recipient_creditor_id=recipient_creditor_id,
         amount=amount,
+        transfer_note_format=transfer_note_format,
         transfer_note=transfer_note,
     )
 
@@ -328,6 +338,7 @@ def process_prepared_issuing_transfer_signal(
                 coordinator_id=coordinator_id,
                 coordinator_request_id=coordinator_request_id,
                 committed_amount=rt.amount,
+                transfer_note_format=rt.transfer_note_format,
                 transfer_note=rt.transfer_note,
             ))
             return
@@ -340,6 +351,7 @@ def process_prepared_issuing_transfer_signal(
         coordinator_id=coordinator_id,
         coordinator_request_id=coordinator_request_id,
         committed_amount=0,
+        transfer_note_format='',
         transfer_note='',
     ))
 
@@ -493,6 +505,7 @@ def _insert_running_transfer_or_raise_conflict_error(
         transfer_uuid: UUID,
         recipient_creditor_id: int,
         amount: int,
+        transfer_note_format: str,
         transfer_note: str) -> RunningTransfer:
 
     running_transfer = RunningTransfer(
@@ -500,6 +513,7 @@ def _insert_running_transfer_or_raise_conflict_error(
         transfer_uuid=transfer_uuid,
         recipient_creditor_id=recipient_creditor_id,
         amount=amount,
+        transfer_note_format=transfer_note_format,
         transfer_note=transfer_note,
     )
     db.session.add(running_transfer)
@@ -525,6 +539,7 @@ def _raise_error_if_transfer_exists(
         transfer_uuid: UUID,
         recipient_creditor_id: int,
         amount: int,
+        transfer_note_format: str,
         transfer_note: str) -> None:
 
     t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one_or_none()
@@ -532,6 +547,7 @@ def _raise_error_if_transfer_exists(
         is_same_transfer = (
             t.recipient_creditor_id == recipient_creditor_id
             and t.amount == amount
+            and t.transfer_note_format == transfer_note_format
             and t.transfer_note == transfer_note
         )
         if is_same_transfer:

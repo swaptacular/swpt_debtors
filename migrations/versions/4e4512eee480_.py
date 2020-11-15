@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 325350a4bd71
+Revision ID: 4e4512eee480
 Revises: 8d09bea9c7d1
-Create Date: 2020-08-31 21:27:25.214294
+Create Date: 2020-11-15 22:28:13.006606
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '325350a4bd71'
+revision = '4e4512eee480'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -99,6 +99,7 @@ def upgrade():
     sa.Column('coordinator_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
     sa.Column('transfer_id', sa.BigInteger(), nullable=False),
+    sa.Column('transfer_note_format', sa.String(), nullable=False),
     sa.Column('transfer_note', sa.String(), nullable=False),
     sa.Column('committed_amount', sa.BigInteger(), nullable=False),
     sa.CheckConstraint('committed_amount >= 0'),
@@ -122,13 +123,14 @@ def upgrade():
     sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
     sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False, comment='The recipient of the transfer.'),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
+    sa.Column('transfer_note_format', sa.String(), nullable=False, comment='The format used for the `note` field. An empty string signifies unstructured text.'),
     sa.Column('transfer_note', sa.String(), nullable=False, comment='A note from the debtor. Can be any string that the debtor wants the recipient to see.'),
     sa.Column('started_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was started.'),
     sa.Column('issuing_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('issuing_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
     sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
     sa.CheckConstraint('amount > 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
-    comment='Represents a running issuing transfer. Important note: The records for the successfully finalized issuing transfers (those for which `issuing_transfer_id` is not `null`), must not be deleted right away. Instead, after they have been finalized, they should stay in the database until the corresponding `FinalizedTransferSignal` is received.'
+    comment='Represents a running issuing transfer.'
     )
     op.create_index('idx_issuing_coordinator_request_id', 'running_transfer', ['debtor_id', 'issuing_coordinator_request_id'], unique=True)
     op.create_table('try_to_delete_account_signal',
@@ -144,6 +146,7 @@ def upgrade():
     sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
     sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
+    sa.Column('transfer_note_format', sa.String(), nullable=False, comment='The format used for the `note` field. An empty string signifies unstructured text.'),
     sa.Column('transfer_note', sa.String(), nullable=False, comment='A note from the debtor. Can be any string that the debtor wants the recipient to see.'),
     sa.Column('initiated_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was initiated.'),
     sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),

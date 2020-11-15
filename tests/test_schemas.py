@@ -80,7 +80,7 @@ def test_deserialize_transfer_creation_request(db_session):
     s = schemas.IssuingTransferCreationRequestSchema()
     with pytest.raises(ValidationError, match='The total byte-length of the note exceeds'):
         s.load({
-            'recipientCreditorId': 1,
+            'creditorId': 1,
             'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
             'amount': 1000,
             'note': TRANSFER_NOTE_MAX_BYTES * 'Щ',
