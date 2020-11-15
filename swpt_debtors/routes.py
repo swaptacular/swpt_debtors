@@ -66,7 +66,7 @@ policies_api = Blueprint(
 @policies_api.route('/<i64:debtorId>/policy', parameters=[specs.DEBTOR_ID])
 class DebtorPolicyEndpoint(MethodView):
     @policies_api.response(DebtorPolicySchema(context=context))
-    @policies_api.doc(operationId='getDebtorPolicy', security=specs.SCOPE_ACCESS)
+    @policies_api.doc(operationId='getDebtorPolicy', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
         """Return debtor's policy."""
 
@@ -75,7 +75,7 @@ class DebtorPolicyEndpoint(MethodView):
     @policies_api.arguments(DebtorPolicySchema)
     @policies_api.response(DebtorPolicySchema(context=context))
     @policies_api.doc(operationId='updateDebtorPolicy',
-                      security=specs.SCOPE_ACCESS,
+                      security=specs.SCOPE_ACCESS_MODIFY,
                       responses={403: specs.FORBIDDEN_OPERATION,
                                  409: specs.CONFLICTING_POLICY})
     def patch(self, policy_update_request, debtorId):
@@ -111,7 +111,7 @@ class TransfersListEndpoint(MethodView):
     #       case the executed a query turns out to be too costly.
 
     @transfers_api.response(TransfersListSchema(context=context))
-    @transfers_api.doc(operationId='getTransfersList', security=specs.SCOPE_ACCESS)
+    @transfers_api.doc(operationId='getTransfersList', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
         """Return the debtor's list of credit-issuing transfers."""
 
@@ -124,7 +124,7 @@ class TransfersListEndpoint(MethodView):
     @transfers_api.arguments(IssuingTransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=context), code=201, headers=specs.LOCATION_HEADER)
     @transfers_api.doc(operationId='createTransfer',
-                       security=specs.SCOPE_ACCESS,
+                       security=specs.SCOPE_ACCESS_MODIFY,
                        responses={303: specs.TRANSFER_EXISTS,
                                   403: specs.FORBIDDEN_OPERATION,
                                   409: specs.TRANSFER_CONFLICT})
@@ -157,7 +157,7 @@ class TransfersListEndpoint(MethodView):
 @transfers_api.route('/<i64:debtorId>/transfers/<uuid:transferUuid>', parameters=[specs.DEBTOR_ID, specs.TRANSFER_UUID])
 class TransferEndpoint(MethodView):
     @transfers_api.response(TransferSchema(context=context))
-    @transfers_api.doc(operationId='getTransfer', security=specs.SCOPE_ACCESS)
+    @transfers_api.doc(operationId='getTransfer', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId, transferUuid):
         """Return a credit-issuing transfer."""
 
@@ -166,7 +166,7 @@ class TransferEndpoint(MethodView):
     @transfers_api.arguments(TransferCancelationRequestSchema)
     @transfers_api.response(TransferSchema(context=context))
     @transfers_api.doc(operationId='cancelTransfer',
-                       security=specs.SCOPE_ACCESS,
+                       security=specs.SCOPE_ACCESS_MODIFY,
                        responses={403: specs.TRANSFER_CANCELLATION_FAILURE})
     def post(self, cancel_transfer_request, debtorId, transferUuid):
         """Try to cancel a credit-issuing transfer.
@@ -185,7 +185,7 @@ class TransferEndpoint(MethodView):
         return transfer
 
     @transfers_api.response(code=204)
-    @transfers_api.doc(operationId='deleteTransfer', security=specs.SCOPE_ACCESS)
+    @transfers_api.doc(operationId='deleteTransfer', security=specs.SCOPE_ACCESS_MODIFY)
     def delete(self, debtorId, transferUuid):
         """Delete a credit-issuing transfer.
 

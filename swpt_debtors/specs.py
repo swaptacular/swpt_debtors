@@ -91,7 +91,11 @@ TRANSFER_EXISTS = {
     'headers': LOCATION_HEADER,
 }
 
-SCOPE_ACCESS = [
+SCOPE_ACCESS_READONLY = [
+    {'oauth2': ['access.readonly']},
+]
+
+SCOPE_ACCESS_MODIFY = [
     {'oauth2': ['access']},
 ]
 
@@ -130,6 +134,7 @@ API_SPEC_OPTIONS = {
                         'tokenUrl': '$OAUTH2_TOKEN_URL',
                         'refreshUrl': '$OAUTH2_REFRESH_URL',
                         'scopes': {
+                            'access.readonly': 'read-only access',
                             'access': 'read-write access',
                         },
                     },
@@ -137,6 +142,7 @@ API_SPEC_OPTIONS = {
                         'tokenUrl': '$OAUTH2_TOKEN_URL',
                         'refreshUrl': '$OAUTH2_REFRESH_URL',
                         'scopes': {
+                            'access.readonly': 'read-only access',
                             'access': 'read-write access',
                             'activate': 'activate new debtors',
                             'deactivate': 'deactivate existing debtors',
