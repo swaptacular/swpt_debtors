@@ -16,6 +16,7 @@ config_dict = {
     'APP_MAX_LIMITS_COUNT': 10,
     'APP_TRANSFERS_FINALIZATION_AVG_SECONDS': 10.0,
     'APP_MAX_TRANSFERS_PER_MONTH': 10,
+    'APP_AUTHORITY_URI': 'http://example.com/authority',
 }
 
 

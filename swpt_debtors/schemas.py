@@ -5,7 +5,6 @@ from flask import url_for, current_app
 from .lower_limits import LowerLimit
 from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
     TRANSFER_NOTE_MAX_BYTES, Debtor, InitiatedTransfer
-from swpt_lib import endpoints
 
 
 class TransfersCollection(NamedTuple):
@@ -70,10 +69,10 @@ class DebtorSchema(Schema):
         example='Debtor',
     )
     accountingAuthorityUri = fields.Function(
-        lambda obj: endpoints.build_url('authority'),
+        lambda obj: current_app.config['APP_AUTHORITY_URI'],
         required=True,
         type='string',
-        format="uri",
+        format="uri-reference",
         description="The URI of the authority that manages creditors' accounts.",
         example='https://example.com/authority',
     )
@@ -156,7 +155,7 @@ class DebtorPolicySchema(DebtorSchema):
         example='DebtorPolicy',
     )
     debtorUri = fields.Function(
-        lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),
+        lambda obj: url_for('debtors.DebtorEndpoint', _external=True, debtorId=obj.debtor_id),
         required=True,
         type='string',
         format="uri",
@@ -274,7 +273,7 @@ class TransferSchema(Schema):
         example='Transfer',
     )
     debtorUri = fields.Function(
-        lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),
+        lambda obj: url_for('debtors.DebtorEndpoint', _external=True, debtorId=obj.debtor_id),
         required=True,
         type='string',
         format="uri",
@@ -387,7 +386,7 @@ class TransfersCollectionSchema(Schema):
         example='TransfersCollection',
     )
     debtorUri = fields.Function(
-        lambda obj: endpoints.build_url('debtor', debtorId=obj.debtor_id),
+        lambda obj: url_for('debtors.DebtorEndpoint', _external=True, debtorId=obj.debtor_id),
         required=True,
         type='string',
         format="uri",

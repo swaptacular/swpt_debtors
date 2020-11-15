@@ -1,7 +1,7 @@
 from flask import redirect, url_for
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from swpt_lib import endpoints, utils
+from swpt_lib.utils import u64_to_i64
 from .schemas import DebtorCreationOptionsSchema, DebtorSchema, DebtorPolicyUpdateRequestSchema, \
     DebtorPolicySchema, TransferSchema, TransfersCollectionSchema, IssuingTransferCreationRequestSchema, \
     TransfersCollection, TransferUpdateRequestSchema
@@ -51,7 +51,7 @@ class DebtorEndpoint(MethodView):
             debtor = procedures.create_new_debtor(debtorId)
         except procedures.DebtorExistsError:
             abort(409)
-        return debtor, {'Location': endpoints.build_url('debtor', debtorId=debtorId)}
+        return debtor, {'Location': url_for('debtors.DebtorEndpoint', _external=True, debtorId=debtorId)}
 
 
 policies_api = Blueprint(
@@ -133,7 +133,7 @@ class TransfersCollectionEndpoint(MethodView):
         """Create a new credit-issuing transfer."""
 
         transfer_uuid = transfer_creation_request['transfer_uuid']
-        recipient_creditor_id = utils.u64_to_i64(transfer_creation_request['recipient_creditor_id'])
+        recipient_creditor_id = u64_to_i64(transfer_creation_request['recipient_creditor_id'])
         location = url_for('transfers.TransferEndpoint', _external=True, debtorId=debtorId, transferUuid=transfer_uuid)
         try:
             transfer = procedures.initiate_transfer(
