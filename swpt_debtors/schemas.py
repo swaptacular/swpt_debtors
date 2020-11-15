@@ -186,7 +186,7 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
         dump_only=True,
         format='uri-reference',
         description=URI_DESCRIPTION,
-        example='/debtors/1/',
+        example='/debtors/1/policy',
     )
     type = fields.String(
         missing='DebtorPolicy',
@@ -435,7 +435,7 @@ class TransfersCollectionSchema(Schema):
         dump_only=True,
         format='uri-reference',
         description=URI_DESCRIPTION,
-        example='/debtors/1/transfers/123e4567-e89b-12d3-a456-426655440000',
+        example='/debtors/1/transfers/',
     )
     type = fields.Function(
         lambda obj: 'TransfersCollection',
