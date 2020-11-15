@@ -27,7 +27,7 @@ debtors_api = Blueprint(
 @debtors_api.route('/<i64:debtorId>/', parameters=[specs.DEBTOR_ID])
 class DebtorEndpoint(MethodView):
     @debtors_api.response(DebtorSchema(context=context))
-    @debtors_api.doc(operationId='getDebtor', responses={404: specs.DEBTOR_DOES_NOT_EXIST})
+    @debtors_api.doc(operationId='getDebtor')
     def get(self, debtorId):
         """Return public information about a debtor."""
 
@@ -66,9 +66,7 @@ policies_api = Blueprint(
 @policies_api.route('/<i64:debtorId>/policy', parameters=[specs.DEBTOR_ID])
 class DebtorPolicyEndpoint(MethodView):
     @policies_api.response(DebtorPolicySchema(context=context))
-    @policies_api.doc(operationId='getDebtorPolicy',
-                      security=specs.SCOPE_ACCESS,
-                      responses={404: specs.DEBTOR_DOES_NOT_EXIST})
+    @policies_api.doc(operationId='getDebtorPolicy', security=specs.SCOPE_ACCESS)
     def get(self, debtorId):
         """Return information about debtor's policy."""
 
@@ -78,8 +76,7 @@ class DebtorPolicyEndpoint(MethodView):
     @policies_api.response(DebtorPolicySchema(context=context))
     @policies_api.doc(operationId='updateDebtorPolicy',
                       security=specs.SCOPE_ACCESS,
-                      responses={404: specs.DEBTOR_DOES_NOT_EXIST,
-                                 403: specs.TOO_MANY_POLICY_CHANGES,
+                      responses={403: specs.FORBIDDEN_OPERATION,
                                  409: specs.CONFLICTING_POLICY})
     def patch(self, policy_update_request, debtorId):
         """Update debtor's policy.
@@ -118,9 +115,7 @@ class TransfersCollectionEndpoint(MethodView):
     #       case the executed a query turns out to be too costly.
 
     @transfers_api.response(TransfersCollectionSchema(context=context))
-    @transfers_api.doc(operationId='getTransfers',
-                       security=specs.SCOPE_ACCESS,
-                       responses={404: specs.DEBTOR_DOES_NOT_EXIST})
+    @transfers_api.doc(operationId='getTransfers', security=specs.SCOPE_ACCESS)
     def get(self, debtorId):
         """Return the debtor's collection of credit-issuing transfers."""
 
@@ -135,8 +130,7 @@ class TransfersCollectionEndpoint(MethodView):
     @transfers_api.doc(operationId='createTransfer',
                        security=specs.SCOPE_ACCESS,
                        responses={303: specs.TRANSFER_EXISTS,
-                                  403: specs.TOO_MANY_TRANSFERS,
-                                  404: specs.DEBTOR_DOES_NOT_EXIST,
+                                  403: specs.FORBIDDEN_OPERATION,
                                   409: specs.TRANSFER_CONFLICT})
     def post(self, transfer_creation_request, debtorId):
         """Create a new credit-issuing transfer."""
@@ -166,9 +160,7 @@ class TransfersCollectionEndpoint(MethodView):
 @transfers_api.route('/<i64:debtorId>/transfers/<uuid:transferUuid>', parameters=[specs.DEBTOR_ID, specs.TRANSFER_UUID])
 class TransferEndpoint(MethodView):
     @transfers_api.response(TransferSchema(context=context))
-    @transfers_api.doc(operationId='getTransfer',
-                       security=specs.SCOPE_ACCESS,
-                       responses={404: specs.TRANSFER_DOES_NOT_EXIST})
+    @transfers_api.doc(operationId='getTransfer', security=specs.SCOPE_ACCESS)
     def get(self, debtorId, transferUuid):
         """Return information about a credit-issuing transfer."""
 
@@ -178,8 +170,7 @@ class TransferEndpoint(MethodView):
     @transfers_api.response(TransferSchema(context=context))
     @transfers_api.doc(operationId='updateTransfer',
                        security=specs.SCOPE_ACCESS,
-                       responses={404: specs.TRANSFER_DOES_NOT_EXIST,
-                                  409: specs.TRANSFER_UPDATE_CONFLICT})
+                       responses={409: specs.TRANSFER_UPDATE_CONFLICT})
     def patch(self, transfer_update_request, debtorId, transferUuid):
         """Cancel a credit-issuing transfer, if possible.
 

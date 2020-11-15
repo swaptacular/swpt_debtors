@@ -61,11 +61,6 @@ ERROR_CONTENT = {
     }
 }
 
-DEBTOR_DOES_NOT_EXIST = {
-    'description': 'The debtor does not exist.',
-    'content': ERROR_CONTENT,
-}
-
 CONFLICTING_DEBTOR = {
     'description': 'A debtor with the same ID already exists.',
     'content': ERROR_CONTENT,
@@ -73,11 +68,6 @@ CONFLICTING_DEBTOR = {
 
 CONFLICTING_POLICY = {
     'description': 'The new policy is in conflict with the old one.',
-    'content': ERROR_CONTENT,
-}
-
-TRANSFER_DOES_NOT_EXIST = {
-    'description': 'The transfer entry does not exist.',
     'content': ERROR_CONTENT,
 }
 
@@ -91,13 +81,8 @@ TRANSFER_UPDATE_CONFLICT = {
     'content': ERROR_CONTENT,
 }
 
-TOO_MANY_TRANSFERS = {
-    'description': 'Too many issuing transfers.',
-    'content': ERROR_CONTENT,
-}
-
-TOO_MANY_POLICY_CHANGES = {
-    'description': 'Too many policy changes.',
+FORBIDDEN_OPERATION = {
+    'description': 'Forbidden operation.',
     'content': ERROR_CONTENT,
 }
 
