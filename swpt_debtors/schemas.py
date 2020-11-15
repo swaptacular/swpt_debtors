@@ -53,7 +53,8 @@ class BalanceLowerLimitSchema(ValidateTypeMixin, Schema):
         required=True,
         validate=validate.Range(min=MIN_INT64, max=MAX_INT64),
         format='int64',
-        description='The balance should be no less than this value.',
+        description='The balance should be no less than this value. Normally, '
+                    'this will be a negative number.',
     )
     cutoff = fields.Date(
         required=True,
