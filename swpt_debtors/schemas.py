@@ -482,13 +482,6 @@ class TransfersCollectionSchema(Schema):
         description="The URI of the corresponding `Debtor`.",
         example={'uri': '/debtors/1/'},
     )
-    totalItems = fields.Function(
-        lambda obj: len(obj.items),
-        required=True,
-        type='integer',
-        description="The total number of items in the collection.",
-        example=2,
-    )
     items = fields.List(
         fields.Str(format='uri-reference'),
         dump_only=True,

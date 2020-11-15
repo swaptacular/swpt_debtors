@@ -125,7 +125,6 @@ def test_initiate_transfer(client, debtor):
     assert data['debtor'] == {'uri': '/debtors/123/'}
     assert data['type'] == 'TransfersCollection'
     assert data['uri'] == '/debtors/123/transfers/'
-    assert data['totalItems'] == 0
     assert data['items'] == []
 
     json_request_body = {
@@ -173,7 +172,6 @@ def test_initiate_transfer(client, debtor):
     r = client.get('/debtors/123/transfers/')
     assert r.status_code == 200
     data = r.get_json()
-    assert data['totalItems'] == 1
     assert sorted(data['items']) == [
         '123e4567-e89b-12d3-a456-426655440000',
     ]
@@ -184,7 +182,6 @@ def test_initiate_transfer(client, debtor):
     r = client.get('/debtors/123/transfers/')
     assert r.status_code == 200
     data = r.get_json()
-    assert data['totalItems'] == 1
     assert sorted(data['items']) == [
         '123e4567-e89b-12d3-a456-426655440000',
     ]
