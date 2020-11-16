@@ -489,10 +489,9 @@ class TransfersListSchema(Schema):
     )
     items = fields.Nested(
         ObjectReferenceSchema(many=True),
+        required=True,
         dump_only=True,
-        description="When the total number of items in the list is small enough, this field "
-                    "will contain all of them (in an array), so that in such cases it would be "
-                    "unnecessary to follow the `first` link.",
+        description='Contains links to all `Transfers` in an array of `ObjectReference`s.',
         example=[{'uri': i} for i in [
             '123e4567-e89b-12d3-a456-426655440000',
             '183ea7c7-7a96-4ed7-a50a-a2b069687d23',
@@ -510,11 +509,8 @@ class TransfersListSchema(Schema):
         required=True,
         type='string',
         format="uri-reference",
-        description='The URI of the first page in the paginated list. The object retrieved '
-                    'from this URI will have: 1) An `items` property (an array), which will contain '
-                    'the first items of the list; 2) May have a `next` property (a string), '
-                    'which would contain the URI of the next page in the list. This can be '
-                    'a relative URI.',
+        description='This will always be an empty string, representing the relative URI of '
+                    'the first and only page in a paginated list.',
         example='',
     )
 
