@@ -229,7 +229,10 @@ class DebtorPolicySchema(ValidateTypeMixin, Schema):
     interest_rate_target = fields.Float(
         validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
         data_key='interestRateTarget',
-        description=f'{Debtor.interest_rate_target.comment}'
+        description='The annual rate (in percents) at which the debtor wants the interest '
+                    'to accumulate on creditors\' accounts. The actual interest rate may be '
+                    'different if interest rate limits are enforced. When the debtor is '
+                    'created, the initial value will be zero.'
                     '\n\n'
                     '**Note:** If this field is not present when the policy is being '
                     'updated, the current `interestRateTarget` will remain unchanged.',
