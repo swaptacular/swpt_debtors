@@ -66,6 +66,21 @@ class Signal(db.Model):
     inserted_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
 
 
+class NodeConfig(db.Model):
+    is_effective = db.Column(db.BOOLEAN, primary_key=True, default=True)
+    min_debtor_id = db.Column(db.BigInteger, nullable=False)
+    max_debtor_id = db.Column(db.BigInteger, nullable=False)
+    __table_args__ = (
+        db.CheckConstraint(is_effective == true()),
+        db.CheckConstraint(min_debtor_id <= max_debtor_id),
+        {
+            'comment': 'Represents the global node configuration (a singleton). The '
+                       'node is responsible only for debtor IDs that are within the '
+                       'interval [min_debtor_id, max_debtor_id].',
+        }
+    )
+
+
 # TODO: Implement a daemon that garbage-collects debtors. Here is how
 #       it should work:
 #
@@ -89,30 +104,32 @@ class Signal(db.Model):
 #    be deleted only if a very long time has passed since debtor's
 #    deactivation date (20 years for example).
 class Debtor(db.Model):
-    STATUS_HAS_ACTIVITY_FLAG = 1
-    STATUS_HAS_ACCOUNT_FLAG = 2
+    STATUS_IS_ACTIVATED_FLAG = 1 << 0
+    STATUS_IS_DEACTIVATED_FLAG = 1 << 1
+    STATUS_HAS_ACCOUNT_FLAG = 1 << 2
+
+    _ad_seq = db.Sequence('debtor_reservation_id_seq', metadata=db.Model.metadata)
 
     debtor_id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
-    status = db.Column(
+    status_flags = db.Column(
         db.SmallInteger,
         nullable=False,
         default=0,
         comment="Debtor's status bits: "
-                f"{STATUS_HAS_ACTIVITY_FLAG} - has activity, "
+                f"{STATUS_IS_ACTIVATED_FLAG} - is activated, "
+                f"{STATUS_IS_DEACTIVATED_FLAG} - is deactivated, "
                 f"{STATUS_HAS_ACCOUNT_FLAG} - has account.",
     )
-    created_at_date = db.Column(
+    created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    reservation_id = db.Column(db.BigInteger, server_default=_ad_seq.next_value())
+    deactivation_date = db.Column(
         db.DATE,
-        nullable=False,
-        default=get_now_utc,
-        comment='The date on which the debtor was created.',
-    )
-    deactivated_at_date = db.Column(
-        db.DATE,
-        comment='The date on which the debtor was deactivated. A `null` means that the '
-                'debtor has not been deactivated yet. Management operations (like policy '
-                'updates and credit issuing) are not allowed on deactivated debtors. Once '
-                'deactivated, a debtor stays deactivated until it is deleted.',
+        comment='The date on which the debtor was deactivated. When a debtor gets '
+                'deactivated, all its belonging objects (transfers, etc.) are '
+                'removed. To be deactivated, the debtor must be activated first. Once '
+                'deactivated, a debtor stays deactivated until it is deleted. A '
+                '`NULL` value for this column means either that the debtor has not '
+                'been deactivated yet, or that the deactivation date is unknown.',
     )
     balance = db.Column(
         db.BigInteger,
@@ -186,6 +203,9 @@ class Debtor(db.Model):
     )
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
+    __mapper_args__ = {
+        'eager_defaults': True,
+    }
     __table_args__ = (
         db.CheckConstraint(and_(
             interest_rate_target >= INTEREST_RATE_FLOOR,
@@ -236,8 +256,21 @@ class Debtor(db.Model):
         return self.calc_min_account_balance(current_ts.date())
 
     @property
-    def is_active(self):
-        return bool(self.status & Debtor.STATUS_HAS_ACTIVITY_FLAG and self.deactivated_at_date is None)
+    def is_activated(self):
+        return bool(self.status_flags & Debtor.STATUS_IS_ACTIVATED_FLAG)
+
+    @property
+    def is_deactivated(self):
+        return bool(self.status_flags & Debtor.STATUS_IS_DEACTIVATED_FLAG)
+
+    def activate(self):
+        self.status_flags |= Debtor.STATUS_IS_ACTIVATED_FLAG
+        self.reservation_id = None
+
+    def deactivate(self):
+        self.status_flags |= Debtor.STATUS_IS_DEACTIVATED_FLAG
+        self.deactivation_date = datetime.now(tz=timezone.utc).date()
+
 
 
 class InitiatedTransfer(db.Model):

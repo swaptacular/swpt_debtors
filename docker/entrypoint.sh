@@ -22,6 +22,7 @@ perform_db_upgrade() {
     echo -n 'Running database schema upgrade ...'
     while [[ $retry_after -lt $time_limit ]]; do
         if flask db upgrade 2>$error_file; then
+            perform_initializations
             echo ' done.'
             return 0
         fi
@@ -42,7 +43,7 @@ setup_rabbitmq_bindings() {
 # initializations. Make sure that it is idempotent.
 # (https://en.wikipedia.org/wiki/Idempotence)
 perform_initializations() {
-    return 0
+    flask swpt_debtors configure_interval -- $MIN_DEBTOR_ID $MAX_DEBTOR_ID
 }
 
 case $1 in
@@ -54,25 +55,31 @@ case $1 in
         shift
         perform_db_upgrade
         setup_rabbitmq_bindings
-        perform_initializations
         flask signalbus flush -w 0
         exec dramatiq --processes ${DRAMATIQ_PROCESSES-4} --threads ${DRAMATIQ_THREADS-8} "$@"
         ;;
     test)
         perform_db_upgrade
-        perform_initializations
         exec pytest
         ;;
     configure)
-        flask db upgrade
+        perform_db_upgrade
         setup_rabbitmq_bindings
-        perform_initializations
         ;;
-    serve)
-        exec gunicorn --config "$APP_ROOT_DIR/gunicorn.conf" -b :$PORT wsgi:app
+    gunicorn)
+        exec gunicorn --config "$APP_ROOT_DIR/gunicorn.conf" -b 127.0.0.1:4499 wsgi:app
         ;;
     supervisord)
         exec supervisord -c "$APP_ROOT_DIR/supervisord.conf"
+        ;;
+    oathkeeper)
+        envsubst '$PORT $OAUTH2_INTROSPECT_URL' \
+                 < "$APP_ROOT_DIR/oathkeeper/config.yaml.template" \
+                 > "$APP_ROOT_DIR/oathkeeper/config.yaml"
+        envsubst '$RESOURCE_SERVER' \
+                 < "$APP_ROOT_DIR/oathkeeper/rules.json.template" \
+                 > "$APP_ROOT_DIR/oathkeeper/rules.json"
+        exec oathkeeper serve --config="$APP_ROOT_DIR/oathkeeper/config.yaml"
         ;;
     tasks)
         shift
@@ -80,7 +87,7 @@ case $1 in
         ;;
     tasks-gevent)
         shift
-        exec dramatiq-gevent --processes ${DRAMATIQ_PROCESSES-4} --threads ${DRAMATIQ_GREENLETS-8} "$@"
+        exec dramatiq-gevent --processes ${DRAMATIQ_PROCESSES-4} --threads ${DRAMATIQ_THREADS-8} "$@"
         ;;
     *)
         exec "$@"

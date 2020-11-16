@@ -50,14 +50,16 @@ class Configuration(metaclass=MetaFlaskEnv):
     APP_RUNNING_TRANSFERS_ABANDON_DAYS = 365
     APP_DEAD_ACCOUNTS_ABANDON_DAYS = 365
     APP_MIN_INTEREST_CAPITALIZATION_DAYS = 14
+    APP_INACTIVE_DEBTOR_RETENTION_DAYS = 14
     APP_AUTHORITY_URI = '/authority'
+    APP_DEBTORS_PER_PAGE = 2000
 
 
 def create_app(config_dict={}):
     from flask import Flask
     from swpt_lib.utils import Int64Converter
     from .extensions import db, migrate, broker, api
-    from .routes import debtors_api, policies_api, transfers_api, specs
+    from .routes import admin_api, debtors_api, policies_api, transfers_api, specs
     from .cli import swpt_debtors
     from . import models  # noqa
 
@@ -70,6 +72,7 @@ def create_app(config_dict={}):
     migrate.init_app(app, db)
     broker.init_app(app)
     api.init_app(app)
+    api.register_blueprint(admin_api)
     api.register_blueprint(debtors_api)
     api.register_blueprint(policies_api)
     api.register_blueprint(transfers_api)

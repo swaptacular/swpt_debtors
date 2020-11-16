@@ -1,3 +1,4 @@
+from urllib.parse import urljoin, urlparse
 import pytest
 import iso8601
 from swpt_debtors import procedures as p
@@ -13,30 +14,158 @@ def debtor(db_session):
     return p.lock_or_create_debtor(123)
 
 
-def test_create_debtor(client):
-    r = client.get('/debtors/123/')
-    assert r.status_code == 404
+def _get_all_pages(client, url, page_type, streaming=False):
+    r = client.get(url)
+    assert r.status_code == 200
 
-    r = client.post('/debtors/123/', json={})
-    assert r.status_code == 201
-    assert r.headers['Location'] == 'http://example.com/debtors/123/'
     data = r.get_json()
-    assert data['balance'] == 0
-    assert data['isActive'] is False
-    assert data['type'] == 'Debtor'
-    assert data['uri'] == '/debtors/123/'
+    assert data['type'] == page_type
+    assert urlparse(data['uri']) == urlparse(url)
+    if streaming:
+        assert 'next' in data or 'forthcoming' in data
+        assert 'next' not in data or 'forthcoming' not in data
+    else:
+        assert 'forthcoming' not in data
 
-    r = client.post('/debtors/123/', json={})
+    items = data['items']
+    assert isinstance(items, list)
+
+    if 'next' in data:
+        items.extend(_get_all_pages(client, urljoin(url, data['next']), page_type, streaming))
+
+    return items
+
+
+def test_auto_genereate_creditor_id(client):
+    r = client.post('/debtors/.debtor-reserve', json={})
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['type'] == 'DebtorReservation'
+    assert isinstance(data['debtorId'], int)
+    assert isinstance(data['reservationId'], int)
+    assert iso8601.parse_date(data['validUntil'])
+    assert iso8601.parse_date(data['createdAt'])
+
+
+def test_create_debtor(client):
+    r = client.get('/debtors/2/')
+    assert r.status_code == 403
+
+    r = client.post('/debtors/2/reserve', headers={'X-Swpt-User-Id': 'creditors:2'}, json={})
+    assert r.status_code == 403
+
+    r = client.post('/debtors/2/reserve', json={})
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['type'] == 'DebtorReservation'
+    assert data['DebtorId'] == 2
+    assert isinstance(data['reservationId'], int)
+    assert iso8601.parse_date(data['validUntil'])
+    assert iso8601.parse_date(data['createdAt'])
+    reservation_id = data['reservationId']
+
+    r = client.post('/debtors/2/reserve', json={})
     assert r.status_code == 409
 
-    r = client.get('/debtors/123/')
+    r = client.get('/debtors/2/')
+    assert r.status_code == 403
+
+    r = client.post('/debtors/2/activate', json={
+        'reservationId': 123,
+    })
+    assert r.status_code == 422
+    assert 'reservationId' in r.get_json()['errors']['json']
+
+    r = client.post('/debtors/2/activate', json={
+        'reservationId': reservation_id,
+    })
     assert r.status_code == 200
     assert 'max-age' in r.headers['Cache-Control']
     data = r.get_json()
-    assert data['balance'] == 0
-    assert data['isActive'] is False
     assert data['type'] == 'Debtor'
-    assert data['uri'] == '/debtors/123/'
+    assert data['uri'] == '/debtors/2/'
+    assert iso8601.parse_date(data['createdAt'])
+
+    r = client.post('/debtors/2/activate', json={
+        'reservationId': reservation_id,
+    })
+    assert r.status_code == 200
+
+    r = client.post('/debtors/3/activate', json={
+        'reservationId': 123,
+    })
+    assert r.status_code == 422
+    assert 'reservationId' in r.get_json()['errors']['json']
+
+    r = client.post('/debtors/3/activate', json={})
+    assert 'max-age' in r.headers['Cache-Control']
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['type'] == 'Debtor'
+    assert data['uri'] == '/debtors/3/'
+    assert data['balance'] == 0
+    assert iso8601.parse_date(data['createdAt'])
+
+    r = client.post('/debtors/3/activate', json={})
+    assert r.status_code == 409
+
+    r = client.get('/debtors/2/')
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['type'] == 'Debtor'
+    assert data['uri'] == '/debtors/2/'
+    assert data['balance'] == 0
+    assert iso8601.parse_date(data['createdAt'])
+
+    r = client.get('/debtors/3/')
+    assert r.status_code == 200
+
+    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'creditors:3'}, json={})
+    assert r.status_code == 403
+
+    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'creditors-supervisor'}, json={})
+    assert r.status_code == 403
+
+    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'creditors-superuser'}, json={})
+    assert r.status_code == 204
+
+    r = client.post('/debtors/3/deactivate', json={})
+    assert r.status_code == 204
+
+    r = client.get('/debtors/3/')
+    assert r.status_code == 403
+
+    r = client.post('/debtors/3/deactivate', json={})
+    assert r.status_code == 204
+
+
+def test_get_debtors_list(client):
+    r = client.post('/debtors/1/reserve', json={})
+    assert r.status_code == 200
+    r = client.post('/debtors/2/activate', json={})
+    assert r.status_code == 200
+    r = client.post('/debtors/3/activate', json={})
+    assert r.status_code == 200
+    r = client.post('/debtors/9223372036854775808/activate', json={})
+    assert r.status_code == 200
+    r = client.post('/debtors/18446744073709551615/activate', json={})
+    assert r.status_code == 200
+
+    r = client.get('/debtors/.list')
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['type'] == 'DebtorsList'
+    assert data['uri'] == '/debtors/.list'
+    assert data['itemsType'] == 'ObjectReference'
+    assert data['first'] == '/debtors/9223372036854775808/enumerate'
+
+    entries = _get_all_pages(client, data['first'], page_type='ObjectReferencesPage')
+    assert entries == [
+        {'uri': '/debtors/9223372036854775808/'},
+        {'uri': '/debtors/18446744073709551615/'},
+        {'uri': '/debtors/2/'},
+        {'uri': '/debtors/3/'},
+    ]
 
 
 def test_change_debtor_policy(client, debtor):

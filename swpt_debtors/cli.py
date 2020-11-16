@@ -1,8 +1,11 @@
 from datetime import timedelta
+import sys
 import click
 from os import environ
 from flask import current_app
 from flask.cli import with_appcontext
+from swpt_debtors.models import MIN_INT64, MAX_INT64
+from swpt_debtors import procedures
 from .extensions import db
 from .table_scanners import RunningTransfersScanner, AccountsScanner
 
@@ -47,6 +50,35 @@ def subscribe(queue_name):  # pragma: no cover
             else:
                 unbind(queue_name, MAIN_EXCHANGE_NAME, routing_key)
                 click.echo(f'Unsubscribed "{queue_name}" from "{MAIN_EXCHANGE_NAME}.{routing_key}".')
+
+
+@swpt_debtors.command('configure_interval')
+@with_appcontext
+@click.argument('min_id', type=int)
+@click.argument('max_id', type=int)
+def configure_interval(min_id, max_id):
+    """Configures the server to manage debtor IDs between MIN_ID and MAX_ID.
+
+    The passed debtor IDs must be between -9223372036854775808 and
+    9223372036854775807. Use "--" to pass negative integers. For
+    example:
+
+    $ flask swpt_debtors configure_interval -- -16 0
+
+    """
+
+    def validate(value):
+        if not MIN_INT64 <= value <= MAX_INT64:
+            click.echo(f'Error: {value} is not a valid creditor ID.')
+            sys.exit(1)
+
+    validate(min_id)
+    validate(max_id)
+    if min_id > max_id:
+        click.echo('Error: an invalid interval has been specified.')
+        sys.exit(1)
+
+    procedures.configure_node(min_debtor_id=min_id, max_debtor_id=max_id)
 
 
 @swpt_debtors.command('scan_running_transfers')

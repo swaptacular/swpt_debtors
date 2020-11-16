@@ -3,20 +3,6 @@ from .extensions import broker, APP_QUEUE_NAME
 from . import procedures
 
 
-@broker.actor(queue_name=APP_QUEUE_NAME)
-def create_debtor(debtor_id: int) -> None:
-    """Make sure a debtor with ID `debtor_id` exists."""
-
-    procedures.lock_or_create_debtor(debtor_id)
-
-
-@broker.actor(queue_name=APP_QUEUE_NAME)
-def deactivate_debtor(debtor_id: int) -> None:
-    """Permanently deactivate a debtor."""
-
-    procedures.deactivate_debtor(debtor_id)
-
-
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_account_update_signal(
         debtor_id: int,

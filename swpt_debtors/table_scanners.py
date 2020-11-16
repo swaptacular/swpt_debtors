@@ -287,9 +287,9 @@ class AccountsScanner(TableScanner):
             Debtor.query.\
                 filter(Debtor.debtor_id.in_(debtors_ids)).\
                 update({
-                    Debtor.deactivated_at_date: coalesce(Debtor.deactivated_at_date, current_ts),
+                    Debtor.deactivation_date: coalesce(Debtor.deactivation_date, current_ts),
                     Debtor.initiated_transfers_count: 0,
-                    Debtor.status: Debtor.status.op('&')(~Debtor.STATUS_HAS_ACCOUNT_FLAG),
+                    Debtor.status_flags: Debtor.status_flags.op('&')(~Debtor.STATUS_HAS_ACCOUNT_FLAG),
                     Debtor.bll_values: None,
                     Debtor.bll_cutoffs: None,
                     Debtor.irll_values: None,

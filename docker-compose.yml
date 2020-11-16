@@ -62,3 +62,18 @@ services:
     command: supervisord
     depends_on:
       - pg
+
+
+  tests-config:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - './swpt_debtors:/usr/src/app/swpt_debtors'
+    env_file: .env
+    environment:
+      - 'PYTHONDONTWRITEBYTECODE=1'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@pg:5432/${POSTGRES_DB}'
+    command: configure
+    depends_on:
+      - pg

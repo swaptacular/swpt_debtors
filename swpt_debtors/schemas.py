@@ -3,12 +3,19 @@ from datetime import datetime, timezone, timedelta
 from marshmallow import Schema, fields, validate, pre_dump, post_dump, post_load, \
     validates, ValidationError
 from flask import url_for, current_app
+from swpt_lib.utils import i64_to_u64
 from .lower_limits import LowerLimit
 from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
     TRANSFER_NOTE_MAX_BYTES, Debtor, InitiatedTransfer
 
 URI_DESCRIPTION = '\
 The URI of this object. Can be a relative URI.'
+
+PAGE_NEXT_DESCRIPTION = '\
+An URI of another `{type}` object which contains more items. When \
+there are no remaining items, this field will not be present. If this field \
+is present, there might be remaining items, even when the `items` array is \
+empty. This can be a relative URI.'
 
 TRANSFER_NOTE_FORMAT_REGEX = r'^[0-9A-Za-z.-]{0,8}$'
 
@@ -41,6 +48,183 @@ class ObjectReferenceSchema(Schema):
     def assert_required_fields(self, obj, many):
         assert 'uri' in obj
         return obj
+
+
+class ObjectReferencesPageSchema(Schema):
+    uri = fields.String(
+        required=True,
+        dump_only=True,
+        format='uri-reference',
+        description=URI_DESCRIPTION,
+        example='/debtors/2/enumerate',
+    )
+    type = fields.Function(
+        lambda obj: 'ObjectReferencesPage',
+        required=True,
+        type='string',
+        description='The type of this object.',
+        example='ObjectReferencesPage',
+    )
+    items = fields.Nested(
+        ObjectReferenceSchema(many=True),
+        required=True,
+        dump_only=True,
+        description='An array of `ObjectReference`s. Can be empty.',
+        example=[{'uri': f'{i}/'} for i in [1, 11, 111]],
+    )
+    next = fields.String(
+        dump_only=True,
+        format='uri-reference',
+        description=PAGE_NEXT_DESCRIPTION.format(type='ObjectReferencesPage'),
+        example='?prev=111',
+    )
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'uri' in obj
+        assert 'items' in obj
+        return obj
+
+
+class PaginatedListSchema(Schema):
+    type = fields.Function(
+        lambda obj: 'PaginatedList',
+        required=True,
+        type='string',
+        description='The type of this object.',
+        example='PaginatedList',
+    )
+    items_type = fields.String(
+        required=True,
+        dump_only=True,
+        data_key='itemsType',
+        description='The type of the items in the paginated list.',
+        example='string',
+    )
+    first = fields.String(
+        required=True,
+        dump_only=True,
+        format='uri-reference',
+        description='The URI of the first page in the paginated list. This can be a relative URI. '
+                    'The object retrieved from this URI will have: 1) An `items` field (an '
+                    'array), which will contain the first items of the paginated list; 2) May '
+                    'have a `next` field (a string), which would contain the URI of the next '
+                    'page in the list.',
+        example='/list?page=1',
+    )
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'itemsType' in obj
+        assert 'first' in obj
+        return obj
+
+
+class DebtorsListSchema(PaginatedListSchema):
+    uri = fields.String(
+        required=True,
+        dump_only=True,
+        format='uri-reference',
+        description=URI_DESCRIPTION,
+        example='/debtors/.list',
+    )
+    type = fields.Function(
+        lambda obj: 'DebtorsList',
+        required=True,
+        type='string',
+        description='The type of this object.',
+        example='DebtorsList',
+    )
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'uri' in obj
+        assert 'itemsType' in obj
+        assert 'first' in obj
+        return obj
+
+
+class DebtorReservationRequestSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='DebtorReservationRequest',
+        load_only=True,
+        description='The type of this object.',
+        example='DebtorReservationRequest',
+    )
+
+
+class DebtorReservationSchema(ValidateTypeMixin, Schema):
+    type = fields.Function(
+        lambda obj: 'DebtorReservation',
+        required=True,
+        type='string',
+        description='The type of this object.',
+        example='DebtorReservation',
+    )
+    created_at = fields.DateTime(
+        required=True,
+        dump_only=True,
+        data_key='createdAt',
+        description='The moment at which the reservation was created.',
+    )
+    reservation_id = fields.Function(
+        lambda obj: obj.reservation_id or 0,
+        required=True,
+        data_key='reservationId',
+        type='integer',
+        format='int64',
+        description='A number that will be needed in order to activate the debtor.',
+        example=12345,
+    )
+    debtor_id = fields.Function(
+        lambda obj: i64_to_u64(obj.debtor_id),
+        required=True,
+        data_key='debtorId',
+        type='integer',
+        format='int64',
+        description='The reserved debtor ID.',
+        example=1,
+    )
+    valid_until = fields.Method(
+        'get_valid_until_string',
+        required=True,
+        data_key='validUntil',
+        type='string',
+        format='date-time',
+        description='The moment at which the reservation will expire.',
+    )
+
+    def get_valid_until_string(self, obj) -> str:
+        calc_reservation_deadline = self.context['calc_reservation_deadline']
+        return calc_reservation_deadline(obj.created_at).isoformat()
+
+
+class DebtorActivationRequestSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='DebtorActivationRequest',
+        load_only=True,
+        description='The type of this object.',
+        example='DebtorActivationRequest',
+    )
+    optional_reservation_id = fields.Integer(
+        load_only=True,
+        data_key='reservationId',
+        format='int64',
+        description='When this field is present, the server will try to activate an existing '
+                    'reservation with matching `debtorID` and `reservationID`. When this '
+                    'field is not present, the server will try to reserve the debtor ID '
+                    'specified in the path, and activate it at once.',
+        example=12345,
+    )
+
+
+class DebtorDeactivationRequestSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='DebtorDeactivationRequest',
+        load_only=True,
+        description='The type of this object.',
+        example='DebtorDeactivationRequest',
+    )
 
 
 class InterestRateLowerLimitSchema(ValidateTypeMixin, Schema):
@@ -123,12 +307,11 @@ class DebtorSchema(Schema):
         description="The URI of the authority that manages creditors' accounts.",
         example='https://example.com/authority',
     )
-    created_at_date = fields.Date(
+    created_at = fields.DateTime(
         required=True,
         dump_only=True,
-        data_key='createdOn',
-        description=Debtor.created_at_date.comment,
-        example='2019-11-30',
+        data_key='createdAt',
+        description='The moment at which the debtor was created.',
     )
     balance = fields.Int(
         required=True,

@@ -55,4 +55,4 @@ RUN python -m compileall -x '^\./(migrations|tests)/' . \
 
 USER $FLASK_APP
 ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
-CMD ["serve"]
+CMD ["gunicorn"]

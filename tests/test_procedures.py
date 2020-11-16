@@ -27,28 +27,31 @@ def test_version(db_session):
 def test_lock_or_create_debtor(db_session):
     debtor = p.lock_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
-    assert not debtor.is_active
-    assert debtor.deactivated_at_date is None
+    assert debtor.is_activated
+    assert not debtor.is_deactivated
     cas = ConfigureAccountSignal.query.one()
     assert cas.debtor_id == D_ID
 
     debtor = p.lock_or_create_debtor(D_ID)
     assert debtor.debtor_id == D_ID
-    assert not debtor.is_active
-    assert debtor.deactivated_at_date is None
+    assert debtor.is_activated
+    assert not debtor.is_deactivated
     assert len(ConfigureAccountSignal.query.all()) == 1
 
 
 def test_deactivate_debtor(db_session, debtor):
+    assert debtor.is_activated
+    assert not debtor.is_deactivated
     p.deactivate_debtor(D_ID)
     debtor = p.get_debtor(D_ID)
-    assert not debtor.is_active
-    assert debtor.deactivated_at_date is not None
+    assert debtor.is_activated
+    assert debtor.is_deactivated
+    assert debtor.deactivation_date is not None
 
     p.deactivate_debtor(D_ID)
     debtor = p.get_debtor(D_ID)
-    assert not debtor.is_active
-    assert debtor.deactivated_at_date is not None
+    assert debtor.is_deactivated
+    assert debtor.deactivation_date is not None
 
     p.deactivate_debtor(1234567890)
     assert p.get_debtor(1234567890) is None
@@ -223,7 +226,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert a.status_flags == 0
     assert len(ChangeInterestRateSignal.query.all()) == 0
     d = Debtor.query.filter_by(debtor_id=D_ID).one()
-    assert d.deactivated_at_date is not None
+    assert d.deactivation_date is not None
     assert d.initiated_transfers_count == 0
     assert d.balance == -1000
     assert d.balance_ts == change_ts
@@ -267,7 +270,6 @@ def test_update_debtor_policy(db_session, debtor, current_ts):
 
     p.update_debtor_policy(D_ID, 6.66, [LowerLimit(0.0, date_years_ago)], [LowerLimit(-1000, date_years_ago)])
     debtor = p.get_debtor(D_ID)
-    assert debtor.is_active
     assert debtor.interest_rate_target == 6.66
     assert len(debtor.interest_rate_lower_limits) == 1
     assert debtor.interest_rate_lower_limits[0] == LowerLimit(0.0, date_years_ago)
@@ -321,7 +323,8 @@ def test_delete_non_existing_initiated_transfer(db_session):
 def test_create_new_debtor(db_session, debtor):
     with pytest.raises(p.DebtorExistsError):
         p.create_new_debtor(D_ID)
-    debtor = p.create_new_debtor(1234567890)
+    debtor = p.reserve_debtor(1234567890)
+    debtor = p.activate_debtor(1234567890, debtor.reservation_id)
     assert debtor.debtor_id == 1234567890
     assert len(ConfigureAccountSignal.query.all()) == 2
     assert ConfigureAccountSignal.query.filter_by(debtor_id=D_ID).one()
@@ -334,7 +337,6 @@ def test_initiate_transfer(db_session, debtor):
     assert p.get_debtor_transfer_uuids(D_ID) == []
     t = p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
     debtor = p.get_debtor(D_ID)
-    assert debtor.is_active
     assert len(InitiatedTransfer.query.all()) == 1
     assert t.debtor_id == D_ID
     assert t.transfer_uuid == TEST_UUID
@@ -495,8 +497,8 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
     assert len(Account.query.all()) == 0
     d = Debtor.query.one()
     assert d
-    assert not d.status & Debtor.STATUS_HAS_ACCOUNT_FLAG
-    assert d.deactivated_at_date is not None
+    assert not d.status_flags & Debtor.STATUS_HAS_ACCOUNT_FLAG
+    assert d.deactivation_date is not None
     assert d.initiated_transfers_count == 0
     assert len(InitiatedTransfer.query.filter_by(debtor_id=D_ID).all()) == 0
     assert len(Account.query.all()) == 0

@@ -10,7 +10,7 @@ C_ID = 1
 
 @pytest.fixture
 def debtor(db_session):
-    debtor = Debtor(debtor_id=D_ID)
+    debtor = Debtor(debtor_id=D_ID, status_flags=Debtor.STATUS_IS_ACTIVATED_FLAG)
     db_session.add(debtor)
     db_session.commit()
     return debtor
@@ -86,12 +86,11 @@ def test_running_transfer_attrs(debtor, db_session, current_ts):
 def test_debtor_attrs(debtor, db_session, current_ts):
     assert debtor.interest_rate == 0.0
     assert debtor.min_account_balance == MIN_INT64
-    assert not debtor.is_active
     debtor.interest_rate_target = 6.66
-    debtor.status = Debtor.STATUS_HAS_ACTIVITY_FLAG
+    debtor.status = Debtor.STATUS_IS_ACTIVATED_FLAG
     debtor.balance_lower_limits = [LowerLimit(-1000, date(2100, 1, 1))]
-    assert debtor.is_active
     assert debtor.interest_rate == 6.66
     assert debtor.min_account_balance == -1000
-    debtor.deactivated_at_date = current_ts
-    assert not debtor.is_active
+    debtor.deactivate()
+    assert debtor.is_activated
+    assert debtor.is_deactivated

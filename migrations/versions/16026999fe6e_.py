@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 4e4512eee480
+Revision ID: 16026999fe6e
 Revises: 8d09bea9c7d1
-Create Date: 2020-11-15 22:28:13.006606
+Create Date: 2020-11-16 16:21:40.512508
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '4e4512eee480'
+revision = '16026999fe6e'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -69,9 +69,10 @@ def upgrade():
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
-    sa.Column('status', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - has activity, 2 - has account."),
-    sa.Column('created_at_date', sa.DATE(), nullable=False, comment='The date on which the debtor was created.'),
-    sa.Column('deactivated_at_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet. Management operations (like policy updates and credit issuing) are not allowed on deactivated debtors. Once deactivated, a debtor stays deactivated until it is deleted.'),
+    sa.Column('status_flags', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is activated, 2 - is deactivated, 4 - has account."),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('reservation_id', sa.BigInteger(), server_default=sa.text("nextval('debtor_reservation_id_seq')"), nullable=True),
+    sa.Column('deactivation_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted. A `NULL` value for this column means either that the debtor has not been deactivated yet, or that the deactivation date is unknown.'),
     sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
     sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
     sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The annual rate (in percents) at which the debtor wants the interest to accumulate on creditors' accounts. The actual interest rate may be different if interest rate limits are enforced."),
@@ -104,6 +105,15 @@ def upgrade():
     sa.Column('committed_amount', sa.BigInteger(), nullable=False),
     sa.CheckConstraint('committed_amount >= 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
+    )
+    op.create_table('node_config',
+    sa.Column('is_effective', sa.BOOLEAN(), nullable=False),
+    sa.Column('min_debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('max_debtor_id', sa.BigInteger(), nullable=False),
+    sa.CheckConstraint('is_effective = true'),
+    sa.CheckConstraint('min_debtor_id <= max_debtor_id'),
+    sa.PrimaryKeyConstraint('is_effective'),
+    comment='Represents the global node configuration (a singleton). The node is responsible only for debtor IDs that are within the interval [min_debtor_id, max_debtor_id].'
     )
     op.create_table('prepare_transfer_signal',
     sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
@@ -169,6 +179,7 @@ def downgrade():
     op.drop_index('idx_issuing_coordinator_request_id', table_name='running_transfer')
     op.drop_table('running_transfer')
     op.drop_table('prepare_transfer_signal')
+    op.drop_table('node_config')
     op.drop_table('finalize_transfer_signal')
     op.drop_table('debtor')
     op.drop_table('configure_account_signal')

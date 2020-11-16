@@ -6,18 +6,6 @@ D_ID = -1
 C_ID = 1
 
 
-def test_create_debtor(db_session):
-    a.create_debtor(
-        debtor_id=D_ID,
-    )
-
-
-def test_deactivate_debtor(db_session):
-    a.deactivate_debtor(
-        debtor_id=D_ID,
-    )
-
-
 def test_on_account_update_signal(db_session):
     a.on_account_update_signal(
         debtor_id=D_ID,

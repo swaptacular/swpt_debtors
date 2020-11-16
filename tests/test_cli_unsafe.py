@@ -256,9 +256,9 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
 
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
-    db.session.add(Debtor(debtor_id=1, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
+    db.session.add(Debtor(debtor_id=1, status_flags=Debtor.STATUS_HAS_ACCOUNT_FLAG | Debtor.STATUS_IS_ACTIVATED_FLAG))
     procedures.initiate_transfer(1, TEST_UUID, 1, 50, '', '')
-    db.session.add(Debtor(debtor_id=2, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
+    db.session.add(Debtor(debtor_id=2, status_flags=Debtor.STATUS_HAS_ACCOUNT_FLAG | Debtor.STATUS_IS_ACTIVATED_FLAG))
     db.session.add(Account(
         debtor_id=1,
         creditor_id=ROOT_CREDITOR_ID,
@@ -284,8 +284,8 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     assert len(Debtor.query.all()) == 2
     d = Debtor.query.filter_by(debtor_id=1).one()
     assert d
-    assert not d.status & Debtor.STATUS_HAS_ACCOUNT_FLAG
-    assert d.deactivated_at_date is not None
+    assert not d.status_flags & Debtor.STATUS_HAS_ACCOUNT_FLAG
+    assert d.deactivation_date is not None
     assert d.initiated_transfers_count == 0
     assert len(InitiatedTransfer.query.filter_by(debtor_id=1).all()) == 0
     assert len(Account.query.all()) == 0

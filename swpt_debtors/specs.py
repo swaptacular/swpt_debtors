@@ -153,3 +153,21 @@ API_SPEC_OPTIONS = {
         },
     },
 }
+
+DEBTORS_LIST_EXAMPLE = {
+    'type': 'DebtorsList',
+    'uri': '/debtors/.list',
+    'itemsType': 'ObjectReference',
+    'first': '/debtors/9223372036854775808/enumerate',
+}
+
+DEBTOR_LINKS_EXAMPLE = {
+    'uri': '/debtors/2/enumerate',
+    'type': 'ObjectReferencesPage',
+    'items': [
+        {'uri': '/debtors/2/'},
+        {'uri': '/debtors/5/'},
+        {'uri': '/debtors/11/'},
+    ],
+    'next': '/debtors/12/enumerate',
+}

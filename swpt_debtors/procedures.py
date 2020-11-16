@@ -1,20 +1,35 @@
 from datetime import datetime, date, timedelta, timezone
+from random import randint
 from uuid import UUID
-from typing import TypeVar, Optional, Callable, List
+from typing import TypeVar, Optional, Callable, List, Tuple
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import true
 from swpt_lib.utils import Seqnum, u64_to_i64
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizeTransferSignal, \
     InitiatedTransfer, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
-    MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
+    NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
 
 TD_SECOND = timedelta(seconds=1)
+ACTIVATION_STATUS_MASK = Debtor.STATUS_IS_ACTIVATED_FLAG | Debtor.STATUS_IS_DEACTIVATED_FLAG
+
+
+class MisconfiguredNodeError(Exception):
+    """The node is misconfigured."""
+
+
+class InvalidDebtorError(Exception):
+    """The node is not responsible for this debtor."""
+
+
+class InvalidReservationIdError(Exception):
+    """Invalid debtor reservation ID."""
 
 
 class DebtorDoesNotExistError(Exception):
@@ -56,8 +71,110 @@ class ConflictingPolicyError(Exception):
 
 
 @atomic
-def get_debtor(debtor_id: int) -> Optional[Debtor]:
-    return Debtor.get_instance(debtor_id)
+def configure_node(min_debtor_id: int, max_debtor_id: int) -> None:
+    assert MIN_INT64 <= min_debtor_id <= MAX_INT64
+    assert MIN_INT64 <= max_debtor_id <= MAX_INT64
+    assert min_debtor_id <= max_debtor_id
+
+    agent_config = NodeConfig.query.with_for_update().one_or_none()
+
+    if agent_config:
+        agent_config.min_debtor_id = min_debtor_id
+        agent_config.max_debtor_id = max_debtor_id
+    else:  # pragma: no cover
+        with db.retry_on_integrity_error():
+            db.session.add(NodeConfig(
+                min_debtor_id=min_debtor_id,
+                max_debtor_id=max_debtor_id,
+            ))
+
+
+@atomic
+def generate_new_debtor_id() -> int:
+    node_config = _get_node_config()
+    return randint(node_config.min_debtor_id, node_config.max_debtor_id)
+
+
+@atomic
+def get_debtor_ids(start_from: int, count: int = 1) -> Tuple[List[int], Optional[int]]:
+    query = db.session.\
+        query(Debtor.debtor_id).\
+        filter(Debtor.debtor_id >= start_from).\
+        filter(Debtor.status_flags.op('&')(ACTIVATION_STATUS_MASK) == Debtor.STATUS_IS_ACTIVATED_FLAG).\
+        order_by(Debtor.debtor_id).\
+        limit(count)
+    debtor_ids = [t[0] for t in query.all()]
+
+    if len(debtor_ids) > 0:
+        next_debtor_id = debtor_ids[-1] + 1
+    else:
+        next_debtor_id = _get_node_config().max_debtor_id + 1
+
+    if next_debtor_id > MAX_INT64 or next_debtor_id <= start_from:
+        next_debtor_id = None
+
+    return debtor_ids, next_debtor_id
+
+
+@atomic
+def reserve_debtor(debtor_id, verify_correctness=True) -> Debtor:
+    if verify_correctness and not _is_correct_debtor_id(debtor_id):
+        raise InvalidDebtorError()
+
+    debtor = Debtor(debtor_id=debtor_id)
+    db.session.add(debtor)
+    try:
+        db.session.flush()
+    except IntegrityError:
+        raise DebtorExistsError() from None
+
+    return debtor
+
+
+@atomic
+def activate_debtor(debtor_id: int, reservation_id: int) -> Debtor:
+    debtor = get_debtor(debtor_id, lock=True)
+    if debtor is None:
+        raise InvalidReservationIdError()
+
+    if not debtor.is_activated:
+        if reservation_id != debtor.reservation_id or debtor.is_deactivated:
+            raise InvalidReservationIdError()
+        debtor.activate()
+        _insert_configure_account_signal(debtor_id)
+
+    return debtor
+
+
+@atomic
+def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
+    debtor = get_active_debtor(debtor_id, lock=True)
+    if debtor:
+        debtor.deactivate()
+        if deleted_account:
+            debtor.status_flags &= ~Debtor.STATUS_HAS_ACCOUNT_FLAG
+            debtor.bll_values = None
+            debtor.bll_cutoffs = None
+            debtor.irll_values = None
+            debtor.irll_cutoffs = None
+        debtor.initiated_transfers_count = 0
+        InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
+
+
+@atomic
+def get_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
+    query = Debtor.query.filter_by(debtor_id=debtor_id)
+    if lock:
+        query = query.with_for_update()
+
+    return query.one_or_none()
+
+
+@atomic
+def get_active_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
+    debtor = get_debtor(debtor_id, lock=lock)
+    if debtor and debtor.is_activated and not debtor.is_deactivated:
+        return debtor
 
 
 @atomic
@@ -84,6 +201,8 @@ def lock_or_create_debtor(debtor_id: int) -> Debtor:
         with db.retry_on_integrity_error():
             db.session.add(debtor)
         _insert_configure_account_signal(debtor_id)
+    debtor.activate()
+
     return debtor
 
 
@@ -95,29 +214,12 @@ def update_debtor_balance(debtor_id: int, balance: int, balance_ts: datetime) ->
         # deactivated debtor. That way we guarantee that the debtor's
         # account will be (eventually) deleted from the
         # `swpt_accounts` service when it is no longer used.
-        debtor = Debtor(debtor_id=debtor_id, deactivated_at_date=datetime.now(tz=timezone.utc).date())
+        debtor = Debtor(debtor_id=debtor_id, deactivation_date=datetime.now(tz=timezone.utc).date())
         with db.retry_on_integrity_error():
             db.session.add(debtor)
     debtor.balance = balance
     debtor.balance_ts = balance_ts
-    debtor.status |= Debtor.STATUS_HAS_ACCOUNT_FLAG
-
-
-@atomic
-def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> Optional[Debtor]:
-    debtor = Debtor.lock_instance(debtor_id)
-    if debtor:
-        if debtor.deactivated_at_date is None:
-            debtor.deactivated_at_date = datetime.now(tz=timezone.utc).date()
-        if deleted_account:
-            debtor.status &= ~Debtor.STATUS_HAS_ACCOUNT_FLAG
-            debtor.bll_values = None
-            debtor.bll_cutoffs = None
-            debtor.irll_values = None
-            debtor.irll_cutoffs = None
-        debtor.initiated_transfers_count = 0
-        InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
-    return debtor
+    debtor.status_flags |= Debtor.STATUS_HAS_ACCOUNT_FLAG
 
 
 @atomic
@@ -562,10 +664,7 @@ def _increment_initiated_transfers_count(debtor: Debtor) -> None:
 
 
 def _throttle_debtor_actions(debtor_id: int) -> Debtor:
-    debtor = Debtor.query.filter_by(
-        debtor_id=debtor_id,
-        deactivated_at_date=None,
-    ).with_for_update().one_or_none()
+    debtor = get_active_debtor(debtor_id, lock=True)
     if debtor is None:
         raise DebtorDoesNotExistError()
 
@@ -577,7 +676,6 @@ def _throttle_debtor_actions(debtor_id: int) -> Debtor:
     if debtor.actions_throttle_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
         raise TooManyManagementActionsError()
     debtor.actions_throttle_count += 1
-    debtor.status |= Debtor.STATUS_HAS_ACTIVITY_FLAG
     return debtor
 
 
@@ -610,3 +708,22 @@ def _insert_configure_account_signal(debtor_id: int) -> None:
         debtor_id=debtor_id,
         ts=datetime.now(tz=timezone.utc),
     ))
+
+
+def _get_node_config() -> NodeConfig:
+    try:
+        return NodeConfig.query.one()
+    except exc.NoResultFound:  # pragma: no cover
+        raise MisconfiguredNodeError() from None
+
+
+def _is_correct_debtor_id(debtor_id: int) -> bool:
+    try:
+        config = _get_node_config()
+    except MisconfiguredNodeError:  # pragma: no cover
+        return False
+
+    if not config.min_debtor_id <= debtor_id <= config.max_debtor_id:
+        return False
+
+    return True
