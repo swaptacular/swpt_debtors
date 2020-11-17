@@ -439,12 +439,12 @@ class TransferErrorSchema(Schema):
     )
 
 
-class IssuingTransferCreationRequestSchema(ValidateTypeMixin, Schema):
+class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
-        missing='IssuingTransferCreationRequest',
-        default='IssuingTransferCreationRequest',
+        missing='TransferCreationRequest',
+        default='TransferCreationRequest',
         description='The type of this object.',
-        example='IssuingTransferCreationRequest',
+        example='TransferCreationRequest',
     )
     transfer_uuid = fields.UUID(
         required=True,

@@ -7,7 +7,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib.utils import u64_to_i64
 from .schemas import DebtorSchema, DebtorPolicySchema, TransferSchema, \
-    TransfersListSchema, IssuingTransferCreationRequestSchema, \
+    TransfersListSchema, TransferCreationRequestSchema, \
     TransfersList, TransferCancelationRequestSchema, DebtorReservationRequestSchema, \
     DebtorReservationSchema, DebtorsListSchema, ObjectReferencesPageSchema, \
     DebtorActivationRequestSchema, DebtorDeactivationRequestSchema
@@ -351,7 +351,7 @@ class TransfersListEndpoint(MethodView):
             abort(404)
         return TransfersList(debtor_id=debtorId, items=transfer_uuids)
 
-    @transfers_api.arguments(IssuingTransferCreationRequestSchema)
+    @transfers_api.arguments(TransferCreationRequestSchema)
     @transfers_api.response(TransferSchema(context=context), code=201, headers=specs.LOCATION_HEADER)
     @transfers_api.doc(operationId='createTransfer',
                        security=specs.SCOPE_ACCESS_MODIFY,

@@ -77,7 +77,7 @@ def test_debtor_schema(db_session):
 
 
 def test_deserialize_transfer_creation_request(db_session):
-    s = schemas.IssuingTransferCreationRequestSchema()
+    s = schemas.TransferCreationRequestSchema()
     with pytest.raises(ValidationError, match='The total byte-length of the note exceeds'):
         s.load({
             'creditorId': 1,
