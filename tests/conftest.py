@@ -17,6 +17,9 @@ config_dict = {
     'APP_TRANSFERS_FINALIZATION_AVG_SECONDS': 10.0,
     'APP_MAX_TRANSFERS_PER_MONTH': 10,
     'APP_AUTHORITY_URI': 'http://example.com/authority',
+    'APP_SUPERUSER_SUBJECT_REGEX': '^debtors-superuser$',
+    'APP_SUPERVISOR_SUBJECT_REGEX': '^debtors-supervisor$',
+    'APP_DEBTOR_SUBJECT_REGEX': '^debtors:([0-9]+)$',
 }
 
 

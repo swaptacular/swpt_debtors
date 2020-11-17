@@ -1,3 +1,6 @@
+import re
+from enum import IntEnum
+from typing import Tuple, Optional
 from datetime import datetime, timedelta
 from flask import redirect, url_for, request, current_app, g
 from flask.views import MethodView
@@ -11,6 +14,64 @@ from .schemas import DebtorSchema, DebtorPolicySchema, TransferSchema, \
 from .models import MIN_INT64
 from . import specs
 from . import procedures
+
+
+class UserType(IntEnum):
+    SUPERUSER = 1
+    SUPERVISOR = 2
+    DEBTOR = 3
+
+
+class UserIdPatternMatcher:
+    PATTERN_CONFIG_KEYS = {
+        UserType.SUPERUSER: 'APP_SUPERUSER_SUBJECT_REGEX',
+        UserType.SUPERVISOR: 'APP_SUPERVISOR_SUBJECT_REGEX',
+        UserType.DEBTOR: 'APP_DEBTOR_SUBJECT_REGEX',
+    }
+
+    def __init__(self):
+        self._regex_patterns = {}
+
+    def get_pattern(self, user_type: UserType) -> re.Pattern:
+        pattern_config_key = self.PATTERN_CONFIG_KEYS[user_type]
+        regex = current_app.config[pattern_config_key]
+        regex_patterns = self._regex_patterns
+        regex_pattern = regex_patterns.get(regex)
+        if regex_pattern is None:
+            regex_pattern = regex_patterns[regex] = re.compile(regex)
+
+        return regex_pattern
+
+    def match(self, user_id: str) -> Tuple[UserType, Optional[int]]:
+        for user_type in UserType:
+            pattern = self.get_pattern(user_type)
+            m = pattern.match(user_id)
+            if m:
+                debtor_id = u64_to_i64(int(m.group(1))) if user_type == UserType.DEBTOR else None
+                return user_type, debtor_id
+
+        abort(403)
+
+
+user_id_pattern_matcher = UserIdPatternMatcher()
+
+
+def parse_swpt_user_id_header() -> Tuple[UserType, Optional[int]]:
+    user_id = request.headers.get('X-Swpt-User-Id')
+    if user_id is None:
+        user_type = UserType.SUPERUSER
+        debtor_id = None
+    else:
+        user_type, debtor_id = user_id_pattern_matcher.match(user_id)
+
+    g.superuser = user_type == UserType.SUPERUSER
+    return user_type, debtor_id
+
+
+def ensure_admin():
+    user_type, _ = parse_swpt_user_id_header()
+    if user_type == UserType.DEBTOR:
+        abort(403)
 
 
 def calc_reservation_deadline(created_at: datetime) -> datetime:
@@ -32,6 +93,7 @@ admin_api = Blueprint(
     url_prefix='/debtors',
     description="View debtors list, create new debtors.",
 )
+admin_api.before_request(ensure_admin)
 
 
 @admin_api.route('/.debtor-reserve')
@@ -136,7 +198,7 @@ class DebtorReserveEndpoint(MethodView):
             debtor = procedures.reserve_debtor(debtorId)
         except procedures.DebtorExists:
             abort(409)
-        except procedures.InvalidDebtorError:  # pragma: no cover
+        except procedures.InvalidDebtor:  # pragma: no cover
             abort(500, message='The agent is not responsible for this debtor.')
 
         return debtor
@@ -162,7 +224,7 @@ class DebtorActivateEndpoint(MethodView):
             abort(409)
         except procedures.InvalidReservationId:
             abort(422, errors={'json': {'reservationId': ['Invalid ID.']}})
-        except procedures.InvalidDebtorError:  # pragma: no cover
+        except procedures.InvalidDebtor:  # pragma: no cover
             abort(500, message='The agent is not responsible for this debtor.')
 
         return debtor
@@ -236,11 +298,11 @@ class DebtorPolicyEndpoint(MethodView):
                 new_interest_rate_limits=policy_update_request['interest_rate_lower_limits'],
                 new_balance_limits=policy_update_request['balance_lower_limits'],
             )
-        except procedures.TooManyManagementActionsError:
+        except procedures.TooManyManagementActions:
             abort(403)
-        except procedures.DebtorDoesNotExistError:
+        except procedures.DebtorDoesNotExist:
             abort(404)
-        except procedures.ConflictingPolicyError as e:
+        except procedures.ConflictingPolicy as e:
             abort(409, message=e.message)
         return debtor
 
@@ -265,7 +327,7 @@ class TransfersListEndpoint(MethodView):
 
         try:
             transfer_uuids = procedures.get_debtor_transfer_uuids(debtorId)
-        except procedures.DebtorDoesNotExistError:
+        except procedures.DebtorDoesNotExist:
             abort(404)
         return TransfersList(debtor_id=debtorId, items=transfer_uuids)
 
@@ -291,13 +353,13 @@ class TransfersListEndpoint(MethodView):
                 transfer_note_format=transfer_creation_request['transfer_note_format'],
                 transfer_note=transfer_creation_request['transfer_note'],
             )
-        except procedures.TooManyManagementActionsError:
+        except procedures.TooManyManagementActions:
             abort(403)
-        except procedures.DebtorDoesNotExistError:
+        except procedures.DebtorDoesNotExist:
             abort(404)
-        except procedures.TransfersConflictError:
+        except procedures.TransfersConflict:
             abort(409)
-        except procedures.TransferExistsError:
+        except procedures.TransferExists:
             return redirect(location, code=303)
         return transfer, {'Location': location}
 
@@ -327,7 +389,7 @@ class TransferEndpoint(MethodView):
             transfer = procedures.cancel_transfer(debtorId, transferUuid)
         except procedures.ForbiddenTransferCancellation:  # pragma: no cover
             abort(403)
-        except procedures.TransferDoesNotExistError:
+        except procedures.TransferDoesNotExist:
             abort(404)
 
         return transfer

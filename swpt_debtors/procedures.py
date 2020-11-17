@@ -8,7 +8,7 @@ from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import true
 from swpt_lib.utils import Seqnum, u64_to_i64
 from .extensions import db
-from .lower_limits import LowerLimitSequence, TooLongLimitSequenceError
+from .lower_limits import LowerLimitSequence, TooLongLimitSequence
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizeTransferSignal, \
     InitiatedTransfer, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
     NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
@@ -20,38 +20,38 @@ TD_SECOND = timedelta(seconds=1)
 ACTIVATION_STATUS_MASK = Debtor.STATUS_IS_ACTIVATED_FLAG | Debtor.STATUS_IS_DEACTIVATED_FLAG
 
 
-class MisconfiguredNodeError(Exception):
+class MisconfiguredNode(Exception):
     """The node is misconfigured."""
 
 
-class InvalidDebtorError(Exception):
+class InvalidDebtor(Exception):
     """The node is not responsible for this debtor."""
 
 
-class InvalidReservationIdError(Exception):
+class InvalidReservationId(Exception):
     """Invalid debtor reservation ID."""
 
 
-class DebtorDoesNotExistError(Exception):
+class DebtorDoesNotExist(Exception):
     """The debtor does not exist."""
 
 
-class DebtorExistsError(Exception):
+class DebtorExists(Exception):
     """The same debtor record already exists."""
 
 
-class TransferDoesNotExistError(Exception):
+class TransferDoesNotExist(Exception):
     """The transfer does not exist."""
 
 
-class TransferExistsError(Exception):
+class TransferExists(Exception):
     """The same initiated transfer record already exists."""
 
     def __init__(self, transfer: InitiatedTransfer):
         self.transfer = transfer
 
 
-class TransfersConflictError(Exception):
+class TransfersConflict(Exception):
     """A different transfer with conflicting UUID already exists."""
 
 
@@ -59,11 +59,11 @@ class ForbiddenTransferCancellation(Exception):
     """The transfer can not be canceled."""
 
 
-class TooManyManagementActionsError(Exception):
+class TooManyManagementActions(Exception):
     """Too many management actions per month by a debtor."""
 
 
-class ConflictingPolicyError(Exception):
+class ConflictingPolicy(Exception):
     """The new debtor policy conflicts with the old one."""
 
     def __init__(self, message: str):
@@ -119,14 +119,14 @@ def get_debtor_ids(start_from: int, count: int = 1) -> Tuple[List[int], Optional
 @atomic
 def reserve_debtor(debtor_id, verify_correctness=True) -> Debtor:
     if verify_correctness and not _is_correct_debtor_id(debtor_id):
-        raise InvalidDebtorError()
+        raise InvalidDebtor()
 
     debtor = Debtor(debtor_id=debtor_id)
     db.session.add(debtor)
     try:
         db.session.flush()
     except IntegrityError:
-        raise DebtorExistsError() from None
+        raise DebtorExists() from None
 
     return debtor
 
@@ -135,11 +135,11 @@ def reserve_debtor(debtor_id, verify_correctness=True) -> Debtor:
 def activate_debtor(debtor_id: int, reservation_id: int) -> Debtor:
     debtor = get_debtor(debtor_id, lock=True)
     if debtor is None:
-        raise InvalidReservationIdError()
+        raise InvalidReservationId()
 
     if not debtor.is_activated:
         if reservation_id != debtor.reservation_id or debtor.is_deactivated:
-            raise InvalidReservationIdError()
+            raise InvalidReservationId()
         debtor.activate()
         _insert_configure_account_signal(debtor_id)
 
@@ -175,20 +175,6 @@ def get_active_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
     debtor = get_debtor(debtor_id, lock=lock)
     if debtor and debtor.is_activated and not debtor.is_deactivated:
         return debtor
-
-
-@atomic
-def create_new_debtor(debtor_id: int) -> Debtor:
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-
-    debtor = Debtor(debtor_id=debtor_id)
-    db.session.add(debtor)
-    try:
-        db.session.flush()
-    except IntegrityError:
-        raise DebtorExistsError()
-    _insert_configure_account_signal(debtor_id)
-    return debtor
 
 
 @atomic
@@ -237,15 +223,15 @@ def update_debtor_policy(
     interest_rate_lower_limits = interest_rate_lower_limits.current_limits(date_week_ago)
     try:
         interest_rate_lower_limits.add_limits(new_interest_rate_limits)
-    except TooLongLimitSequenceError:
-        raise ConflictingPolicyError('There are too many interest rate limits.')
+    except TooLongLimitSequence:
+        raise ConflictingPolicy('There are too many interest rate limits.')
 
     balance_lower_limits = debtor.balance_lower_limits
     balance_lower_limits = balance_lower_limits.current_limits(date_week_ago)
     try:
         balance_lower_limits.add_limits(new_balance_limits)
-    except TooLongLimitSequenceError:
-        raise ConflictingPolicyError('There are too many balance limits.')
+    except TooLongLimitSequence:
+        raise ConflictingPolicy('There are too many balance limits.')
 
     if interest_rate_target is not None:
         debtor.interest_rate_target = interest_rate_target
@@ -258,7 +244,7 @@ def update_debtor_policy(
 def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
     debtor_query = Debtor.query.filter_by(debtor_id=debtor_id)
     if not db.session.query(debtor_query.exists()).scalar():
-        raise DebtorDoesNotExistError()
+        raise DebtorDoesNotExist()
 
     rows = db.session.query(InitiatedTransfer.transfer_uuid).filter_by(debtor_id=debtor_id).all()
     return [uuid for (uuid,) in rows]
@@ -274,7 +260,7 @@ def cancel_transfer(debtor_id: int, transfer_uuid: UUID) -> InitiatedTransfer:
     initiated_transfer = InitiatedTransfer.lock_instance((debtor_id, transfer_uuid))
 
     if not initiated_transfer:
-        raise TransferDoesNotExistError()
+        raise TransferDoesNotExist()
 
     if initiated_transfer.is_successful:
         raise ForbiddenTransferCancellation()
@@ -622,7 +608,7 @@ def _insert_running_transfer_or_raise_conflict_error(
     try:
         db.session.flush()
     except IntegrityError:
-        raise TransfersConflictError()
+        raise TransfersConflict()
 
     db.session.add(PrepareTransferSignal(
         debtor_id=debtor.debtor_id,
@@ -653,20 +639,20 @@ def _raise_error_if_transfer_exists(
             and t.transfer_note == transfer_note
         )
         if is_same_transfer:
-            raise TransferExistsError(t)
-        raise TransfersConflictError()
+            raise TransferExists(t)
+        raise TransfersConflict()
 
 
 def _increment_initiated_transfers_count(debtor: Debtor) -> None:
     if debtor.initiated_transfers_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
-        raise TransfersConflictError()
+        raise TransfersConflict()
     debtor.initiated_transfers_count += 1
 
 
 def _throttle_debtor_actions(debtor_id: int) -> Debtor:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor is None:
-        raise DebtorDoesNotExistError()
+        raise DebtorDoesNotExist()
 
     current_date = datetime.now(tz=timezone.utc).date()
     number_of_elapsed_days = (current_date - debtor.actions_throttle_date).days
@@ -674,7 +660,7 @@ def _throttle_debtor_actions(debtor_id: int) -> Debtor:
         debtor.actions_throttle_count = 0
         debtor.actions_throttle_date = current_date
     if debtor.actions_throttle_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
-        raise TooManyManagementActionsError()
+        raise TooManyManagementActions()
     debtor.actions_throttle_count += 1
     return debtor
 
@@ -714,13 +700,13 @@ def _get_node_config() -> NodeConfig:
     try:
         return NodeConfig.query.one()
     except exc.NoResultFound:  # pragma: no cover
-        raise MisconfiguredNodeError() from None
+        raise MisconfiguredNode() from None
 
 
 def _is_correct_debtor_id(debtor_id: int) -> bool:
     try:
         config = _get_node_config()
-    except MisconfiguredNodeError:  # pragma: no cover
+    except MisconfiguredNode:  # pragma: no cover
         return False
 
     if not config.min_debtor_id <= debtor_id <= config.max_debtor_id:

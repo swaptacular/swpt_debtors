@@ -6,7 +6,7 @@ from collections import abc
 from flask import current_app
 
 
-class TooLongLimitSequenceError(Exception):
+class TooLongLimitSequence(Exception):
     """Exceeded the maximum allowed length for limit sequences."""
 
 
@@ -42,7 +42,7 @@ class LowerLimitSequence(abc.Sequence):
     def add_limit(self, new_limit: LowerLimit, check_limits_count: bool = True) -> None:
         """Add a limit, eliminate redundant limits, sort the sequence by cutoff date.
 
-        Raises `TooLongLimitSequenceError` if `check_limits_count` is
+        Raises `TooLongLimitSequence` if `check_limits_count` is
         `True` and the resulting sequence is too long.
 
         """
@@ -64,12 +64,12 @@ class LowerLimitSequence(abc.Sequence):
             self.sort()
             eliminator = find_eliminator_in_sorted_limit_sequence(self)
         if check_limits_count and len(self) > self._get_max_limits_count():
-            raise TooLongLimitSequenceError()
+            raise TooLongLimitSequence()
 
     def add_limits(self, limits: Sequence[LowerLimit]) -> None:
         """Safely add several limits at once.
 
-        Raises `TooLongLimitSequenceError` if the resulting number of
+        Raises `TooLongLimitSequence` if the resulting number of
         limits is too big.
 
         """
@@ -80,7 +80,7 @@ class LowerLimitSequence(abc.Sequence):
         # other, we can be certain that the resulting number of limits
         # will be no less than `len(limits)`.
         if len(limits) > max_limits_count:
-            raise TooLongLimitSequenceError()
+            raise TooLongLimitSequence()
 
         # We check the number of limits only at the end (not on each
         # added limit) because each added limit can eliminate any
@@ -88,7 +88,7 @@ class LowerLimitSequence(abc.Sequence):
         for limit in limits:
             self.add_limit(limit, check_limits_count=False)
         if len(self) > max_limits_count:
-            raise TooLongLimitSequenceError()
+            raise TooLongLimitSequence()
 
     def current_limits(self, current_date: date) -> LowerLimitSequence:
         """Return a new sequence containing only the limits effectual to the `current_date`."""

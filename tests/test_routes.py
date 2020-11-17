@@ -58,7 +58,7 @@ def test_create_debtor(client):
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'DebtorReservation'
-    assert data['DebtorId'] == 2
+    assert data['debtorId'] == 2
     assert isinstance(data['reservationId'], int)
     assert iso8601.parse_date(data['validUntil'])
     assert iso8601.parse_date(data['createdAt'])
@@ -80,7 +80,6 @@ def test_create_debtor(client):
         'reservationId': reservation_id,
     })
     assert r.status_code == 200
-    assert 'max-age' in r.headers['Cache-Control']
     data = r.get_json()
     assert data['type'] == 'Debtor'
     assert data['uri'] == '/debtors/2/'
@@ -98,7 +97,6 @@ def test_create_debtor(client):
     assert 'reservationId' in r.get_json()['errors']['json']
 
     r = client.post('/debtors/3/activate', json={})
-    assert 'max-age' in r.headers['Cache-Control']
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'Debtor'
@@ -119,14 +117,15 @@ def test_create_debtor(client):
 
     r = client.get('/debtors/3/')
     assert r.status_code == 200
+    assert 'max-age' in r.headers['Cache-Control']
 
-    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'creditors:3'}, json={})
+    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'debtors:3'}, json={})
     assert r.status_code == 403
 
-    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'creditors-supervisor'}, json={})
+    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'debtors-supervisor'}, json={})
     assert r.status_code == 403
 
-    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'creditors-superuser'}, json={})
+    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'debtors-superuser'}, json={})
     assert r.status_code == 204
 
     r = client.post('/debtors/3/deactivate', json={})

@@ -57,6 +57,9 @@ class Configuration(metaclass=MetaFlaskEnv):
     APP_DEACTIVATED_DEBTOR_RETENTION_DAYS = 1826
     APP_AUTHORITY_URI = '/authority'
     APP_DEBTORS_PER_PAGE = 2000
+    APP_SUPERUSER_SUBJECT_REGEX = '^debtors-superuser$'
+    APP_SUPERVISOR_SUBJECT_REGEX = '^debtors-supervisor$'
+    APP_DEBTOR_SUBJECT_REGEX = '^debtors:([0-9]+)$'
 
 
 def create_app(config_dict={}):

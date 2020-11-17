@@ -1,6 +1,6 @@
 import pytest
 from datetime import date, timedelta
-from swpt_debtors.lower_limits import LowerLimit, LowerLimitSequence, TooLongLimitSequenceError
+from swpt_debtors.lower_limits import LowerLimit, LowerLimitSequence, TooLongLimitSequence
 
 
 def test_add_limit_to_list(app):
@@ -27,7 +27,7 @@ def test_add_limit_max_count(app):
     to_add = [LowerLimit(-i, today + timedelta(days=i)) for i in range(11)]
     for limit in to_add[:10]:
         limits.add_limit(limit)
-    with pytest.raises(TooLongLimitSequenceError):
+    with pytest.raises(TooLongLimitSequence):
         limits.add_limit(to_add[10])
 
 
@@ -37,7 +37,7 @@ def test_add_limit_to_list_eliminator(app):
         LowerLimit(20, date(2000, 1, 2)),
         LowerLimit(30, date(2000, 1, 3)),
     ])
-    assert [l.value for l in limits] == [10, 20, 30]
+    assert [limit.value for limit in limits] == [10, 20, 30]
     limits.add_limit(LowerLimit(10, date(2000, 1, 1)))
     assert [l.value for l in limits] == [30]
 
@@ -51,7 +51,7 @@ def test_add_limits(app):
     limits = LowerLimitSequence()
     today = date(2000, 1, 1)
     to_add = [LowerLimit(-i, today + timedelta(days=i)) for i in range(11)]
-    with pytest.raises(TooLongLimitSequenceError):
+    with pytest.raises(TooLongLimitSequence):
         limits.add_limits(to_add)
 
     limits.add_limits(to_add[:10])
@@ -61,7 +61,7 @@ def test_add_limits(app):
     limits.add_limits(to_add[:5])
     assert list(limits) == to_add[:10]
 
-    with pytest.raises(TooLongLimitSequenceError):
+    with pytest.raises(TooLongLimitSequence):
         limits.add_limits([to_add[10]])
 
     # Add eliminating limit

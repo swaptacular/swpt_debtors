@@ -86,13 +86,20 @@ class ObjectReferencesPageSchema(Schema):
         return obj
 
 
-class PaginatedListSchema(Schema):
+class DebtorsListSchema(Schema):
+    uri = fields.String(
+        required=True,
+        dump_only=True,
+        format='uri-reference',
+        description=URI_DESCRIPTION,
+        example='/debtors/.list',
+    )
     type = fields.Function(
-        lambda obj: 'PaginatedList',
+        lambda obj: 'DebtorsList',
         required=True,
         type='string',
         description='The type of this object.',
-        example='PaginatedList',
+        example='DebtorsList',
     )
     items_type = fields.String(
         required=True,
@@ -111,29 +118,6 @@ class PaginatedListSchema(Schema):
                     'have a `next` field (a string), which would contain the URI of the next '
                     'page in the list.',
         example='/list?page=1',
-    )
-
-    @post_dump
-    def assert_required_fields(self, obj, many):
-        assert 'itemsType' in obj
-        assert 'first' in obj
-        return obj
-
-
-class DebtorsListSchema(PaginatedListSchema):
-    uri = fields.String(
-        required=True,
-        dump_only=True,
-        format='uri-reference',
-        description=URI_DESCRIPTION,
-        example='/debtors/.list',
-    )
-    type = fields.Function(
-        lambda obj: 'DebtorsList',
-        required=True,
-        type='string',
-        description='The type of this object.',
-        example='DebtorsList',
     )
 
     @post_dump

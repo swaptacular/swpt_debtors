@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, \
     RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, ConfigureAccountSignal, \
-    INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, BEGINNING_OF_TIME
+    MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, BEGINNING_OF_TIME
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
 
@@ -265,7 +265,7 @@ def test_interest_rate_absolute_limits(db_session, debtor):
 
 def test_update_debtor_policy(db_session, debtor, current_ts):
     date_years_ago = (current_ts - timedelta(days=5000)).date()
-    with pytest.raises(p.DebtorDoesNotExistError):
+    with pytest.raises(p.DebtorDoesNotExist):
         p.update_debtor_policy(1234567890, 6.66, [], [])
 
     p.update_debtor_policy(D_ID, 6.66, [LowerLimit(0.0, date_years_ago)], [LowerLimit(-1000, date_years_ago)])
@@ -282,9 +282,9 @@ def test_update_debtor_policy(db_session, debtor, current_ts):
     assert len(debtor.interest_rate_lower_limits) == 0
     assert len(debtor.balance_lower_limits) == 0
 
-    with pytest.raises(p.ConflictingPolicyError):
+    with pytest.raises(p.ConflictingPolicy):
         p.update_debtor_policy(D_ID, None, 11 * [LowerLimit(0.0, current_ts.date())], [])
-    with pytest.raises(p.ConflictingPolicyError):
+    with pytest.raises(p.ConflictingPolicy):
         p.update_debtor_policy(D_ID, None, [], 11 * [LowerLimit(-1000, current_ts.date())])
 
 
@@ -298,7 +298,7 @@ def test_initiated_transfers(db_session, debtor):
     ))
     db_session.commit()
     assert p.get_debtor(D_ID).initiated_transfers_count == 1
-    with pytest.raises(p.DebtorDoesNotExistError):
+    with pytest.raises(p.DebtorDoesNotExist):
         p.get_debtor_transfer_uuids(1234567890)
     uuids = p.get_debtor_transfer_uuids(D_ID)
     assert uuids == [TEST_UUID]
@@ -320,23 +320,11 @@ def test_delete_non_existing_initiated_transfer(db_session):
     assert p.delete_initiated_transfer(D_ID, TEST_UUID) is False
 
 
-def test_create_new_debtor(db_session, debtor):
-    with pytest.raises(p.DebtorExistsError):
-        p.create_new_debtor(D_ID)
-    debtor = p.reserve_debtor(1234567890)
-    debtor = p.activate_debtor(1234567890, debtor.reservation_id)
-    assert debtor.debtor_id == 1234567890
-    assert len(ConfigureAccountSignal.query.all()) == 2
-    assert ConfigureAccountSignal.query.filter_by(debtor_id=D_ID).one()
-    assert ConfigureAccountSignal.query.filter_by(debtor_id=1234567890).one()
-
-
 def test_initiate_transfer(db_session, debtor):
     assert len(RunningTransfer.query.all()) == 0
     assert len(InitiatedTransfer.query.all()) == 0
     assert p.get_debtor_transfer_uuids(D_ID) == []
     t = p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
-    debtor = p.get_debtor(D_ID)
     assert len(InitiatedTransfer.query.all()) == 1
     assert t.debtor_id == D_ID
     assert t.transfer_uuid == TEST_UUID
@@ -355,18 +343,18 @@ def test_initiate_transfer(db_session, debtor):
     assert rt.transfer_note_format == 'fmt'
     assert rt.transfer_note == 'test'
     assert not t.is_finalized
-    with pytest.raises(p.TransferExistsError):
+    with pytest.raises(p.TransferExists):
         p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
-    with pytest.raises(p.TransfersConflictError):
+    with pytest.raises(p.TransfersConflict):
         p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1001, 'fmt', 'test')
-    with pytest.raises(p.DebtorDoesNotExistError):
+    with pytest.raises(p.DebtorDoesNotExist):
         p.initiate_transfer(1234567890, TEST_UUID, C_ID, 1001, 'fmt', 'test')
     assert len(p.get_debtor_transfer_uuids(D_ID)) == 1
     assert len(RunningTransfer.query.all()) == 1
 
     p.delete_initiated_transfer(D_ID, TEST_UUID)
     assert len(RunningTransfer.query.all()) == 1
-    with pytest.raises(p.TransfersConflictError):
+    with pytest.raises(p.TransfersConflict):
         p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
 
 
@@ -387,7 +375,7 @@ def test_too_many_initiated_transfers(db_session, debtor):
         p.initiate_transfer(D_ID, uuid, C_ID, 1000, '', '')
     assert len(InitiatedTransfer.query.all()) == 10
     assert p.get_debtor(D_ID).initiated_transfers_count == 10
-    with pytest.raises(p.TransfersConflictError):
+    with pytest.raises(p.TransfersConflict):
         p.initiate_transfer(D_ID, '123e4567-e89b-12d3-a456-426655440010', C_ID, 1000, '', '')
 
 
@@ -590,3 +578,26 @@ def test_cancel_transfer_failure(db_session, debtor):
         p.cancel_transfer(D_ID, TEST_UUID)
     with pytest.raises(p.ForbiddenTransferCancellation):
         p.cancel_transfer(D_ID, TEST_UUID)
+
+
+def test_activate_new_creditor(db_session):
+    with pytest.raises(p.InvalidDebtor):
+        debtor = p.reserve_debtor(MAX_INT64 + 1)
+
+    debtor = p.reserve_debtor(D_ID)
+    assert debtor.debtor_id == D_ID
+    assert not debtor.is_activated
+    assert len(Debtor.query.all()) == 1
+    with pytest.raises(p.DebtorExists):
+        p.reserve_debtor(D_ID)
+
+    assert not p.get_active_debtor(D_ID)
+    with pytest.raises(p.InvalidReservationId):
+        p.activate_debtor(D_ID, -123)
+    p.activate_debtor(D_ID, debtor.reservation_id)
+    debtor = p.get_active_debtor(D_ID)
+    assert debtor
+    assert debtor.is_activated
+
+    with pytest.raises(p.DebtorExists):
+        p.reserve_debtor(D_ID)
