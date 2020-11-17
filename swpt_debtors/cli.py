@@ -7,7 +7,7 @@ from flask.cli import with_appcontext
 from swpt_debtors.models import MIN_INT64, MAX_INT64
 from swpt_debtors import procedures
 from .extensions import db
-from .table_scanners import RunningTransfersScanner, AccountsScanner
+from .table_scanners import RunningTransfersScanner, AccountsScanner, DebtorScanner
 
 
 @click.group('swpt_debtors')
@@ -69,7 +69,7 @@ def configure_interval(min_id, max_id):
 
     def validate(value):
         if not MIN_INT64 <= value <= MAX_INT64:
-            click.echo(f'Error: {value} is not a valid creditor ID.')
+            click.echo(f'Error: {value} is not a valid debtor ID.')
             sys.exit(1)
 
     validate(min_id)
@@ -123,3 +123,25 @@ def scan_accounts(hours, quit_early):
     assert hours > 0.0
     scanner = AccountsScanner(hours)
     scanner.run(db.engine, timedelta(hours=hours), quit_early=quit_early)
+
+
+@swpt_debtors.command('scan_debtors')
+@with_appcontext
+@click.option('-d', '--days', type=float, help='The number of days.')
+@click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
+def scan_debtors(days, quit_early):
+    """Start a process that garbage-collects inactive debtors.
+
+    The specified number of days determines the intended duration of a
+    single pass through the debtors table. If the number of days is
+    not specified, the value of the configuration variable
+    APP_DEBTORS_SCAN_DAYS is taken. If it is not set, the default
+    number of days is 7.
+
+    """
+
+    click.echo('Scanning debtors...')
+    days = days or float(current_app.config['APP_DEBTORS_SCAN_DAYS'])
+    assert days > 0.0
+    scanner = DebtorScanner()
+    scanner.run(db.engine, timedelta(days=days), quit_early=quit_early)

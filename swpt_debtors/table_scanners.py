@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import NamedTuple, Dict, List, TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
-from sqlalchemy.sql.expression import tuple_
+from sqlalchemy.sql.expression import tuple_, or_, null
 from sqlalchemy.sql.functions import coalesce
 from flask import current_app
 from .extensions import db
@@ -335,3 +335,82 @@ class AccountsScanner(TableScanner):
         self._mute_accounts(for_deletion_pks, current_ts, for_deletion=True)
         self._mute_accounts(capitalized_pks, current_ts, capitalized=True)
         self._mute_accounts(changed_rate_pks, current_ts)
+
+
+class DebtorScanner(TableScanner):
+    """Garbage-collects inactive debtors."""
+
+    table = Debtor.__table__
+    columns = [Debtor.debtor_id, Debtor.created_at, Debtor.status_flags, Debtor.deactivation_date]
+    pk = tuple_(table.c.debtor_id,)
+
+    def __init__(self):
+        super().__init__()
+        self.inactive_interval = timedelta(days=current_app.config['APP_INACTIVE_DEBTOR_RETENTION_DAYS'])
+        self.deactivated_interval = timedelta(days=current_app.config['APP_DEACTIVATED_DEBTOR_RETENTION_DAYS'])
+
+    @property
+    def blocks_per_query(self) -> int:
+        return int(current_app.config['APP_DEBTORS_SCAN_BLOCKS_PER_QUERY'])
+
+    @property
+    def target_beat_duration(self) -> int:
+        return int(current_app.config['APP_DEBTORS_SCAN_BEAT_MILLISECS'])
+
+    @atomic
+    def process_rows(self, rows):
+        current_ts = datetime.now(tz=timezone.utc)
+        self._delete_debtors_not_activated_for_long_time(rows, current_ts)
+        self._delete_debtors_deactivated_long_time_ago(rows, current_ts)
+
+    def _delete_debtors_not_activated_for_long_time(self, rows, current_ts):
+        c = self.table.c
+        activated_flag = Debtor.STATUS_IS_ACTIVATED_FLAG
+        inactive_cutoff_ts = current_ts - self.inactive_interval
+
+        def not_activated_for_long_time(row) -> bool:
+            return (
+                row[c.status_flags] & activated_flag == 0
+                and row[c.created_at] < inactive_cutoff_ts
+            )
+
+        ids_to_delete = [row[c.debtor_id] for row in rows if not_activated_for_long_time(row)]
+        if ids_to_delete:
+            to_delete = Debtor.query.\
+                filter(Debtor.debtor_id.in_(ids_to_delete)).\
+                filter(Debtor.status_flags.op('&')(activated_flag) == 0).\
+                filter(Debtor.created_at < inactive_cutoff_ts).\
+                with_for_update(skip_locked=True).\
+                all()
+
+            for debtor in to_delete:
+                db.session.delete(debtor)
+
+    def _delete_debtors_deactivated_long_time_ago(self, rows, current_ts):
+        c = self.table.c
+        deactivated_flag = Debtor.STATUS_IS_DEACTIVATED_FLAG
+        deactivated_cutoff_date = (current_ts - self.deactivated_interval).date()
+
+        def deactivated_long_time_ago(row) -> bool:
+            return (
+                row[c.status_flags] & deactivated_flag != 0
+                and (
+                    row[c.deactivation_date] is None
+                    or row[c.deactivation_date] < deactivated_cutoff_date
+                )
+            )
+
+        ids_to_delete = [row[c.debtor_id] for row in rows if deactivated_long_time_ago(row)]
+        if ids_to_delete:
+            to_delete = Debtor.query.\
+                filter(Debtor.debtor_id.in_(ids_to_delete)).\
+                filter(Debtor.status_flags.op('&')(deactivated_flag) != 0).\
+                filter(or_(
+                    Debtor.deactivation_date == null(),
+                    Debtor.deactivation_date < deactivated_cutoff_date),
+                ).\
+                with_for_update(skip_locked=True).\
+                all()
+
+            for debtor in to_delete:
+                db.session.delete(debtor)

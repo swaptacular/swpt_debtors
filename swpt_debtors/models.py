@@ -110,7 +110,7 @@ class Debtor(db.Model):
 
     _ad_seq = db.Sequence('debtor_reservation_id_seq', metadata=db.Model.metadata)
 
-    debtor_id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
+    debtor_id = db.Column(db.BigInteger, nullable=False)
     status_flags = db.Column(
         db.SmallInteger,
         nullable=False,
@@ -204,6 +204,7 @@ class Debtor(db.Model):
     irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
 
     __mapper_args__ = {
+        'primary_key': [debtor_id],
         'eager_defaults': True,
     }
     __table_args__ = (
@@ -211,11 +212,23 @@ class Debtor(db.Model):
             interest_rate_target >= INTEREST_RATE_FLOOR,
             interest_rate_target <= INTEREST_RATE_CEIL,
         )),
+        db.CheckConstraint(or_(
+            status_flags.op('&')(STATUS_IS_DEACTIVATED_FLAG) == 0,
+            status_flags.op('&')(STATUS_IS_ACTIVATED_FLAG) != 0,
+        )),
         db.CheckConstraint(actions_throttle_count >= 0),
         db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
         db.CheckConstraint(or_(bll_cutoffs == null(), func.array_ndims(bll_cutoffs) == 1)),
         db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
         db.CheckConstraint(or_(irll_cutoffs == null(), func.array_ndims(irll_cutoffs) == 1)),
+
+        # TODO: The `status_flags` column is not be part of the
+        #       primary key, but should be included in the primary key
+        #       index to allow index-only scans. Because SQLAlchemy
+        #       does not support this yet (2020-01-11), temporarily,
+        #       there are no index-only scans.
+        db.Index('idx_debtor_pk', debtor_id, unique=True),
+
         {
             'comment': "Represents debtor's principal information.",
         }

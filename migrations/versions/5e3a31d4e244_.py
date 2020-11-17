@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 16026999fe6e
+Revision ID: 5e3a31d4e244
 Revises: 8d09bea9c7d1
-Create Date: 2020-11-16 16:21:40.512508
+Create Date: 2020-11-17 18:15:03.354706
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '16026999fe6e'
+revision = '5e3a31d4e244'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -68,7 +68,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('debtor',
-    sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
+    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('status_flags', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is activated, 2 - is deactivated, 4 - has account."),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('reservation_id', sa.BigInteger(), server_default=sa.text("nextval('debtor_reservation_id_seq')"), nullable=True),
@@ -83,15 +83,16 @@ def upgrade():
     sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.Column('irll_values', postgresql.ARRAY(sa.REAL(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `null` is the same as an empty array. If the array contains values bigger that 100.0, they are treated as equal to 100.0.'),
     sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
+    sa.CheckConstraint('(status_flags & 2) = 0 OR (status_flags & 1) != 0'),
     sa.CheckConstraint('actions_throttle_count >= 0'),
     sa.CheckConstraint('bll_cutoffs IS NULL OR array_ndims(bll_cutoffs) = 1'),
     sa.CheckConstraint('bll_values IS NULL OR array_ndims(bll_values) = 1'),
     sa.CheckConstraint('interest_rate_target >= -50.0 AND interest_rate_target <= 100.0'),
     sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
     sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1'),
-    sa.PrimaryKeyConstraint('debtor_id'),
     comment="Represents debtor's principal information."
     )
+    op.create_index('idx_debtor_pk', 'debtor', ['debtor_id'], unique=True)
     op.create_table('finalize_transfer_signal',
     sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
@@ -181,6 +182,7 @@ def downgrade():
     op.drop_table('prepare_transfer_signal')
     op.drop_table('node_config')
     op.drop_table('finalize_transfer_signal')
+    op.drop_index('idx_debtor_pk', table_name='debtor')
     op.drop_table('debtor')
     op.drop_table('configure_account_signal')
     op.drop_table('change_interest_rate_signal')
