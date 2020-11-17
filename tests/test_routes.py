@@ -354,3 +354,29 @@ def test_cancel_transfer(client, debtor):
 
     r = client.post('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={})
     assert r.status_code == 200
+
+
+def test_unauthorized_debtor_id(debtor, client):
+    r = client.get('/debtors/123/policy')
+    assert r.status_code == 200
+
+    r = client.get('/debtors/123/policy', headers={'X-Swpt-User-Id': 'debtors-supervisor'})
+    assert r.status_code == 200
+
+    r = client.patch('/debtors/123/policy', json={}, headers={'X-Swpt-User-Id': 'debtors-supervisor'})
+    assert r.status_code == 403
+
+    r = client.get('/debtors/123/policy', headers={'X-Swpt-User-Id': 'debtors:123'})
+    assert r.status_code == 200
+
+    r = client.get('/debtors/123/policy', headers={'X-Swpt-User-Id': 'debtors:1'})
+    assert r.status_code == 403
+
+    r = client.get('/debtors/18446744073709551615/policy', headers={'X-Swpt-User-Id': 'INVALID_USER_ID'})
+    assert r.status_code == 403
+
+    with pytest.raises(ValueError):
+        r = client.get(
+            '/debtors/18446744073709551615/policy',
+            headers={'X-Swpt-User-Id': 'debtors:18446744073709551616'},
+        )

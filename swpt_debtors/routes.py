@@ -15,6 +15,8 @@ from .models import MIN_INT64
 from . import specs
 from . import procedures
 
+READ_ONLY_METHODS = ['GET', 'HEAD', 'OPTIONS']
+
 
 class UserType(IntEnum):
     SUPERUSER = 1
@@ -72,6 +74,22 @@ def ensure_admin():
     user_type, _ = parse_swpt_user_id_header()
     if user_type == UserType.DEBTOR:
         abort(403)
+
+
+def ensure_debtor_permissions():
+    # NOTE: Debtors can access and modify only their own resources.
+    # Supervisors can activate new debtors, and have read-only access
+    # to all debtors's resources. Superusers are allowed everything.
+
+    user_type, debtor_id = parse_swpt_user_id_header()
+
+    if user_type == UserType.DEBTOR and debtor_id != request.view_args.get('debtorId', debtor_id):
+        abort(403)
+
+    if user_type == UserType.SUPERVISOR and request.method not in READ_ONLY_METHODS:
+        abort(403)
+
+    g.debtor_id = debtor_id
 
 
 def calc_reservation_deadline(created_at: datetime) -> datetime:
@@ -271,6 +289,7 @@ policies_api = Blueprint(
     url_prefix='/debtors',
     description="Change individual debtor's policies.",
 )
+policies_api.before_request(ensure_debtor_permissions)
 
 
 @policies_api.route('/<i64:debtorId>/policy', parameters=[specs.DEBTOR_ID])
@@ -313,6 +332,7 @@ transfers_api = Blueprint(
     url_prefix='/debtors',
     description="Make credit-issuing transfers.",
 )
+transfers_api.before_request(ensure_debtor_permissions)
 
 
 @transfers_api.route('/<i64:debtorId>/transfers/', parameters=[specs.DEBTOR_ID])
