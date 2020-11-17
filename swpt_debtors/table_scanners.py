@@ -28,7 +28,7 @@ class RunningTransfersScanner(TableScanner):
     """Garbage-collects staled running transfers."""
 
     table = RunningTransfer.__table__
-    columns = [RunningTransfer.debtor_id, RunningTransfer.transfer_uuid, RunningTransfer.started_at_ts]
+    columns = [RunningTransfer.debtor_id, RunningTransfer.transfer_uuid, RunningTransfer.started_at]
     pk = tuple_(table.c.debtor_id, table.c.transfer_uuid)
 
     def __init__(self):

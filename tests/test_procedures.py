@@ -5,7 +5,8 @@ from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, \
     RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, ConfigureAccountSignal, \
-    MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, BEGINNING_OF_TIME
+    MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, BEGINNING_OF_TIME, \
+    SC_OK
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
 
@@ -432,7 +433,7 @@ def test_successful_transfer(db_session, debtor):
         coordinator_request_id=coordinator_request_id,
         recipient=str(C_ID),
         committed_amount=1000,
-        status_code='OK',
+        status_code=SC_OK,
     )
     it_list = InitiatedTransfer.query.all()
     assert len(it_list) == 1
@@ -572,7 +573,7 @@ def test_cancel_transfer_failure(db_session, debtor):
         coordinator_request_id=coordinator_request_id,
         recipient=str(C_ID),
         committed_amount=1000,
-        status_code='OK',
+        status_code=SC_OK,
     )
     with pytest.raises(p.ForbiddenTransferCancellation):
         p.cancel_transfer(D_ID, TEST_UUID)

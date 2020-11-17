@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 5e3a31d4e244
+Revision ID: 736e03bab67d
 Revises: 8d09bea9c7d1
-Create Date: 2020-11-17 18:15:03.354706
+Create Date: 2020-11-17 21:34:08.270517
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '5e3a31d4e244'
+revision = '736e03bab67d'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -43,7 +43,7 @@ def upgrade():
     comment='Tells who owes what to whom. This table is a replica of the table with the same name in the `swpt_accounts` service. It is used to perform maintenance routines like changing interest rates. Most of the columns get their values from the corresponding fields in the last applied `AccountChangeSignal`.'
     )
     op.create_table('capitalize_interest_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
@@ -52,7 +52,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('change_interest_rate_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
@@ -61,7 +61,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('configure_account_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('ts', sa.TIMESTAMP(timezone=True), nullable=False),
@@ -94,7 +94,7 @@ def upgrade():
     )
     op.create_index('idx_debtor_pk', 'debtor', ['debtor_id'], unique=True)
     op.create_table('finalize_transfer_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('sender_creditor_id', sa.BigInteger(), nullable=False),
@@ -117,7 +117,7 @@ def upgrade():
     comment='Represents the global node configuration (a singleton). The node is responsible only for debtor IDs that are within the interval [min_debtor_id, max_debtor_id].'
     )
     op.create_table('prepare_transfer_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
     sa.Column('min_locked_amount', sa.BigInteger(), nullable=False),
@@ -136,7 +136,7 @@ def upgrade():
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
     sa.Column('transfer_note_format', sa.String(), nullable=False, comment='The format used for the `note` field. An empty string signifies unstructured text.'),
     sa.Column('transfer_note', sa.String(), nullable=False, comment='A note from the debtor. Can be any string that the debtor wants the recipient to see.'),
-    sa.Column('started_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was started.'),
+    sa.Column('started_at', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was started.'),
     sa.Column('issuing_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('issuing_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
     sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
     sa.CheckConstraint('amount > 0'),
@@ -145,7 +145,7 @@ def upgrade():
     )
     op.create_index('idx_issuing_coordinator_request_id', 'running_transfer', ['debtor_id', 'issuing_coordinator_request_id'], unique=True)
     op.create_table('try_to_delete_account_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
@@ -159,13 +159,13 @@ def upgrade():
     sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
     sa.Column('transfer_note_format', sa.String(), nullable=False, comment='The format used for the `note` field. An empty string signifies unstructured text.'),
     sa.Column('transfer_note', sa.String(), nullable=False, comment='A note from the debtor. Can be any string that the debtor wants the recipient to see.'),
-    sa.Column('initiated_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was initiated.'),
-    sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),
-    sa.Column('is_successful', sa.BOOLEAN(), nullable=False, comment='Whether the transfer has been successful or not.'),
-    sa.Column('error', postgresql.JSON(astext_type=sa.Text()), nullable=True, comment='Describes the reason of the failure, in case the transfer has not been successful.'),
+    sa.Column('initiated_at', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was initiated.'),
+    sa.Column('finalized_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),
+    sa.Column('error_code', sa.String(), nullable=True),
+    sa.Column('total_locked_amount', sa.BigInteger(), nullable=True),
     sa.CheckConstraint('amount > 0'),
-    sa.CheckConstraint('finalized_at_ts IS NULL OR is_successful = true OR error IS NOT NULL'),
-    sa.CheckConstraint('is_successful = false OR finalized_at_ts IS NOT NULL'),
+    sa.CheckConstraint('error_code IS NULL OR finalized_at IS NOT NULL'),
+    sa.CheckConstraint('total_locked_amount >= 0'),
     sa.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
     comment='Represents an initiated issuing transfer. A new row is inserted when a debtor creates a new issuing transfer. The row is deleted when the debtor acknowledges (purges) the transfer.'

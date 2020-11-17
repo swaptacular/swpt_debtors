@@ -267,16 +267,13 @@ def test_initiate_transfer(client, debtor):
     data = r.get_json()
     assert data['amount'] == 1000
     assert iso8601.parse_date(data['initiatedAt'])
-    assert iso8601.parse_date(data['finalizedAt'])
-    assert data['isFinalized'] is False
-    assert data['errors'] == []
+    assert 'result' not in data
     assert data['creditorId'] == 1111
     assert data['type'] == 'Transfer'
     assert data['uri'] == '/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
     assert data['noteFormat'] == 'fmt'
     assert data['note'] == 'test'
-    assert data['debtor'] == {'uri': '/debtors/123/'}
-    assert data['isSuccessful'] is False
+    assert data['transfersList'] == {'uri': '/debtors/123/transfers/'}
     assert r.headers['Location'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
 
     r = client.get('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000')
@@ -338,7 +335,7 @@ def test_cancel_transfer(client, debtor):
     r = client.post('/debtors/123/transfers/', json=json_request_body)
     assert r.status_code == 201
     data = r.get_json()
-    assert data['isFinalized'] is False
+    assert 'result' not in data
 
     r = client.post('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001', json={})
     assert r.status_code == 404
@@ -349,8 +346,9 @@ def test_cancel_transfer(client, debtor):
     r = client.get('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000')
     assert r.status_code == 200
     data = r.get_json()
-    assert data['isFinalized'] is True
-    assert data['isSuccessful'] is False
+    result = data['result']
+    error = result['error']
+    assert error['errorCode'] == 'CANCELED_BY_THE_SENDER'
 
     r = client.post('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={})
     assert r.status_code == 200

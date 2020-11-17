@@ -1,7 +1,7 @@
 import re
 from enum import IntEnum
 from typing import Tuple, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import redirect, url_for, request, current_app, g
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
@@ -96,12 +96,20 @@ def calc_reservation_deadline(created_at: datetime) -> datetime:
     return created_at + timedelta(days=current_app.config['APP_INACTIVE_DEBTOR_RETENTION_DAYS'])
 
 
+def calc_checkup_datetime(debtor_id: int, initiated_at: datetime) -> datetime:
+    current_ts = datetime.now(tz=timezone.utc)
+    current_delay = current_ts - initiated_at
+    average_delay = timedelta(seconds=float(current_app.config['APP_TRANSFERS_FINALIZATION_AVG_SECONDS']))
+    return current_ts + max(current_delay, average_delay)
+
+
 context = {
     'Debtor': 'debtors.DebtorEndpoint',
     'DebtorPolicy': 'policies.DebtorPolicyEndpoint',
     'TransfersList': 'transfers.TransfersListEndpoint',
     'Transfer': 'transfers.TransferEndpoint',
     'calc_reservation_deadline': calc_reservation_deadline,
+    'calc_checkup_datetime': calc_checkup_datetime,
 }
 
 

@@ -1,9 +1,12 @@
+import iso8601
 import pytest
-from datetime import date
+from datetime import date, datetime
 from marshmallow import ValidationError
 from swpt_debtors import schemas
 from swpt_debtors.lower_limits import LowerLimit
-from swpt_debtors.models import Debtor, TRANSFER_NOTE_MAX_BYTES
+from swpt_debtors.models import Debtor, InitiatedTransfer, TRANSFER_NOTE_MAX_BYTES, BEGINNING_OF_TIME, \
+    SC_INSUFFICIENT_AVAILABLE_AMOUNT
+from swpt_debtors.routes import context
 
 
 def test_interest_rate_lower_limit_schema():
@@ -85,3 +88,78 @@ def test_deserialize_transfer_creation_request(db_session):
             'amount': 1000,
             'note': TRANSFER_NOTE_MAX_BYTES * 'Щ',
         })
+
+
+def test_serialize_transfer(app):
+    ts = schemas.TransferSchema(context=context)
+
+    transfer_data = {
+        'recipient_creditor_id': 2,
+        'transfer_uuid': '123e4567-e89b-12d3-a456-426655440000',
+        'debtor_id': -1,
+        'amount': 1000,
+        'transfer_note_format': 'json',
+        'transfer_note': '{"note": "test"}',
+        'initiated_at': BEGINNING_OF_TIME,
+        'finalized_at': datetime(2020, 1, 4),
+        'error_code': SC_INSUFFICIENT_AVAILABLE_AMOUNT,
+        'total_locked_amount': 5,
+    }
+    it = InitiatedTransfer(**transfer_data)
+
+    data = ts.dump(it)
+    assert data == {
+        "type": "Transfer",
+        "uri": "/debtors/18446744073709551615/transfers/123e4567-e89b-12d3-a456-426655440000",
+        "transferUuid": "123e4567-e89b-12d3-a456-426655440000",
+        "transfersList": {"uri": "/debtors/18446744073709551615/transfers/"},
+        "initiatedAt": "1970-01-01T00:00:00+00:00",
+        "creditorId": 2,
+        "amount": 1000,
+        "noteFormat": "json",
+        "note": '{"note": "test"}',
+        "result": {
+            "type": "TransferResult",
+            "finalizedAt": "2020-01-04T00:00:00",
+            "committedAmount": 0,
+            "error": {
+                "type": "TransferError",
+                "errorCode": SC_INSUFFICIENT_AVAILABLE_AMOUNT,
+                "totalLockedAmount": 5,
+            },
+        },
+    }
+
+    it.error_code = None
+    data = ts.dump(it)
+    assert data == {
+        "type": "Transfer",
+        "uri": "/debtors/18446744073709551615/transfers/123e4567-e89b-12d3-a456-426655440000",
+        "transferUuid": "123e4567-e89b-12d3-a456-426655440000",
+        "transfersList": {"uri": "/debtors/18446744073709551615/transfers/"},
+        "initiatedAt": "1970-01-01T00:00:00+00:00",
+        "creditorId": 2,
+        "amount": 1000,
+        "noteFormat": "json",
+        "note": '{"note": "test"}',
+        "result": {
+            "type": "TransferResult",
+            "finalizedAt": "2020-01-04T00:00:00",
+            "committedAmount": 1000,
+        },
+    }
+
+    it.finalized_at = None
+    data = ts.dump(it)
+    assert iso8601.parse_date(data.pop('checkupAt'))
+    assert data == {
+        "type": "Transfer",
+        "uri": "/debtors/18446744073709551615/transfers/123e4567-e89b-12d3-a456-426655440000",
+        "transferUuid": "123e4567-e89b-12d3-a456-426655440000",
+        "transfersList": {"uri": "/debtors/18446744073709551615/transfers/"},
+        "initiatedAt": "1970-01-01T00:00:00+00:00",
+        "creditorId": 2,
+        "amount": 1000,
+        "noteFormat": "json",
+        "note": '{"note": "test"}',
+    }

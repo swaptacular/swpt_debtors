@@ -5,7 +5,7 @@ from marshmallow import Schema, fields
 from flask import current_app
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import func, null, true, false, or_, and_
+from sqlalchemy.sql.expression import func, null, true, or_, and_
 from swpt_lib.utils import i64_to_u64
 from .lower_limits import lower_limits_property
 from .extensions import db, broker, MAIN_EXCHANGE_NAME
@@ -22,6 +22,11 @@ INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
 TRANSFER_NOTE_MAX_BYTES = 500
 ROOT_CREDITOR_ID = 0
+
+SC_OK = 'OK'
+SC_UNEXPECTED_ERROR = 'UNEXPECTED_ERROR'
+SC_INSUFFICIENT_AVAILABLE_AMOUNT = 'INSUFFICIENT_AVAILABLE_AMOUNT'
+SC_CANCELED_BY_THE_SENDER = 'CANCELED_BY_THE_SENDER'
 
 
 def get_now_utc():
@@ -63,7 +68,7 @@ class Signal(db.Model):
         )
         broker.publish_message(message, exchange=MAIN_EXCHANGE_NAME, routing_key=routing_key)
 
-    inserted_at_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    inserted_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
 
 
 class NodeConfig(db.Model):
@@ -285,7 +290,6 @@ class Debtor(db.Model):
         self.deactivation_date = datetime.now(tz=timezone.utc).date()
 
 
-
 class InitiatedTransfer(db.Model):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
@@ -308,32 +312,24 @@ class InitiatedTransfer(db.Model):
         comment='A note from the debtor. Can be any string that the debtor wants the '
                 'recipient to see.',
     )
-    initiated_at_ts = db.Column(
+    initiated_at = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,
         default=get_now_utc,
         comment='The moment at which the transfer was initiated.',
     )
-    finalized_at_ts = db.Column(
+    finalized_at = db.Column(
         db.TIMESTAMP(timezone=True),
         comment='The moment at which the transfer was finalized. A `null` means that the '
                 'transfer has not been finalized yet.',
     )
-    is_successful = db.Column(
-        db.BOOLEAN,
-        nullable=False,
-        default=False,
-        comment='Whether the transfer has been successful or not.',
-    )
-    error = db.Column(
-        pg.JSON,
-        comment='Describes the reason of the failure, in case the transfer has not been successful.',
-    )
+    error_code = db.Column(db.String)
+    total_locked_amount = db.Column(db.BigInteger)
     __table_args__ = (
         db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
         db.CheckConstraint(amount > 0),
-        db.CheckConstraint(or_(is_successful == false(), finalized_at_ts != null())),
-        db.CheckConstraint(or_(finalized_at_ts == null(), is_successful == true(), error != null())),
+        db.CheckConstraint(total_locked_amount >= 0),
+        db.CheckConstraint(or_(error_code == null(), finalized_at != null())),
         {
             'comment': 'Represents an initiated issuing transfer. A new row is inserted when '
                        'a debtor creates a new issuing transfer. The row is deleted when the '
@@ -343,13 +339,11 @@ class InitiatedTransfer(db.Model):
 
     @property
     def is_finalized(self):
-        return bool(self.finalized_at_ts)
+        return bool(self.finalized_at)
 
     @property
-    def errors(self):
-        if self.is_finalized and not self.is_successful:
-            return [self.error]
-        return []
+    def is_successful(self):
+        return bool(self.finalized_at and self.error_code is None)
 
 
 class RunningTransfer(db.Model):
@@ -378,7 +372,7 @@ class RunningTransfer(db.Model):
         comment='A note from the debtor. Can be any string that the debtor wants the '
                 'recipient to see.',
     )
-    started_at_ts = db.Column(
+    started_at = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,
         default=get_now_utc,
@@ -537,7 +531,7 @@ class PrepareTransferSignal(Signal):
         debtor_id = fields.Integer()
         sender_creditor_id = fields.Integer(data_key='creditor_id')
         recipient = fields.Function(lambda obj: str(i64_to_u64(obj.recipient_creditor_id)))
-        inserted_at_ts = fields.DateTime(data_key='ts')
+        inserted_at = fields.DateTime(data_key='ts')
         max_commit_delay = fields.Constant(MAX_INT32)
         min_account_balance = fields.Integer()
         min_interest_rate = fields.Constant(-100.0)
@@ -570,7 +564,7 @@ class FinalizeTransferSignal(Signal):
         finalization_flags = fields.Constant(0)
         transfer_note_format = fields.String()
         transfer_note = fields.String()
-        inserted_at_ts = fields.DateTime(data_key='ts')
+        inserted_at = fields.DateTime(data_key='ts')
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)

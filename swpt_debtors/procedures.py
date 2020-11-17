@@ -11,7 +11,8 @@ from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequence
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizeTransferSignal, \
     InitiatedTransfer, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
-    NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID
+    NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
+    SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -275,8 +276,8 @@ def cancel_transfer(debtor_id: int, transfer_uuid: UUID) -> InitiatedTransfer:
 
         if rt.is_settled:
             raise ForbiddenTransferCancellation()
-        initiated_transfer.finalized_at_ts = datetime.now(tz=timezone.utc)
-        initiated_transfer.error = {'errorCode': 'CANCELED_TRANSFER'}
+        initiated_transfer.finalized_at = datetime.now(tz=timezone.utc)
+        initiated_transfer.error_code = SC_CANCELED_BY_THE_SENDER
         db.session.delete(rt)
 
     assert initiated_transfer.is_finalized and not initiated_transfer.is_successful
@@ -372,16 +373,18 @@ def process_rejected_issuing_transfer_signal(
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and not rt.is_settled:
         if rt.debtor_id == debtor_id and ROOT_CREDITOR_ID == sender_creditor_id:
-            error = {
-                'errorCode': status_code,
-                'totalLockedAmount': total_locked_amount,
-            }
+            _finalize_initiated_transfer(
+                rt.debtor_id,
+                rt.transfer_uuid,
+                error_code=status_code,
+                total_locked_amount=total_locked_amount,
+            )
         else:  # pragma:  no cover
-            error = {
-                'errorCode': 'UNEXPECTED_ERROR',
-                'totalLockedAmount': 0,
-            }
-        _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=error)
+            _finalize_initiated_transfer(
+                rt.debtor_id,
+                rt.transfer_uuid,
+                error_code=SC_UNEXPECTED_ERROR,
+            )
         db.session.delete(rt)
 
 
@@ -472,10 +475,9 @@ def process_finalized_issuing_transfer_signal(
     if rt_matches_the_signal:
         assert rt is not None
         if committed_amount == rt.amount and recipient_creditor_id == rt.recipient_creditor_id:
-            error = None
+            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid)
         else:  # pragma: no cover
-            error = {'errorCode': status_code}
-        _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error=error)
+            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error_code=status_code)
         db.session.delete(rt)
 
 
@@ -678,15 +680,14 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
 def _finalize_initiated_transfer(
         debtor_id: int,
         transfer_uuid: int,
-        finalized_at_ts: datetime = None,
-        error: dict = None) -> None:
+        error_code: str = None,
+        total_locked_amount: int = None) -> None:
 
     initiated_transfer = InitiatedTransfer.lock_instance((debtor_id, transfer_uuid))
-    if initiated_transfer and initiated_transfer.finalized_at_ts is None:
-        initiated_transfer.finalized_at_ts = finalized_at_ts or datetime.now(tz=timezone.utc)
-        initiated_transfer.is_successful = error is None
-        if error is not None:
-            initiated_transfer.error = error
+    if initiated_transfer and initiated_transfer.finalized_at is None:
+        initiated_transfer.finalized_at = datetime.now(tz=timezone.utc)
+        initiated_transfer.error_code = error_code
+        initiated_transfer.total_locked_amount = total_locked_amount
 
 
 def _insert_configure_account_signal(debtor_id: int) -> None:

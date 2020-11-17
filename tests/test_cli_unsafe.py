@@ -38,7 +38,7 @@ def test_scan_running_transfers(app_unsafe_session):
         transfer_note_format='',
         transfer_note='',
         issuing_transfer_id=666,
-        started_at_ts=datetime(2000, 1, 1, tzinfo=timezone.utc)
+        started_at=datetime(2000, 1, 1, tzinfo=timezone.utc)
     )
     db.session.add(running_transfer)
     db.session.commit()

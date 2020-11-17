@@ -1,12 +1,11 @@
 from copy import copy
-from datetime import datetime, timezone, timedelta
 from marshmallow import Schema, fields, validate, pre_dump, post_dump, post_load, \
-    validates, ValidationError
+    validates, missing, ValidationError
 from flask import url_for, current_app
 from swpt_lib.utils import i64_to_u64
 from .lower_limits import LowerLimit
 from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
-    TRANSFER_NOTE_MAX_BYTES, Debtor, InitiatedTransfer
+    TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, Debtor, InitiatedTransfer
 
 URI_DESCRIPTION = '\
 The URI of this object. Can be a relative URI.'
@@ -424,19 +423,90 @@ class TransferErrorSchema(Schema):
         description='The type of this object.',
         example='TransferError',
     )
-    errorCode = fields.String(
+    error_code = fields.String(
         required=True,
         dump_only=True,
-        description='The error code.',
+        data_key='errorCode',
+        description='The error code.'
+                    '\n\n'
+                    '* `"CANCELED_BY_THE_SENDER"` signifies that the transfer has been '
+                    '  canceled the sender.\n'
+                    '* `"SENDER_DOES_NOT_EXIST"` signifies that the sender\'s account '
+                    '  does not exist.\n'
+                    '* `"RECIPIENT_IS_UNREACHABLE"` signifies that the recipient\'s'
+                    '  account does not exist, or does not accept incoming transfers.\n'
+                    '* `"NO_RECIPIENT_CONFIRMATION"` signifies that a confirmation from '
+                    '  the recipient is required, but has not been obtained.\n'
+                    '* `"TRANSFER_NOTE_IS_TOO_LONG"` signifies that the transfer has been '
+                    '  rejected because the byte-length of the transfer note is too big.\n'
+                    '* `"INSUFFICIENT_AVAILABLE_AMOUNT"` signifies that the transfer '
+                    '  has been rejected due to insufficient amount available on the '
+                    '  sender\'s account.\n'
+                    '* `"TERMINATED"` signifies that the transfer has been terminated '
+                    '  due to expired deadline, unapproved interest rate change, or '
+                    '  some other *temporary or correctable condition*. If the client '
+                    '  verifies the transer options and retries the transfer, chances '
+                    '  are that it will be committed successfully.\n',
         example='INSUFFICIENT_AVAILABLE_AMOUNT',
     )
-    totalLockedAmount = fields.Integer(
-        required=True,
-        dump_only=True,
+    total_locked_amount = fields.Method(
+        'get_total_locked_amount',
         format="int64",
-        description='The total amount secured (locked) for prepared transfers on the account.',
+        data_key='totalLockedAmount',
+        description='This field will be present only when the transfer has been rejected '
+                    'due to insufficient available amount. In this case, it will contain '
+                    'the total sum secured (locked) for transfers on the account, '
+                    '*after* this transfer has been finalized.',
         example=0,
     )
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'errorCode' in obj
+        return obj
+
+    def get_total_locked_amount(self, obj):
+        if obj['error_code'] != SC_INSUFFICIENT_AVAILABLE_AMOUNT:
+            return missing
+        return obj.get('total_locked_amount') or 0
+
+
+class TransferResultSchema(Schema):
+    type = fields.Function(
+        lambda obj: 'TransferResult',
+        required=True,
+        type='string',
+        description='The type of this object.',
+        example='TransferResult',
+    )
+    finalized_at = fields.DateTime(
+        required=True,
+        dump_only=True,
+        data_key='finalizedAt',
+        description='The moment at which the transfer was finalized.',
+    )
+    committed_amount = fields.Integer(
+        required=True,
+        dump_only=True,
+        format='int64',
+        data_key='committedAmount',
+        description='The transferred amount. If the transfer has been successful, the value will '
+                    'be equal to the requested transfer amount (always a positive number). If '
+                    'the transfer has been unsuccessful, the value will be zero.',
+        example=0,
+    )
+    error = fields.Nested(
+        TransferErrorSchema,
+        dump_only=True,
+        description='An error that has occurred during the execution of the transfer. This field '
+                    'will be present if, and only if, the transfer has been unsuccessful.',
+    )
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'finalizedAt' in obj
+        assert 'committedAmount' in obj
+        return obj
 
 
 class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
@@ -503,12 +573,19 @@ class TransferSchema(Schema):
         description='The type of this object.',
         example='Transfer',
     )
-    debtor = fields.Nested(
+    transfers_list = fields.Nested(
         ObjectReferenceSchema,
         required=True,
         dump_only=True,
-        description="The URI of the corresponding `Debtor`.",
-        example={'uri': '/debtors/1/'},
+        data_key='transfersList',
+        description="The URI of creditor's `TransfersList`.",
+        example={'uri': '/debtors/2/transfers/'},
+    )
+    transfer_uuid = fields.UUID(
+        required=True,
+        data_key='transferUuid',
+        description="A client-generated UUID for the transfer.",
+        example='123e4567-e89b-12d3-a456-426655440000',
     )
     recipient_creditor_id = fields.Integer(
         required=True,
@@ -540,42 +617,30 @@ class TransferSchema(Schema):
         dump_only=True,
         data_key='note',
         description=InitiatedTransfer.transfer_note.comment,
+        example='Hello, World!',
     )
-    initiated_at_ts = fields.DateTime(
+    initiated_at = fields.DateTime(
         required=True,
         dump_only=True,
         data_key='initiatedAt',
-        description=InitiatedTransfer.initiated_at_ts.comment,
+        description=InitiatedTransfer.initiated_at.comment,
     )
-    is_finalized = fields.Boolean(
-        required=True,
-        dump_only=True,
-        data_key='isFinalized',
-        description='Whether the transfer has been finalized or not.',
-        example=True,
-    )
-    finalizedAt = fields.Method(
-        'get_finalized_at_string',
-        required=True,
+    checkup_at = fields.Method(
+        'get_checkup_at_string',
         type='string',
         format='date-time',
-        description='The moment at which the transfer has been finalized. If the transfer '
-                    'has not been finalized yet, this field contains an estimation of when '
-                    'the transfer should be finalized.',
+        data_key='checkupAt',
+        description="The moment at which the debtor is advised to look at the transfer "
+                    "again, to see if it's status has changed. If this field is not present, "
+                    "this means either that the status of the transfer is not expected to "
+                    "change, or that the moment of the expected change can not be predicted.",
     )
-    is_successful = fields.Boolean(
-        required=True,
+    result = fields.Nested(
+        TransferResultSchema,
         dump_only=True,
-        data_key='isSuccessful',
-        description=InitiatedTransfer.is_successful.comment,
-        example=False,
-    )
-    errors = fields.Nested(
-        TransferErrorSchema(many=True),
-        dump_only=True,
-        required=True,
-        description='Errors that have occurred during the execution of the transfer. If '
-                    'the transfer has been successful, this will be an empty array.',
+        description='Contains information about the outcome of the transfer. This field will '
+                    'be preset if, and only if, the transfer has been finalized. Note that a '
+                    'finalized transfer can be either successful, or unsuccessful.',
     )
 
     @pre_dump
@@ -588,18 +653,28 @@ class TransferSchema(Schema):
             debtorId=obj.debtor_id,
             transferUuid=obj.transfer_uuid,
         )
-        obj.debtor = {'uri': url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)}
+        obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
+
+        if obj.finalized_at:
+            result = {'finalized_at': obj.finalized_at}
+
+            error_code = obj.error_code
+            if error_code is None:
+                result['committed_amount'] = obj.amount
+            else:
+                result['committed_amount'] = 0
+                result['error'] = {'error_code': error_code, 'total_locked_amount': obj.total_locked_amount}
+
+            obj.result = result
+
         return obj
 
-    def get_finalized_at_string(self, obj):
-        if obj.is_finalized:
-            finalized_at_ts = obj.finalized_at_ts
-        else:
-            current_ts = datetime.now(tz=timezone.utc)
-            current_delay = current_ts - obj.initiated_at_ts
-            average_delay = timedelta(seconds=current_app.config['APP_TRANSFERS_FINALIZATION_AVG_SECONDS'])
-            finalized_at_ts = current_ts + max(current_delay, average_delay)
-        return finalized_at_ts.isoformat()
+    def get_checkup_at_string(self, obj):
+        if obj.finalized_at:
+            return missing
+
+        calc_checkup_datetime = self.context['calc_checkup_datetime']
+        return calc_checkup_datetime(obj.debtor_id, obj.initiated_at).isoformat()
 
 
 class TransferCancelationRequestSchema(Schema):
@@ -608,27 +683,6 @@ class TransferCancelationRequestSchema(Schema):
         default='TransferCancelationRequest',
         description='The type of this object.',
         example='TransferCancelationRequest',
-    )
-
-
-class TransferUpdateRequestSchema(ValidateTypeMixin, Schema):
-    type = fields.String(
-        missing='TransferUpdateRequest',
-        default='TransferUpdateRequest',
-        description='The type of this object.',
-        example='TransferUpdateRequest',
-    )
-    is_finalized = fields.Boolean(
-        required=True,
-        data_key='isFinalized',
-        description='Should be `true`.',
-        example=True,
-    )
-    is_successful = fields.Boolean(
-        required=True,
-        data_key='isSuccessful',
-        description='Should be `false`.',
-        example=False,
     )
 
 

@@ -1,8 +1,8 @@
 import pytest
 import uuid
-from datetime import date, datetime
+from datetime import date
 from swpt_debtors.lower_limits import LowerLimit, LowerLimitSequence
-from swpt_debtors.models import Debtor, InitiatedTransfer, RunningTransfer, MIN_INT64
+from swpt_debtors.models import Debtor, RunningTransfer, MIN_INT64
 
 D_ID = -1
 C_ID = 1
@@ -46,26 +46,6 @@ def test_limit_properties(db_session):
     d.balance_lower_limits = LowerLimitSequence()
     assert d.bll_values is None
     assert d.bll_cutoffs is None
-
-
-def test_initiated_transfer_attrs(debtor, db_session, current_ts):
-    debtor_id = debtor.debtor_id
-    transfer_uuid = uuid.uuid4()
-    t = InitiatedTransfer(debtor_id=debtor_id, transfer_uuid=transfer_uuid, recipient_creditor_id=C_ID, amount=1)
-    db_session.add(t)
-    db_session.commit()
-    t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one()
-    assert t.transfer_note == ''
-    assert not t.is_finalized
-    assert t.errors == []
-    assert isinstance(t.initiated_at_ts, datetime)
-    assert not t.is_successful
-    t.finalized_at_ts = current_ts
-    t.error = {'errorCode': 'Uups!'}
-    assert t.is_finalized
-    assert t.errors == [{'errorCode': 'Uups!'}]
-    t.is_successful = True
-    assert t.errors == []
 
 
 def test_running_transfer_attrs(debtor, db_session, current_ts):
