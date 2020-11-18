@@ -342,9 +342,6 @@ transfers_api.before_request(ensure_debtor_permissions)
 
 @transfers_api.route('/<i64:debtorId>/transfers/', parameters=[specs.DEBTOR_ID])
 class TransfersListEndpoint(MethodView):
-    # TODO: Consider implementing pagination. This might be needed in
-    #       case the executed a query turns out to be too costly.
-
     @transfers_api.response(TransfersListSchema(context=context))
     @transfers_api.doc(operationId='getTransfersList', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
@@ -431,10 +428,3 @@ class TransferEndpoint(MethodView):
         """
 
         procedures.delete_initiated_transfer(debtorId, transferUuid)
-
-
-# TODO: Implement the endpoint
-#       `public-transfers/<i64:debtorId>/<i64:creditorId>/<i64:transferSeqnum>`,
-#       that shows all transfers having their `TRANSFER_FLAG_IS_PUBLIC`
-#       flag set. Also, implement an `on_account_commit_signal` event
-#       handler, which saves all public transfers in the database.
