@@ -61,6 +61,15 @@ ERROR_CONTENT = {
     }
 }
 
+DEBTOR_DOES_NOT_EXIST = {
+    "description": "The debtor has not been found.",
+}
+
+DEBTOR_EXISTS = {
+    "description": "The debtor has been found.",
+    'headers': LOCATION_HEADER,
+}
+
 CONFLICTING_DEBTOR = {
     'description': 'A debtor with the same ID already exists.',
     'content': ERROR_CONTENT,

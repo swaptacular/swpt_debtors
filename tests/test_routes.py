@@ -394,3 +394,16 @@ def test_unauthorized_debtor_id(debtor, client):
             json=json_request_body,
             headers={'X-Swpt-User-Id': 'debtors:18446744073709551616'},
         )
+
+
+def test_redirect_to_debtor(client, debtor):
+    r = client.get('/debtors/.debtor')
+    assert r.status_code == 204
+
+    r = client.get('/debtors/.debtor', headers={'X-Swpt-User-Id': 'debtors:2'})
+    assert r.status_code == 303
+    assert r.headers['Location'] == 'http://example.com/debtors/2/'
+
+    r = client.get('/debtors/.debtor', headers={'X-Swpt-User-Id': 'debtors:18446744073709551615'})
+    assert r.status_code == 303
+    assert r.headers['Location'] == 'http://example.com/debtors/18446744073709551615/'
