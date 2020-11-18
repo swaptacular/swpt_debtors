@@ -277,6 +277,24 @@ debtors_api = Blueprint(
 )
 
 
+@debtors_api.route('/.debtor')
+class RedirectToDebtorEndpoint(MethodView):
+    @debtors_api.response(code=204)
+    @debtors_api.doc(operationId='redirectToDebtor',
+                     security=specs.SCOPE_ACCESS_READONLY,
+                     responses={204: specs.DEBTOR_DOES_NOT_EXIST,
+                                303: specs.DEBTOR_EXISTS})
+    def get(self):
+        """Redirect to the debtor's policy."""
+
+        ensure_debtor_permissions()
+
+        debtorId = g.debtor_id
+        if debtorId is not None:
+            location = url_for('debtors.DebtorEndpoint', _external=True, debtorId=debtorId)
+            return redirect(location, code=303)
+
+
 @debtors_api.route('/<i64:debtorId>/', parameters=[specs.DEBTOR_ID])
 class DebtorEndpoint(MethodView):
     @debtors_api.response(DebtorSchema(context=context))
