@@ -151,9 +151,8 @@ def activate_debtor(debtor_id: int, reservation_id: int) -> Debtor:
 def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor:
+        _delete_debtor_transfers(debtor)
         debtor.deactivate()
-        debtor.initiated_transfers_count = 0
-        InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
 
 
 @atomic
@@ -692,3 +691,11 @@ def _is_correct_debtor_id(debtor_id: int) -> bool:
         return False
 
     return True
+
+
+def _delete_debtor_transfers(debtor: Debtor) -> None:
+    InitiatedTransfer.query.\
+        filter_by(debtor_id=debtor.debtor_id).\
+        delete(synchronize_session=False)
+
+    debtor.initiated_transfers_count = 0
