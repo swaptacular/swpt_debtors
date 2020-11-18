@@ -218,6 +218,8 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert len(ChangeInterestRateSignal.query.all()) == 0
     d = Debtor.query.filter_by(debtor_id=D_ID).one()
     assert d.deactivation_date is not None
+    assert d.is_deactivated
+    assert d.reservation_id is None
     assert d.initiated_transfers_count == 0
     assert d.balance == -1000
     assert d.balance_ts == change_ts

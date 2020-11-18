@@ -179,11 +179,11 @@ def update_debtor_balance(debtor_id: int, balance: int, balance_ts: datetime) ->
         # Normally, this should never happen. If it does happen,
         # though, we create a new deactivated debtor, not allowing the
         # debtor ID to be used.
-        debtor = Debtor(debtor_id=debtor_id, status_flags=0)
-        debtor.activate()
-        debtor.deactivate()
+        debtor = Debtor(debtor_id=debtor_id)
         with db.retry_on_integrity_error():
             db.session.add(debtor)
+        debtor.activate()
+        debtor.deactivate()
 
     debtor.balance = balance
     debtor.balance_ts = balance_ts
