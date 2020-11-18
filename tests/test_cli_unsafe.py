@@ -328,8 +328,8 @@ def test_scan_debtors(app_unsafe_session, current_ts):
     assert result.exit_code == 0
 
     debtors = Debtor.query.all()
-    assert len(debtors) == 3
-    assert sorted([d.debtor_id for d in debtors]) == [2, 5, 6]
+    assert len(debtors) == 5
+    assert sorted([d.debtor_id for d in debtors]) == [2, 3, 4, 5, 6]
 
     Debtor.query.delete()
     ConfigureAccountSignal.query.delete()

@@ -4,11 +4,10 @@ from typing import NamedTuple, Dict, List, TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_, or_, null
-from sqlalchemy.sql.functions import coalesce
 from flask import current_app
 from .extensions import db
 from .models import Debtor, RunningTransfer, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
-    TryToDeleteAccountSignal, InitiatedTransfer, MAX_INT64, ROOT_CREDITOR_ID, \
+    TryToDeleteAccountSignal, MAX_INT64, ROOT_CREDITOR_ID, \
     BEGINNING_OF_TIME
 
 T = TypeVar('T')
@@ -336,7 +335,6 @@ class DebtorScanner(TableScanner):
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
         self._delete_debtors_not_activated_for_long_time(rows, current_ts)
-        self._delete_debtors_deactivated_long_time_ago(rows, current_ts)
 
     def _delete_debtors_not_activated_for_long_time(self, rows, current_ts):
         c = self.table.c
@@ -355,35 +353,6 @@ class DebtorScanner(TableScanner):
                 filter(Debtor.debtor_id.in_(ids_to_delete)).\
                 filter(Debtor.status_flags.op('&')(activated_flag) == 0).\
                 filter(Debtor.created_at < inactive_cutoff_ts).\
-                with_for_update(skip_locked=True).\
-                all()
-
-            for debtor in to_delete:
-                db.session.delete(debtor)
-
-    def _delete_debtors_deactivated_long_time_ago(self, rows, current_ts):
-        c = self.table.c
-        deactivated_flag = Debtor.STATUS_IS_DEACTIVATED_FLAG
-        deactivated_cutoff_date = (current_ts - self.deactivated_interval).date()
-
-        def deactivated_long_time_ago(row) -> bool:
-            return (
-                row[c.status_flags] & deactivated_flag != 0
-                and (
-                    row[c.deactivation_date] is None
-                    or row[c.deactivation_date] < deactivated_cutoff_date
-                )
-            )
-
-        ids_to_delete = [row[c.debtor_id] for row in rows if deactivated_long_time_ago(row)]
-        if ids_to_delete:
-            to_delete = Debtor.query.\
-                filter(Debtor.debtor_id.in_(ids_to_delete)).\
-                filter(Debtor.status_flags.op('&')(deactivated_flag) != 0).\
-                filter(or_(
-                    Debtor.deactivation_date == null(),
-                    Debtor.deactivation_date < deactivated_cutoff_date),
-                ).\
                 with_for_update(skip_locked=True).\
                 all()
 

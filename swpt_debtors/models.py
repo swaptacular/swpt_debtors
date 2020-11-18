@@ -86,28 +86,6 @@ class NodeConfig(db.Model):
     )
 
 
-# TODO: Implement a daemon that garbage-collects debtors. Here is how
-#       it should work:
-#
-# 1. For debtors created some time ago (a month for example), which
-#    are not deactivated, but have their "has account" flag NOT SET:
-#    Deactivate the debtor.
-#
-# 2. For debtors created some time ago (a month for example), which
-#    are not deactivated, but have their "has activity" flag NOT SET:
-#    Deactivate the debtor.
-#
-# 3. For debtors which are deactivated, and have their "has account"
-#    flag SET: Check if the debtor's account principal is zero.
-#    If no -- do nothing; if yes -- send an account deletion request.
-#    In both cases, modify the account record so as to prevent it from
-#    being checked for garbage-collection for some time.
-#
-# 4. For debtors which are deactivated, and have their "has account"
-#    flag NOT SET: Check if the "has activity" flag is SET. If no --
-#    the debtor can be deleted immediately; if yes -- the debtor can
-#    be deleted only if a very long time has passed since debtor's
-#    deactivation date (20 years for example).
 class Debtor(db.Model):
     STATUS_IS_ACTIVATED_FLAG = 1 << 0
     STATUS_IS_DEACTIVATED_FLAG = 1 << 1

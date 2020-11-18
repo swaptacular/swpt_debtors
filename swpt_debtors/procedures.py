@@ -151,9 +151,6 @@ def activate_debtor(debtor_id: int, reservation_id: int) -> Debtor:
 def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor:
-        # TODO: Send `ConfigureAccountSignal`, scheduling the debtor's
-        #       account for deletion.
-
         debtor.deactivate()
         debtor.initiated_transfers_count = 0
         InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
