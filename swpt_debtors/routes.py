@@ -6,7 +6,7 @@ from flask import redirect, url_for, request, current_app, g
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib.utils import u64_to_i64
-from .schemas import DebtorSchema, DebtorPolicySchema, TransferSchema, \
+from .schemas import DebtorSchema, TransferSchema, \
     TransfersListSchema, TransferCreationRequestSchema, \
     TransfersList, TransferCancelationRequestSchema, DebtorReservationRequestSchema, \
     DebtorReservationSchema, DebtorsListSchema, ObjectReferencesPageSchema, \
@@ -105,7 +105,6 @@ def calc_checkup_datetime(debtor_id: int, initiated_at: datetime) -> datetime:
 
 context = {
     'Debtor': 'debtors.DebtorEndpoint',
-    'DebtorPolicy': 'policies.DebtorPolicyEndpoint',
     'TransfersList': 'transfers.TransfersListEndpoint',
     'Transfer': 'transfers.TransferEndpoint',
     'calc_reservation_deadline': calc_reservation_deadline,
@@ -283,41 +282,23 @@ class DebtorEndpoint(MethodView):
     @debtors_api.response(DebtorSchema(context=context))
     @debtors_api.doc(operationId='getDebtor')
     def get(self, debtorId):
-        """Return public information about a debtor."""
+        """Return debtor's policy."""
 
         debtor = procedures.get_active_debtor(debtorId)
         if not debtor:
             abort(403)
         return debtor, {'Cache-Control': 'max-age=86400'}
 
-
-policies_api = Blueprint(
-    'policies',
-    __name__,
-    url_prefix='/debtors',
-    description="Change individual debtor's policies.",
-)
-policies_api.before_request(ensure_debtor_permissions)
-
-
-@policies_api.route('/<i64:debtorId>/policy', parameters=[specs.DEBTOR_ID])
-class DebtorPolicyEndpoint(MethodView):
-    @policies_api.response(DebtorPolicySchema(context=context))
-    @policies_api.doc(operationId='getDebtorPolicy', security=specs.SCOPE_ACCESS_READONLY)
-    def get(self, debtorId):
-        """Return debtor's policy."""
-
-        return procedures.get_active_debtor(debtorId) or abort(404)
-
-    @policies_api.arguments(DebtorPolicySchema)
-    @policies_api.response(DebtorPolicySchema(context=context))
-    @policies_api.doc(operationId='updateDebtorPolicy',
-                      security=specs.SCOPE_ACCESS_MODIFY,
-                      responses={403: specs.FORBIDDEN_OPERATION,
-                                 409: specs.CONFLICTING_POLICY})
+    @debtors_api.arguments(DebtorSchema)
+    @debtors_api.response(DebtorSchema(context=context))
+    @debtors_api.doc(operationId='updateDebtor',
+                     security=specs.SCOPE_ACCESS_MODIFY,
+                     responses={403: specs.FORBIDDEN_OPERATION,
+                                409: specs.CONFLICTING_POLICY})
     def patch(self, policy_update_request, debtorId):
         """Update debtor's policy."""
 
+        ensure_debtor_permissions()
         try:
             debtor = procedures.update_debtor_policy(
                 debtor_id=debtorId,
@@ -325,10 +306,8 @@ class DebtorPolicyEndpoint(MethodView):
                 new_interest_rate_limits=policy_update_request['interest_rate_lower_limits'],
                 new_balance_limits=policy_update_request['balance_lower_limits'],
             )
-        except procedures.TooManyManagementActions:
+        except (procedures.DebtorDoesNotExist, procedures.TooManyManagementActions):
             abort(403)
-        except procedures.DebtorDoesNotExist:
-            abort(404)
         except procedures.ConflictingPolicy as e:
             abort(409, message=e.message)
         return debtor

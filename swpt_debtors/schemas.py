@@ -16,6 +16,12 @@ there are no remaining items, this field will not be present. If this field \
 is present, there might be remaining items, even when the `items` array is \
 empty. This can be a relative URI.'
 
+ESTABLISHED_LIMITS_NOTE = '\
+**Note:** Established limits can not be removed. They will continue \
+to be enforced until the specified expiration date. Therefore, when \
+the policy is being updated, this field should contain only the \
+additional limits that have to be added to the existing ones.'
+
 TRANSFER_NOTE_FORMAT_REGEX = r'^[0-9A-Za-z.-]{0,8}$'
 
 TRANSFER_NOTE_FORMAT_DESCRIPTION = '\
@@ -267,7 +273,7 @@ class DebtorCreationOptionsSchema(ValidateTypeMixin, Schema):
     )
 
 
-class DebtorSchema(Schema):
+class DebtorSchema(ValidateTypeMixin, Schema):
     uri = fields.String(
         required=True,
         dump_only=True,
@@ -275,20 +281,19 @@ class DebtorSchema(Schema):
         description=URI_DESCRIPTION,
         example='/debtors/1/',
     )
-    type = fields.Function(
-        lambda obj: 'Debtor',
-        required=True,
-        type='string',
+    type = fields.String(
+        missing='Debtor',
+        default='Debtor',
         description='The type of this object.',
         example='Debtor',
     )
-    accountingAuthorityUri = fields.Function(
-        lambda obj: current_app.config['APP_AUTHORITY_URI'],
+    transfers_list = fields.Nested(
+        ObjectReferenceSchema,
         required=True,
-        type='string',
-        format="uri-reference",
-        description="The URI of the authority that manages creditors' accounts.",
-        example='https://example.com/authority',
+        dump_only=True,
+        data_key='transfersList',
+        description="The URI of the debtor's list of credit-issuing transfers (`TransfersList`).",
+        example={'uri': '/debtors/2/transfers/'},
     )
     created_at = fields.DateTime(
         required=True,
@@ -301,32 +306,29 @@ class DebtorSchema(Schema):
         dump_only=True,
         format="int64",
         description=Debtor.balance.comment,
-    )
-    balance_ts = fields.DateTime(
-        required=True,
-        dump_only=True,
-        data_key='balanceTimestamp',
-        description='The moment at which the last change in the `balance` field happened.',
+        example=-1000000,
     )
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
         required=True,
-        dump_only=True,
         data_key='balanceLowerLimits',
-        description='Enforced lower limits for the `balance` field.'
-                    '\n\n'
-                    '**Note:** Established limits can not be removed. They will '
-                    'continue to be enforced until the specified expiration date.',
+        description=f'Enforced lower limits for the `balance` field.\n\n{ESTABLISHED_LIMITS_NOTE}',
     )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
         required=True,
-        dump_only=True,
         data_key='interestRateLowerLimits',
-        description='Enforced interest rate lower limits.'
-                    '\n\n'
-                    '**Note:** Established limits can not be removed. They will '
-                    'continue to be enforced until the specified expiration date.',
+        description=f'Enforced lower limits for the `interestRate` field.\n\n{ESTABLISHED_LIMITS_NOTE}',
+    )
+    interest_rate_target = fields.Float(
+        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
+        required=True,
+        data_key='interestRateTarget',
+        description='The annual rate (in percents) at which the debtor wants the interest '
+                    'to accumulate on creditors\' accounts. The actual current interest rate may '
+                    'be different if interest rate limits are being enforced. When the debtor is '
+                    'created, the initial value for this field will be `0`.',
+        example=0,
     )
     interest_rate = fields.Float(
         required=True,
@@ -335,82 +337,13 @@ class DebtorSchema(Schema):
         description="The current annual interest rate (in percents) at which "
                     "interest accumulates on creditors' accounts.",
     )
-    is_active = fields.Boolean(
-        required=True,
-        dump_only=True,
-        data_key='isActive',
-        description="Whether the debtor is currently active or not."
-    )
 
     @pre_dump
     def process_debtor_instance(self, obj, many):
         assert isinstance(obj, Debtor)
         obj = copy(obj)
         obj.uri = url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)
-
-        return obj
-
-
-class DebtorPolicySchema(ValidateTypeMixin, Schema):
-    uri = fields.String(
-        required=True,
-        dump_only=True,
-        format='uri-reference',
-        description=URI_DESCRIPTION,
-        example='/debtors/1/policy',
-    )
-    type = fields.String(
-        missing='DebtorPolicy',
-        default='DebtorPolicy',
-        description='The type of this object.',
-        example='DebtorPolicy',
-    )
-    debtor = fields.Nested(
-        ObjectReferenceSchema,
-        required=True,
-        dump_only=True,
-        description="The URI of the corresponding `Debtor`.",
-        example={'uri': '/debtors/1/'},
-    )
-    balance_lower_limits = fields.Nested(
-        BalanceLowerLimitSchema(many=True),
-        missing=[],
-        data_key='balanceLowerLimits',
-        description='Enforced lower limits for the debtor\'s balance.'
-                    '\n\n'
-                    '**Note:** Established limits can not be removed. When the policy is '
-                    'being updated, this field should contain only the additional limits '
-                    'that have to be added to the existing ones.',
-    )
-    interest_rate_lower_limits = fields.Nested(
-        InterestRateLowerLimitSchema(many=True),
-        missing=[],
-        data_key='interestRateLowerLimits',
-        description='Enforced interest rate lower limits.'
-                    '\n\n'
-                    '**Note:** Established limits can not be removed. When the policy is '
-                    'being updated, this field should contain only the additional limits '
-                    'that have to be added to the existing ones.',
-    )
-    interest_rate_target = fields.Float(
-        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
-        data_key='interestRateTarget',
-        description='The annual rate (in percents) at which the debtor wants the interest '
-                    'to accumulate on creditors\' accounts. The actual interest rate may be '
-                    'different if interest rate limits are enforced. When the debtor is '
-                    'created, the initial value for this field will be `0`.'
-                    '\n\n'
-                    '**Note:** If this field is not present when the policy is being '
-                    'updated, the current `interestRateTarget` will remain unchanged.',
-        example=0,
-    )
-
-    @pre_dump
-    def process_debtor_instance(self, obj, many):
-        assert isinstance(obj, Debtor)
-        obj = copy(obj)
-        obj.uri = url_for(self.context['DebtorPolicy'], _external=False, debtorId=obj.debtor_id)
-        obj.debtor = {'uri': url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)}
+        obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
 
         return obj
 

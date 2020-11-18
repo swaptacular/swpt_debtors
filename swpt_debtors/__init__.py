@@ -55,7 +55,6 @@ class Configuration(metaclass=MetaFlaskEnv):
     APP_DEBTORS_SCAN_BEAT_MILLISECS = 25
     APP_INACTIVE_DEBTOR_RETENTION_DAYS = 14
     APP_DEACTIVATED_DEBTOR_RETENTION_DAYS = 1826
-    APP_AUTHORITY_URI = '/authority'
     APP_DEBTORS_PER_PAGE = 2000
     APP_SUPERUSER_SUBJECT_REGEX = '^debtors-superuser$'
     APP_SUPERVISOR_SUBJECT_REGEX = '^debtors-supervisor$'
@@ -66,7 +65,7 @@ def create_app(config_dict={}):
     from flask import Flask
     from swpt_lib.utils import Int64Converter
     from .extensions import db, migrate, broker, api
-    from .routes import admin_api, debtors_api, policies_api, transfers_api, specs
+    from .routes import admin_api, debtors_api, transfers_api, specs
     from .cli import swpt_debtors
     from . import models  # noqa
 
@@ -81,7 +80,6 @@ def create_app(config_dict={}):
     api.init_app(app)
     api.register_blueprint(admin_api)
     api.register_blueprint(debtors_api)
-    api.register_blueprint(policies_api)
     api.register_blueprint(transfers_api)
     app.cli.add_command(swpt_debtors)
     return app

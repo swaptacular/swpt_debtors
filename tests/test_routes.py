@@ -168,16 +168,19 @@ def test_get_debtors_list(client):
 
 
 def test_change_debtor_policy(client, debtor):
-    r = client.get('/debtors/123/policy')
+    r = client.get('/debtors/123/')
     assert r.status_code == 200
     data = r.get_json()
-    assert data['type'] == 'DebtorPolicy'
-    assert data['uri'] == '/debtors/123/policy'
+    assert data['type'] == 'Debtor'
+    assert data['uri'] == '/debtors/123/'
+    assert data['balance'] == 0
+    assert data['interestRate'] == 0.0
     assert data['interestRateTarget'] == 0.0
     assert data['interestRateLowerLimits'] == []
     assert data['balanceLowerLimits'] == []
 
-    r = client.patch('/debtors/123/policy', json={
+    r = client.patch('/debtors/123/', json={
+        'interestRateTarget': 5.5,
         'interestRateLowerLimits': [
             {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
             {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
@@ -189,10 +192,10 @@ def test_change_debtor_policy(client, debtor):
     })
     assert r.status_code == 200
 
-    r = client.get('/debtors/123/policy')
+    r = client.get('/debtors/123/')
     assert r.status_code == 200
     data = r.get_json()
-    assert data['interestRateTarget'] == 0.0
+    assert data['interestRateTarget'] == 5.5
     assert data['interestRateLowerLimits'] == [
         {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
         {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
@@ -202,8 +205,9 @@ def test_change_debtor_policy(client, debtor):
         {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
     ]
 
-    r = client.patch('/debtors/123/policy', json={
+    r = client.patch('/debtors/123/', json={
         'interestRateTarget': 5.0,
+        'interestRateLowerLimits': [],
         'balanceLowerLimits': [
             {'type': 'BalanceLowerLimit', 'enforcedUntil': '2030-12-31', 'value': -200},
         ],
@@ -221,15 +225,22 @@ def test_change_debtor_policy(client, debtor):
         {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
     ]
 
-    r = client.patch('/debtors/666/policy', json={})
-    assert r.status_code == 404
+    empty_request = {
+        'interestRateTarget': 5.0,
+        'interestRateLowerLimits': [],
+        'balanceLowerLimits': [],
+    }
+    r = client.patch('/debtors/666/', json=empty_request)
+    assert r.status_code == 403
 
-    r = client.patch('/debtors/123/policy', json={})
+    r = client.patch('/debtors/123/', json=empty_request)
     assert r.status_code == 200
     data = r.get_json()
     assert data['interestRateTarget'] == 5.0
 
-    r = client.patch('/debtors/123/policy', json={
+    r = client.patch('/debtors/123/', json={
+        'interestRateTarget': 5.0,
+        'interestRateLowerLimits': [],
         'balanceLowerLimits': 100 * [
             {'type': 'BalanceLowerLimit', 'enforcedUntil': '2030-12-31', 'value': -200},
         ],
@@ -237,9 +248,9 @@ def test_change_debtor_policy(client, debtor):
     assert r.status_code == 409
 
     for _ in range(7):
-        r = client.patch('/debtors/123/policy', json={})
+        r = client.patch('/debtors/123/', json=empty_request)
         assert r.status_code == 200
-    r = client.patch('/debtors/123/policy', json={})
+    r = client.patch('/debtors/123/', json=empty_request)
     assert r.status_code == 403
 
 
@@ -355,26 +366,31 @@ def test_cancel_transfer(client, debtor):
 
 
 def test_unauthorized_debtor_id(debtor, client):
-    r = client.get('/debtors/123/policy')
+    json_request_body = {
+        'type': 'Debtor',
+        'balanceLowerLimits': [],
+        'interestRateLowerLimits': [],
+        'interestRateTarget': 0.0
+    }
+
+    r = client.get('/debtors/123/')
     assert r.status_code == 200
 
-    r = client.get('/debtors/123/policy', headers={'X-Swpt-User-Id': 'debtors-supervisor'})
+    r = client.get('/debtors/123/', headers={'X-Swpt-User-Id': 'INVALID_USER_ID'})
     assert r.status_code == 200
 
-    r = client.patch('/debtors/123/policy', json={}, headers={'X-Swpt-User-Id': 'debtors-supervisor'})
+    r = client.patch('/debtors/123/', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors-supervisor'})
     assert r.status_code == 403
 
-    r = client.get('/debtors/123/policy', headers={'X-Swpt-User-Id': 'debtors:123'})
+    r = client.patch('/debtors/123/', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors:666'})
+    assert r.status_code == 403
+
+    r = client.patch('/debtors/123/', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors:123'})
     assert r.status_code == 200
-
-    r = client.get('/debtors/123/policy', headers={'X-Swpt-User-Id': 'debtors:1'})
-    assert r.status_code == 403
-
-    r = client.get('/debtors/18446744073709551615/policy', headers={'X-Swpt-User-Id': 'INVALID_USER_ID'})
-    assert r.status_code == 403
 
     with pytest.raises(ValueError):
-        r = client.get(
-            '/debtors/18446744073709551615/policy',
+        r = client.patch(
+            '/debtors/18446744073709551615/',
+            json=json_request_body,
             headers={'X-Swpt-User-Id': 'debtors:18446744073709551616'},
         )

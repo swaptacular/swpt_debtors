@@ -27,18 +27,45 @@ def test_balance_lower_limit_schema():
     assert s.dump(data) == {'type': 'BalanceLowerLimit', 'value': 1000, 'enforcedUntil': '2020-10-25'}
 
 
-def test_debtor_policy_schema(db_session):
-    s = schemas.DebtorPolicySchema(context={
-        'Debtor': 'debtors.DebtorEndpoint',
-        'DebtorPolicy': 'policies.DebtorPolicyEndpoint',
-    })
+def test_server_name(app):
+    assert app.config['SERVER_NAME'] == app.config['SWPT_SERVER_NAME']
+
+
+def test_serialize_debtor_schema(db_session):
+    debtor = Debtor(debtor_id=1)
+    db_session.add(debtor)
+    db_session.commit()
+    debtor = Debtor.query.filter_by(debtor_id=1).one()
+    with pytest.raises(KeyError):
+        s = schemas.DebtorSchema()
+        s.dump(debtor)
+    s = schemas.DebtorSchema(context=context)
+    obj = s.dump(debtor)
+    assert obj['uri'] == '/debtors/1/'
+    assert obj['type'] == 'Debtor'
+    assert iso8601.parse_date(obj['createdAt'])
+    assert obj['balance'] == 0
+    assert obj['balanceLowerLimits'] == []
+    assert obj['interestRateLowerLimits'] == []
+    assert obj['interestRateTarget'] == 0.0
+    assert obj['interestRate'] == 0.0
+    assert obj['transfersList'] == {'uri': '/debtors/1/transfers/'}
+
+
+def test_deserialize_debtor_schema(db_session):
+    s = schemas.DebtorSchema(context=context)
     with pytest.raises(ValidationError):
         data = s.load({'type': 'INVALID_TYPE'})
 
-    data = s.load({})
+    data = s.load({
+        'type': 'Debtor',
+        'balanceLowerLimits': [],
+        'interestRateLowerLimits': [],
+        'interestRateTarget': 0.0
+    })
     assert data['balance_lower_limits'] == []
     assert data['interest_rate_lower_limits'] == []
-    assert 'interest_rate_target' not in data
+    assert data['interest_rate_target'] == 0.0
     data = s.load({
         'balanceLowerLimits': [{'value': 1000, 'enforcedUntil': '2020-10-25'}],
         'interestRateLowerLimits': [{'value': 5.6, 'enforcedUntil': '2020-10-25'}],
@@ -49,34 +76,6 @@ def test_debtor_policy_schema(db_session):
     assert len(data['interest_rate_lower_limits']) == 1
     assert data['interest_rate_lower_limits'][0].value == 5.6
     assert data['interest_rate_target'] == 6.1
-
-    debtor = Debtor(debtor_id=1)
-    db_session.add(debtor)
-    db_session.commit()
-    debtor = Debtor.query.filter_by(debtor_id=1).one()
-    obj = s.dump(debtor)
-    assert obj['uri'] == '/debtors/1/policy'
-    assert obj['type'] == 'DebtorPolicy'
-    assert obj['debtor'] == {'uri': '/debtors/1/'}
-
-
-def test_server_name(app):
-    assert app.config['SERVER_NAME'] == app.config['SWPT_SERVER_NAME']
-
-
-def test_debtor_schema(db_session):
-    debtor = Debtor(debtor_id=1)
-    db_session.add(debtor)
-    db_session.commit()
-    debtor = Debtor.query.filter_by(debtor_id=1).one()
-    with pytest.raises(KeyError):
-        s = schemas.DebtorSchema()
-        s.dump(debtor)
-    s = schemas.DebtorSchema(context={'Debtor': 'debtors.DebtorEndpoint'})
-    obj = s.dump(debtor)
-    assert obj['uri'] == '/debtors/1/'
-    assert obj['type'] == 'Debtor'
-    assert 'example.com' in obj['accountingAuthorityUri']
 
 
 def test_deserialize_transfer_creation_request(db_session):

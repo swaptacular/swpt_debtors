@@ -197,11 +197,13 @@ def lock_or_create_debtor(debtor_id: int) -> Debtor:
 def update_debtor_balance(debtor_id: int, balance: int, balance_ts: datetime) -> None:
     debtor = Debtor.lock_instance(debtor_id)
     if debtor is None:
-        # If the debtor does not exist, we create a brand new
-        # deactivated debtor. That way we guarantee that the debtor's
-        # account will be (eventually) deleted from the
-        # `swpt_accounts` service when it is no longer used.
-        debtor = Debtor(debtor_id=debtor_id, deactivation_date=datetime.now(tz=timezone.utc).date())
+        # If the debtor does not exist, we create a deactivated
+        # debtor. This way we guarantee that the debtor's account will
+        # be (eventually) deleted from the `swpt_accounts` service
+        # when it is no longer used.
+        debtor = Debtor(debtor_id=debtor_id, status_flags=0)
+        debtor.activate()
+        debtor.deactivate()
         with db.retry_on_integrity_error():
             db.session.add(debtor)
     debtor.balance = balance
