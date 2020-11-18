@@ -111,7 +111,6 @@ class NodeConfig(db.Model):
 class Debtor(db.Model):
     STATUS_IS_ACTIVATED_FLAG = 1 << 0
     STATUS_IS_DEACTIVATED_FLAG = 1 << 1
-    STATUS_HAS_ACCOUNT_FLAG = 1 << 2
 
     _ad_seq = db.Sequence('debtor_reservation_id_seq', metadata=db.Model.metadata)
 
@@ -122,8 +121,7 @@ class Debtor(db.Model):
         default=0,
         comment="Debtor's status bits: "
                 f"{STATUS_IS_ACTIVATED_FLAG} - is activated, "
-                f"{STATUS_IS_DEACTIVATED_FLAG} - is deactivated, "
-                f"{STATUS_HAS_ACCOUNT_FLAG} - has account.",
+                f"{STATUS_IS_DEACTIVATED_FLAG} - is deactivated.",
     )
     created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     reservation_id = db.Column(db.BigInteger, server_default=_ad_seq.next_value())
@@ -286,6 +284,14 @@ class Debtor(db.Model):
         self.reservation_id = None
 
     def deactivate(self):
+        # Remove the limits to save space.
+        self.interest_rate_target = INTEREST_RATE_FLOOR
+        self.interest_rate_target = self.interest_rate
+        self.bll_values = None
+        self.bll_cutoffs = None
+        self.irll_values = None
+        self.irll_cutoffs = None
+
         self.status_flags |= Debtor.STATUS_IS_DEACTIVATED_FLAG
         self.deactivation_date = datetime.now(tz=timezone.utc).date()
 

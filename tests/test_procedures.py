@@ -227,7 +227,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert a.status_flags == 0
     assert len(ChangeInterestRateSignal.query.all()) == 0
     d = Debtor.query.filter_by(debtor_id=D_ID).one()
-    assert d.deactivation_date is not None
+    assert d.deactivation_date is None
     assert d.initiated_transfers_count == 0
     assert d.balance == -1000
     assert d.balance_ts == change_ts
@@ -486,11 +486,6 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
     assert len(Account.query.all()) == 0
     d = Debtor.query.one()
     assert d
-    assert not d.status_flags & Debtor.STATUS_HAS_ACCOUNT_FLAG
-    assert d.deactivation_date is not None
-    assert d.initiated_transfers_count == 0
-    assert len(InitiatedTransfer.query.filter_by(debtor_id=D_ID).all()) == 0
-    assert len(Account.query.all()) == 0
 
 
 def test_process_account_maintenance_signal(db_session, debtor, current_ts):

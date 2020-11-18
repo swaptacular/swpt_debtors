@@ -151,13 +151,10 @@ def activate_debtor(debtor_id: int, reservation_id: int) -> Debtor:
 def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor:
+        # TODO: Send `ConfigureAccountSignal`, scheduling the debtor's
+        #       account for deletion.
+
         debtor.deactivate()
-        if deleted_account:
-            debtor.status_flags &= ~Debtor.STATUS_HAS_ACCOUNT_FLAG
-            debtor.bll_values = None
-            debtor.bll_cutoffs = None
-            debtor.irll_values = None
-            debtor.irll_cutoffs = None
         debtor.initiated_transfers_count = 0
         InitiatedTransfer.query.filter_by(debtor_id=debtor_id).delete(synchronize_session=False)
 
@@ -197,18 +194,17 @@ def lock_or_create_debtor(debtor_id: int) -> Debtor:
 def update_debtor_balance(debtor_id: int, balance: int, balance_ts: datetime) -> None:
     debtor = Debtor.lock_instance(debtor_id)
     if debtor is None:
-        # If the debtor does not exist, we create a deactivated
-        # debtor. This way we guarantee that the debtor's account will
-        # be (eventually) deleted from the `swpt_accounts` service
-        # when it is no longer used.
+        # If the debtor does not exist, we create a new debtor. Thus,
+        # we guarantee that the debtor's account will be deleted from
+        # the `swpt_accounts` service when the newly created debtor
+        # gets deactivated.
         debtor = Debtor(debtor_id=debtor_id, status_flags=0)
         debtor.activate()
-        debtor.deactivate()
         with db.retry_on_integrity_error():
             db.session.add(debtor)
+
     debtor.balance = balance
     debtor.balance_ts = balance_ts
-    debtor.status_flags |= Debtor.STATUS_HAS_ACCOUNT_FLAG
 
 
 @atomic
@@ -354,8 +350,6 @@ def process_account_purge_signal(debtor_id: int, creditor_id: int, creation_date
     account = Account.lock_instance((debtor_id, creditor_id))
     if account and account.creation_date == creation_date:
         db.session.delete(account)
-        if creditor_id == ROOT_CREDITOR_ID:
-            deactivate_debtor(debtor_id, deleted_account=True)
 
 
 @atomic
