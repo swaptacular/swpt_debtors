@@ -315,13 +315,12 @@ class DebtorScanner(TableScanner):
     """Garbage-collects inactive debtors."""
 
     table = Debtor.__table__
-    columns = [Debtor.debtor_id, Debtor.created_at, Debtor.status_flags, Debtor.deactivation_date]
+    columns = [Debtor.debtor_id, Debtor.created_at, Debtor.status_flags]
     pk = tuple_(table.c.debtor_id,)
 
     def __init__(self):
         super().__init__()
         self.inactive_interval = timedelta(days=current_app.config['APP_INACTIVE_DEBTOR_RETENTION_DAYS'])
-        self.deactivated_interval = timedelta(days=current_app.config['APP_DEACTIVATED_DEBTOR_RETENTION_DAYS'])
 
     @property
     def blocks_per_query(self) -> int:

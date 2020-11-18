@@ -4,7 +4,7 @@ from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, \
-    RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, ConfigureAccountSignal, \
+    RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, \
     MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, BEGINNING_OF_TIME, \
     SC_OK
 from swpt_debtors import procedures as p
@@ -18,26 +18,16 @@ TEST_UUID2 = UUID('123e4567-e89b-12d3-a456-426655440001')
 
 @pytest.fixture
 def debtor(db_session):
-    return p.lock_or_create_debtor(D_ID)
+    debtor = Debtor(debtor_id=D_ID, status_flags=0)
+    debtor.activate()
+    db_session.add(debtor)
+    db_session.commit()
+
+    return p.get_debtor(D_ID)
 
 
 def test_version(db_session):
     assert __version__
-
-
-def test_lock_or_create_debtor(db_session):
-    debtor = p.lock_or_create_debtor(D_ID)
-    assert debtor.debtor_id == D_ID
-    assert debtor.is_activated
-    assert not debtor.is_deactivated
-    cas = ConfigureAccountSignal.query.one()
-    assert cas.debtor_id == D_ID
-
-    debtor = p.lock_or_create_debtor(D_ID)
-    assert debtor.debtor_id == D_ID
-    assert debtor.is_activated
-    assert not debtor.is_deactivated
-    assert len(ConfigureAccountSignal.query.all()) == 1
 
 
 def test_deactivate_debtor(db_session, debtor):
@@ -227,7 +217,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert a.status_flags == 0
     assert len(ChangeInterestRateSignal.query.all()) == 0
     d = Debtor.query.filter_by(debtor_id=D_ID).one()
-    assert d.deactivation_date is None
+    assert d.deactivation_date is not None
     assert d.initiated_transfers_count == 0
     assert d.balance == -1000
     assert d.balance_ts == change_ts

@@ -2,6 +2,7 @@ from urllib.parse import urljoin, urlparse
 import pytest
 import iso8601
 from swpt_debtors import procedures as p
+from swpt_debtors import models as m
 
 
 @pytest.fixture(scope='function')
@@ -11,7 +12,12 @@ def client(app, db_session):
 
 @pytest.fixture(scope='function')
 def debtor(db_session):
-    return p.lock_or_create_debtor(123)
+    debtor = m.Debtor(debtor_id=123, status_flags=0)
+    debtor.activate()
+    db_session.add(debtor)
+    db_session.commit()
+
+    return p.get_debtor(123)
 
 
 def _get_all_pages(client, url, page_type, streaming=False):

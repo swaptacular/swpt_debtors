@@ -173,30 +173,15 @@ def get_active_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
 
 
 @atomic
-def lock_or_create_debtor(debtor_id: int) -> Debtor:
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-
-    debtor = Debtor.lock_instance(debtor_id)
-    if debtor is None:
-        debtor = Debtor(debtor_id=debtor_id)
-        with db.retry_on_integrity_error():
-            db.session.add(debtor)
-        _insert_configure_account_signal(debtor_id)
-    debtor.activate()
-
-    return debtor
-
-
-@atomic
 def update_debtor_balance(debtor_id: int, balance: int, balance_ts: datetime) -> None:
     debtor = Debtor.lock_instance(debtor_id)
-    if debtor is None:
-        # If the debtor does not exist, we create a new debtor. Thus,
-        # we guarantee that the debtor's account will be deleted from
-        # the `swpt_accounts` service when the newly created debtor
-        # gets deactivated.
+    if debtor is None and _is_correct_debtor_id(debtor_id):
+        # Normally, this should never happen. If it does happen,
+        # though, we create a new deactivated debtor, not allowing the
+        # debtor ID to be used.
         debtor = Debtor(debtor_id=debtor_id, status_flags=0)
         debtor.activate()
+        debtor.deactivate()
         with db.retry_on_integrity_error():
             db.session.add(debtor)
 
