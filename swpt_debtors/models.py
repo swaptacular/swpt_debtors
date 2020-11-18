@@ -257,7 +257,6 @@ class Debtor(db.Model):
 
     def deactivate(self):
         # Remove the limits to save space.
-        self.interest_rate_target = INTEREST_RATE_FLOOR
         self.interest_rate_target = self.interest_rate
         self.bll_values = None
         self.bll_cutoffs = None
