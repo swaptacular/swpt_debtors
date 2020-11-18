@@ -222,7 +222,6 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert d.reservation_id is None
     assert d.initiated_transfers_count == 0
     assert d.balance == -1000
-    assert d.balance_ts == change_ts
 
 
 def test_process_root_account_change_signal(db_session, debtor, current_ts):
@@ -246,7 +245,6 @@ def test_process_root_account_change_signal(db_session, debtor, current_ts):
     )
     d = p.get_debtor(D_ID)
     assert d.balance == -9999
-    assert d.balance_ts == change_ts
 
 
 def test_interest_rate_absolute_limits(db_session, debtor):

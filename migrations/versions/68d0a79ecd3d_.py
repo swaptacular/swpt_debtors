@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 736e03bab67d
+Revision ID: 68d0a79ecd3d
 Revises: 8d09bea9c7d1
-Create Date: 2020-11-17 21:34:08.270517
+Create Date: 2020-11-19 00:44:54.343290
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '736e03bab67d'
+revision = '68d0a79ecd3d'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -69,12 +69,11 @@ def upgrade():
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
-    sa.Column('status_flags', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is activated, 2 - is deactivated, 4 - has account."),
+    sa.Column('status_flags', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is activated, 2 - is deactivated."),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('reservation_id', sa.BigInteger(), server_default=sa.text("nextval('debtor_reservation_id_seq')"), nullable=True),
     sa.Column('deactivation_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted. A `NULL` value for this column means either that the debtor has not been deactivated yet, or that the deactivation date is unknown.'),
     sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
-    sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
     sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The annual rate (in percents) at which the debtor wants the interest to accumulate on creditors' accounts. The actual interest rate may be different if interest rate limits are enforced."),
     sa.Column('initiated_transfers_count', sa.Integer(), nullable=False, comment='The number of initiated issuing transfers for this debtor. It is incremented when a new row for the debtor is inserted in the `initiated_transfer` table, and decremented when a row is deleted. It is needed for performance reasons.'),
     sa.Column('actions_throttle_date', sa.DATE(), nullable=False, comment='The date at which `actions_throttle_count` was zeroed out for the last time. This field is used to limit the number of management actions per month that a debtor is allowed to do.'),

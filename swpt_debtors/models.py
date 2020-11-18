@@ -120,12 +120,6 @@ class Debtor(db.Model):
                 "negative number or a zero. A positive value, although theoretically "
                 "possible, should be very rare.",
     )
-    balance_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=BEGINNING_OF_TIME,
-        comment='Updated on each change of the `balance` field.',
-    )
     interest_rate_target = db.Column(
         db.REAL,
         nullable=False,

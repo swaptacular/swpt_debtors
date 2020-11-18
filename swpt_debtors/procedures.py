@@ -151,8 +151,8 @@ def activate_debtor(debtor_id: int, reservation_id: int) -> Debtor:
 def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor:
-        _delete_debtor_transfers(debtor)
         debtor.deactivate()
+        _delete_debtor_transfers(debtor)
 
 
 @atomic
@@ -172,9 +172,12 @@ def get_active_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
 
 
 @atomic
-def update_debtor_balance(debtor_id: int, balance: int, balance_ts: datetime) -> None:
-    debtor = Debtor.lock_instance(debtor_id)
-    if debtor is None and _is_correct_debtor_id(debtor_id):
+def update_debtor_balance(debtor_id: int, balance: int) -> None:
+    debtor = get_debtor(debtor_id, lock=True)
+    if debtor is None:
+        if not _is_correct_debtor_id(debtor_id):  # pragma: no cover
+            return
+
         # Normally, this should never happen. If it does happen,
         # though, we create a new deactivated debtor, not allowing the
         # debtor ID to be used.
@@ -184,8 +187,8 @@ def update_debtor_balance(debtor_id: int, balance: int, balance_ts: datetime) ->
         debtor.activate()
         debtor.deactivate()
 
-    debtor.balance = balance
-    debtor.balance_ts = balance_ts
+    if debtor.balance != balance:
+        debtor.balance = balance
 
 
 @atomic
@@ -529,8 +532,7 @@ def process_account_update_signal(
 
     if account.creditor_id == ROOT_CREDITOR_ID:
         balance = MIN_INT64 if account.is_overflown else account.principal
-        balance_ts = account.last_change_ts
-        update_debtor_balance(debtor_id, balance, balance_ts)
+        update_debtor_balance(debtor_id, balance)
     elif not account.status_flags & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
         cutoff_ts = current_ts - Account.get_interest_rate_change_min_interval()
         debtor = Debtor.get_instance(debtor_id)
@@ -694,8 +696,8 @@ def _is_correct_debtor_id(debtor_id: int) -> bool:
 
 
 def _delete_debtor_transfers(debtor: Debtor) -> None:
+    debtor.initiated_transfers_count = 0
+
     InitiatedTransfer.query.\
         filter_by(debtor_id=debtor.debtor_id).\
         delete(synchronize_session=False)
-
-    debtor.initiated_transfers_count = 0
