@@ -109,6 +109,7 @@ def test_create_debtor(client):
     assert data['uri'] == '/debtors/3/'
     assert data['balance'] == 0
     assert iso8601.parse_date(data['createdAt'])
+    assert 'debtorInfo' not in data
 
     r = client.post('/debtors/3/activate', json={})
     assert r.status_code == 409
@@ -195,6 +196,12 @@ def test_change_debtor_policy(client, debtor):
             {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
             {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
         ],
+        'debtorInfo': {
+            'type': 'DebtorInfo',
+            'iri': 'http://example.com/',
+            'contentType': 'text/plain',
+            'sha256': 32 * 'AA',
+        }
     })
     assert r.status_code == 200
 
@@ -210,6 +217,12 @@ def test_change_debtor_policy(client, debtor):
         {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
         {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
     ]
+    assert data['debtorInfo'] == {
+        'type': 'DebtorInfo',
+        'iri': 'http://example.com/',
+        'contentType': 'text/plain',
+        'sha256': 32 * 'AA',
+    }
 
     r = client.patch('/debtors/123/', json={
         'interestRateTarget': 5.0,

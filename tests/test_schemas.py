@@ -167,3 +167,63 @@ def test_serialize_transfer(app):
         "noteFormat": "json",
         "note": '{"note": "test"}',
     }
+
+
+def test_serialize_debtor_info(app):
+    dis = schemas.DebtorInfoSchema()
+    data = dis.dump({
+        'iri': 'abc',
+        'optional_content_type': 50 * 'x',
+        'optional_sha256': 32 * 'AA',
+    })
+    assert data == {
+        "type": "DebtorInfo",
+        "iri": "abc",
+        "contentType": 50 * 'x',
+        "sha256": 32 * 'AA',
+    }
+
+    data = dis.dump({
+        'iri': 'abc',
+    })
+    assert data == {
+        "type": "DebtorInfo",
+        "iri": "abc",
+    }
+
+
+def test_deserialize_debtor_info(app):
+    dis = schemas.DebtorInfoSchema()
+
+    assert dis.load({'iri': ''}) == {
+        'type': 'DebtorInfo',
+        'iri': '',
+    }
+
+    data = {
+        'type': 'DebtorInfo',
+        'iri': 'abc',
+        'contentType': 50 * 'x',
+        'sha256': 32 * 'AA',
+    }
+
+    assert dis.load(data) == {
+        'type': 'DebtorInfo',
+        'iri': 'abc',
+        'optional_content_type': 50 * 'x',
+        'optional_sha256': 32 * 'AA',
+    }
+
+    with pytest.raises(ValidationError, match='Includes non-ASCII characters'):
+        dis.load({
+            'type': 'DebtorInfo',
+            'contentType': 100 * 'Щ',
+            'sha256': 32 * 'AA',
+        })
+    with pytest.raises(ValidationError, match='Longer than maximum length'):
+        dis.load({
+            'type': 'DebtorInfo',
+            'iri': 'abc',
+            'contentType': 101 * 'Щ',
+            'sha256': 32 * 'AA',
+        })

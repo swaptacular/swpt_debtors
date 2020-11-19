@@ -192,7 +192,10 @@ def update_debtor_policy(
         debtor_id: int,
         interest_rate_target: Optional[float],
         new_interest_rate_limits: LowerLimitSequence,
-        new_balance_limits: LowerLimitSequence) -> Debtor:
+        new_balance_limits: LowerLimitSequence,
+        debtor_info_iri: Optional[str],
+        debtor_info_content_type: Optional[str],
+        debtor_info_sha256: Optional[bytes]) -> Debtor:
 
     debtor = _throttle_debtor_actions(debtor_id)
     current_ts = datetime.now(tz=timezone.utc)
@@ -216,6 +219,10 @@ def update_debtor_policy(
         debtor.interest_rate_target = interest_rate_target
     debtor.interest_rate_lower_limits = interest_rate_lower_limits
     debtor.balance_lower_limits = balance_lower_limits
+    debtor.debtor_info_iri = debtor_info_iri
+    debtor.debtor_info_sha256 = debtor_info_sha256
+    debtor.debtor_info_content_type = debtor_info_content_type
+
     return debtor
 
 

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 0a26fa35af24
+Revision ID: 985393187df7
 Revises: 8d09bea9c7d1
-Create Date: 2020-11-19 21:32:48.470460
+Create Date: 2020-11-19 22:27:52.659330
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '0a26fa35af24'
+revision = '985393187df7'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -74,6 +74,9 @@ def upgrade():
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('balance', sa.BigInteger(), nullable=False),
     sa.Column('interest_rate_target', sa.REAL(), nullable=False),
+    sa.Column('debtor_info_iri', sa.String(), nullable=True),
+    sa.Column('debtor_info_content_type', sa.String(), nullable=True),
+    sa.Column('debtor_info_sha256', sa.LargeBinary(), nullable=True),
     sa.Column('running_transfers_count', sa.Integer(), nullable=False),
     sa.Column('actions_count', sa.Integer(), nullable=False),
     sa.Column('actions_count_reset_date', sa.DATE(), nullable=False),
@@ -87,6 +90,7 @@ def upgrade():
     sa.CheckConstraint('bll_cutoffs IS NULL OR array_ndims(bll_cutoffs) = 1'),
     sa.CheckConstraint('bll_values IS NULL OR array_ndims(bll_values) = 1'),
     sa.CheckConstraint('deactivation_date IS NULL OR (status_flags & 2) != 0'),
+    sa.CheckConstraint('debtor_info_sha256 IS NULL OR octet_length(debtor_info_sha256) = 32'),
     sa.CheckConstraint('interest_rate_target >= -50.0 AND interest_rate_target <= 100.0'),
     sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
     sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1')

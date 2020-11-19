@@ -1,4 +1,5 @@
 import re
+from base64 import b16decode
 from enum import IntEnum
 from typing import Tuple, Optional
 from datetime import datetime, timedelta, timezone
@@ -288,7 +289,6 @@ class RedirectToDebtorEndpoint(MethodView):
         """Redirect to the debtor's policy."""
 
         ensure_debtor_permissions()
-
         debtorId = g.debtor_id
         if debtorId is not None:
             location = url_for('debtors.DebtorEndpoint', _external=True, debtorId=debtorId)
@@ -317,12 +317,17 @@ class DebtorEndpoint(MethodView):
         """Update debtor's policy."""
 
         ensure_debtor_permissions()
+        optional_info = policy_update_request.get('optional_debtor_info')
+        optional_sha256 = optional_info and optional_info.get('optional_sha256')
         try:
             debtor = procedures.update_debtor_policy(
                 debtor_id=debtorId,
                 interest_rate_target=policy_update_request.get('interest_rate_target'),
                 new_interest_rate_limits=policy_update_request['interest_rate_lower_limits'],
                 new_balance_limits=policy_update_request['balance_lower_limits'],
+                debtor_info_iri=optional_info and optional_info['iri'],
+                debtor_info_sha256=optional_sha256 and b16decode(optional_sha256),
+                debtor_info_content_type=optional_info and optional_info.get('optional_content_type'),
             )
         except (procedures.DebtorDoesNotExist, procedures.TooManyManagementActions):
             abort(403)

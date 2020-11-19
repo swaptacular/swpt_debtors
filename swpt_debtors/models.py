@@ -105,6 +105,9 @@ class Debtor(db.Model):
     created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     balance = db.Column(db.BigInteger, nullable=False, default=0)
     interest_rate_target = db.Column(db.REAL, nullable=False, default=0.0)
+    debtor_info_iri = db.Column(db.String)
+    debtor_info_content_type = db.Column(db.String)
+    debtor_info_sha256 = db.Column(db.LargeBinary)
     running_transfers_count = db.Column(db.Integer, nullable=False, default=0)
     actions_count = db.Column(db.Integer, nullable=False, default=0)
     actions_count_reset_date = db.Column(db.DATE, nullable=False, default=get_now_utc)
@@ -155,6 +158,10 @@ class Debtor(db.Model):
         db.CheckConstraint(or_(
             deactivation_date == null(),
             status_flags.op('&')(STATUS_IS_DEACTIVATED_FLAG) != 0,
+        )),
+        db.CheckConstraint(or_(
+            debtor_info_sha256 == null(),
+            func.octet_length(debtor_info_sha256) == 32
         )),
         db.CheckConstraint(actions_count >= 0),
         db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
@@ -226,6 +233,9 @@ class Debtor(db.Model):
         self.bll_cutoffs = None
         self.irll_values = None
         self.irll_cutoffs = None
+        self.debtor_info_iri = None
+        self.debtor_info_sha256 = None
+        self.debtor_info_content_type = None
 
         self.status_flags |= Debtor.STATUS_IS_DEACTIVATED_FLAG
         self.deactivation_date = datetime.now(tz=timezone.utc).date()

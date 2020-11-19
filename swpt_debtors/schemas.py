@@ -1,4 +1,5 @@
 from copy import copy
+from base64 import b16encode
 from marshmallow import Schema, fields, validate, pre_dump, post_dump, post_load, \
     validates, missing, ValidationError
 from flask import url_for
@@ -20,7 +21,8 @@ ESTABLISHED_LIMITS_NOTE = '\
 **Note:** Established limits can not be removed. They will continue \
 to be enforced until the specified expiration date. Therefore, when \
 the policy is being updated, this field should contain only the \
-additional limits that have to be added to the existing ones.'
+additional limits that have to be added to the existing ones. This can \
+be an empty array.'
 
 TRANSFER_NOTE_FORMAT_REGEX = r'^[0-9A-Za-z.-]{0,8}$'
 
@@ -264,6 +266,47 @@ class BalanceLowerLimitSchema(ValidateTypeMixin, Schema):
         return LowerLimit(value=data['value'], cutoff=data['cutoff'])
 
 
+class DebtorInfoSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='DebtorInfo',
+        default='DebtorInfo',
+        description='The type of this object.',
+        example='DebtorInfo',
+    )
+    iri = fields.String(
+        required=True,
+        validate=validate.Length(max=200),
+        format='iri',
+        description='A link (Internationalized Resource Identifier) referring to a document '
+                    'containing information about the debtor.',
+        example='https://example.com/1/',
+    )
+    optional_content_type = fields.String(
+        data_key='contentType',
+        validate=validate.Length(max=100),
+        description='Optional MIME type of the document that the `iri` field refers to.',
+        example='text/html',
+    )
+    optional_sha256 = fields.String(
+        validate=validate.Regexp('^[0-9A-F]{64}$'),
+        data_key='sha256',
+        description='Optional SHA-256 cryptographic hash (Base16 encoded) of the content of '
+                    'the document that the `iri` field refers to.',
+        example='E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855',
+    )
+
+    @validates('optional_content_type')
+    def validate_optional_content_type(self, value):
+        assert len(value) <= 100
+        if not value.isascii():
+            raise ValidationError('Includes non-ASCII characters.')
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'iri' in obj
+        return obj
+
+
 class DebtorCreationOptionsSchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='DebtorCreationOptions',
@@ -343,6 +386,11 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description="The date on which the debtor was deactivated. If this field is not present, "
                     "this means that the debtor has not been deactivated yet.",
     )
+    optional_debtor_info = fields.Nested(
+        DebtorInfoSchema,
+        data_key='debtorInfo',
+        description='Optional link to additional information about the debtor.',
+    )
 
     @pre_dump
     def process_debtor_instance(self, obj, many):
@@ -353,6 +401,14 @@ class DebtorSchema(ValidateTypeMixin, Schema):
 
         if obj.deactivation_date is not None:
             obj.optional_deactivation_date = obj.deactivation_date
+
+        if obj.debtor_info_iri is not None:
+            debtor_info = {'iri': obj.debtor_info_iri}
+            if obj.debtor_info_content_type is not None:
+                debtor_info['optional_content_type'] = obj.debtor_info_content_type
+            if obj.debtor_info_sha256 is not None:
+                debtor_info['optional_sha256'] = b16encode(obj.debtor_info_sha256).decode()
+            obj.optional_debtor_info = debtor_info
 
         return obj
 
