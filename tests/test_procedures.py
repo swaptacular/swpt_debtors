@@ -400,7 +400,7 @@ def test_successful_transfer(db_session, debtor):
     assert len(rt_list) == 1
     rt = rt_list[0]
     assert rt.is_settled
-    assert rt.issuing_transfer_id is not None
+    assert rt.transfer_id is not None
     it_list = RunningTransfer.query.all()
     assert len(it_list) == 1
     it = it_list[0]
@@ -482,7 +482,7 @@ def test_failed_transfer(db_session, debtor):
     assert len(rt_list) == 1
     rt = rt_list[0]
     assert rt.is_settled
-    assert rt.issuing_transfer_id is not None
+    assert rt.transfer_id is not None
     it_list = RunningTransfer.query.all()
     assert len(it_list) == 1
     it = it_list[0]

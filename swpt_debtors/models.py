@@ -101,56 +101,19 @@ class Debtor(db.Model):
                 f"{STATUS_IS_ACTIVATED_FLAG} - is activated, "
                 f"{STATUS_IS_DEACTIVATED_FLAG} - is deactivated.",
     )
-    created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     reservation_id = db.Column(db.BigInteger, server_default=_ad_seq.next_value())
+    created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    balance = db.Column(db.BigInteger, nullable=False, default=0)
+    interest_rate_target = db.Column(db.REAL, nullable=False, default=0.0)
+    running_transfers_count = db.Column(db.Integer, nullable=False, default=0)
+    actions_count = db.Column(db.Integer, nullable=False, default=0)
+    actions_count_reset_date = db.Column(db.DATE, nullable=False, default=get_now_utc)
     deactivation_date = db.Column(
         db.DATE,
         comment='The date on which the debtor was deactivated. When a debtor gets '
                 'deactivated, all its belonging objects (transfers, etc.) are '
                 'removed. To be deactivated, the debtor must be activated first. Once '
                 'deactivated, a debtor stays deactivated until it is deleted.',
-    )
-    balance = db.Column(
-        db.BigInteger,
-        nullable=False,
-        default=0,
-        comment="The total issued amount with a negative sign. Normally, it will be a "
-                "negative number or a zero. A positive value, although theoretically "
-                "possible, should be very rare.",
-    )
-    interest_rate_target = db.Column(
-        db.REAL,
-        nullable=False,
-        default=0.0,
-        comment="The annual rate (in percents) at which the debtor wants the interest "
-                "to accumulate on creditors' accounts. The actual interest rate may be "
-                "different if interest rate limits are enforced.",
-    )
-    running_transfers_count = db.Column(
-        db.Integer,
-        nullable=False,
-        default=0,
-        comment='The number of initiated issuing transfers for this debtor. It is '
-                'incremented when a new row for the debtor is inserted in the '
-                '`initiated_transfer` table, and decremented when a row is deleted. It '
-                'is needed for performance reasons.',
-    )
-    actions_throttle_date = db.Column(
-        db.DATE,
-        nullable=False,
-        default=get_now_utc,
-        comment="The date at which `actions_throttle_count` was zeroed out for the last "
-                "time. This field is used to limit the number of management actions per "
-                "month that a debtor is allowed to do.",
-    )
-    actions_throttle_count = db.Column(
-        db.Integer,
-        nullable=False,
-        default=0,
-        comment="The number of management actions that have been initiated after "
-                "`actions_throttle_date`. This field is used to limit the number of "
-                "management actions per month that a debtor is allowed to do. It gets "
-                "zeroed out once a month.",
     )
 
     # Ballance Lower Limits
@@ -193,7 +156,7 @@ class Debtor(db.Model):
             deactivation_date == null(),
             status_flags.op('&')(STATUS_IS_DEACTIVATED_FLAG) != 0,
         )),
-        db.CheckConstraint(actions_throttle_count >= 0),
+        db.CheckConstraint(actions_count >= 0),
         db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
         db.CheckConstraint(or_(bll_cutoffs == null(), func.array_ndims(bll_cutoffs) == 1)),
         db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
@@ -205,10 +168,6 @@ class Debtor(db.Model):
         #       does not support this yet (2020-01-11), temporarily,
         #       there are no index-only scans.
         db.Index('idx_debtor_pk', debtor_id, unique=True),
-
-        {
-            'comment': "Represents debtor's principal information.",
-        }
     )
 
     balance_lower_limits = lower_limits_property('bll_values', 'bll_cutoffs')
@@ -258,7 +217,10 @@ class Debtor(db.Model):
         self.reservation_id = None
 
     def deactivate(self):
-        # Remove the limits to save space.
+        # NOTE: We want to remove the limits to save disk space. But
+        # before doing this, we update the interest rate target to
+        # ensure that the interest rate will not change once the
+        # limits are removed.
         self.interest_rate_target = self.interest_rate
         self.bll_values = None
         self.bll_cutoffs = None
@@ -270,70 +232,27 @@ class Debtor(db.Model):
 
 
 class RunningTransfer(db.Model):
-    _icr_seq = db.Sequence('issuing_coordinator_request_id_seq', metadata=db.Model.metadata)
+    _cr_seq = db.Sequence('coordinator_request_id_seq', metadata=db.Model.metadata)
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
-    recipient_creditor_id = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The recipient of the transfer.',
-    )
-    amount = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The amount to be transferred. Must be positive.',
-    )
-    transfer_note_format = db.Column(
-        db.String,
-        nullable=False,
-        comment='The format used for the `note` field. An empty string signifies unstructured text.'
-    )
-    transfer_note = db.Column(
-        db.String,
-        nullable=False,
-        comment='A note from the debtor. Can be any string that the debtor wants the '
-                'recipient to see.',
-    )
-    initiated_at = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=get_now_utc,
-        comment='The moment at which the transfer was initiated.',
-    )
-    finalized_at = db.Column(
-        db.TIMESTAMP(timezone=True),
-        comment='The moment at which the transfer was finalized. A `null` means that the '
-                'transfer has not been finalized yet.',
-    )
+    recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
+    amount = db.Column(db.BigInteger, nullable=False)
+    transfer_note_format = db.Column(db.String, nullable=False)
+    transfer_note = db.Column(db.String, nullable=False)
+    initiated_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    finalized_at = db.Column(db.TIMESTAMP(timezone=True))
     error_code = db.Column(db.String)
     total_locked_amount = db.Column(db.BigInteger)
-    issuing_coordinator_request_id = db.Column(
-        db.BigInteger,
-        nullable=False,
-        server_default=_icr_seq.next_value(),
-        comment='This is the value of the `coordinator_request_id` parameter, which has been '
-                'sent with the `prepare_transfer` message for the transfer. The value of '
-                '`debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` '
-                'is "issuing".',
-    )
-    issuing_transfer_id = db.Column(
-        db.BigInteger,
-        comment="This value, along with `debtor_id` uniquely identifies the successfully prepared "
-                "transfer. (The sender is always the debtor's account.)",
-    )
+    coordinator_request_id = db.Column(db.BigInteger, nullable=False, server_default=_cr_seq.next_value())
+    transfer_id = db.Column(db.BigInteger)
     __mapper_args__ = {'eager_defaults': True}
     __table_args__ = (
         db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
         db.CheckConstraint(amount > 0),
         db.CheckConstraint(total_locked_amount >= 0),
         db.CheckConstraint(or_(error_code == null(), finalized_at != null())),
-        db.Index(
-            'idx_issuing_coordinator_request_id',
-            debtor_id,
-            issuing_coordinator_request_id,
-            unique=True,
-        ),
+        db.Index('idx_coordinator_request_id', debtor_id, coordinator_request_id, unique=True),
         {
             'comment': 'Represents an initiated issuing transfer. A new row is inserted when '
                        'a debtor creates a new issuing transfer. The row is deleted when the '
@@ -343,7 +262,7 @@ class RunningTransfer(db.Model):
 
     @property
     def is_settled(self):
-        return self.issuing_transfer_id is not None
+        return self.transfer_id is not None
 
     @property
     def is_finalized(self):

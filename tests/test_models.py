@@ -59,7 +59,7 @@ def test_running_transfer_attrs(debtor, db_session, current_ts):
     assert t.transfer_note_format == 'fmt'
     assert t.transfer_note == 'a test note'
     assert not t.is_settled
-    t.issuing_transfer_id = 666
+    t.transfer_id = 666
     assert t.is_settled
 
 

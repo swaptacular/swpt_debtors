@@ -307,7 +307,7 @@ def initiate_running_transfer(
 
     db.session.add(PrepareTransferSignal(
         debtor_id=debtor_id,
-        coordinator_request_id=new_running_transfer.issuing_coordinator_request_id,
+        coordinator_request_id=new_running_transfer.coordinator_request_id,
         min_locked_amount=amount,
         max_locked_amount=amount,
         sender_creditor_id=ROOT_CREDITOR_ID,
@@ -387,10 +387,10 @@ def process_prepared_issuing_transfer_signal(
     if the_signal_matches_the_transfer:
         assert rt is not None
 
-        if not rt.is_finalized and rt.issuing_transfer_id is None:
-            rt.issuing_transfer_id = transfer_id
+        if not rt.is_finalized and rt.transfer_id is None:
+            rt.transfer_id = transfer_id
 
-        if rt.issuing_transfer_id == transfer_id:
+        if rt.transfer_id == transfer_id:
             db.session.add(FinalizeTransferSignal(
                 debtor_id=rt.debtor_id,
                 sender_creditor_id=ROOT_CREDITOR_ID,
@@ -431,7 +431,7 @@ def process_finalized_issuing_transfer_signal(
         rt is not None
         and rt.debtor_id == debtor_id
         and ROOT_CREDITOR_ID == sender_creditor_id
-        and rt.issuing_transfer_id == transfer_id
+        and rt.transfer_id == transfer_id
     )
     if the_signal_matches_the_transfer:
         assert rt is not None
@@ -558,13 +558,13 @@ def _throttle_debtor_actions(debtor_id: int) -> Debtor:
         raise DebtorDoesNotExist()
 
     current_date = datetime.now(tz=timezone.utc).date()
-    number_of_elapsed_days = (current_date - debtor.actions_throttle_date).days
+    number_of_elapsed_days = (current_date - debtor.actions_count_reset_date).days
     if number_of_elapsed_days > 30:  # pragma: no cover
-        debtor.actions_throttle_count = 0
-        debtor.actions_throttle_date = current_date
-    if debtor.actions_throttle_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
+        debtor.actions_count = 0
+        debtor.actions_count_reset_date = current_date
+    if debtor.actions_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
         raise TooManyManagementActions()
-    debtor.actions_throttle_count += 1
+    debtor.actions_count += 1
     return debtor
 
 
@@ -573,7 +573,7 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
     assert MIN_INT64 < coordinator_request_id <= MAX_INT64
 
     return RunningTransfer.query.\
-        filter_by(debtor_id=coordinator_id, issuing_coordinator_request_id=coordinator_request_id).\
+        filter_by(debtor_id=coordinator_id, coordinator_request_id=coordinator_request_id).\
         one_or_none()
 
 
