@@ -4,7 +4,7 @@ from datetime import date, datetime
 from marshmallow import ValidationError
 from swpt_debtors import schemas
 from swpt_debtors.lower_limits import LowerLimit
-from swpt_debtors.models import Debtor, InitiatedTransfer, TRANSFER_NOTE_MAX_BYTES, BEGINNING_OF_TIME, \
+from swpt_debtors.models import Debtor, RunningTransfer, TRANSFER_NOTE_MAX_BYTES, BEGINNING_OF_TIME, \
     SC_INSUFFICIENT_AVAILABLE_AMOUNT
 from swpt_debtors.routes import context
 
@@ -109,7 +109,7 @@ def test_serialize_transfer(app):
         'error_code': SC_INSUFFICIENT_AVAILABLE_AMOUNT,
         'total_locked_amount': 5,
     }
-    it = InitiatedTransfer(**transfer_data)
+    it = RunningTransfer(**transfer_data)
 
     data = ts.dump(it)
     assert data == {

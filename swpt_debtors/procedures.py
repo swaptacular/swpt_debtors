@@ -10,9 +10,9 @@ from swpt_lib.utils import Seqnum, u64_to_i64
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequence
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizeTransferSignal, \
-    InitiatedTransfer, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
+    RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
     NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
-    SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER
+    SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -46,9 +46,6 @@ class TransferDoesNotExist(Exception):
 
 class TransferExists(Exception):
     """The same initiated transfer record already exists."""
-
-    def __init__(self, transfer: InitiatedTransfer):
-        self.transfer = transfer
 
 
 class TransfersConflict(Exception):
@@ -228,104 +225,97 @@ def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
     if not db.session.query(debtor_query.exists()).scalar():
         raise DebtorDoesNotExist()
 
-    rows = db.session.query(InitiatedTransfer.transfer_uuid).filter_by(debtor_id=debtor_id).all()
+    rows = db.session.query(RunningTransfer.transfer_uuid).filter_by(debtor_id=debtor_id).all()
     return [uuid for (uuid,) in rows]
 
 
 @atomic
-def get_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> Optional[InitiatedTransfer]:
-    return InitiatedTransfer.get_instance((debtor_id, transfer_uuid))
+def get_running_transfer(debtor_id: int, transfer_uuid: UUID, lock=False) -> Optional[RunningTransfer]:
+    query = RunningTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid)
+    if lock:
+        query = query.with_for_update()
+
+    return query.one_or_none()
 
 
 @atomic
-def cancel_transfer(debtor_id: int, transfer_uuid: UUID) -> InitiatedTransfer:
-    initiated_transfer = InitiatedTransfer.lock_instance((debtor_id, transfer_uuid))
-
-    if not initiated_transfer:
+def cancel_running_transfer(debtor_id: int, transfer_uuid: UUID) -> RunningTransfer:
+    rt = get_running_transfer(debtor_id, transfer_uuid, lock=True)
+    if rt is None:
         raise TransferDoesNotExist()
 
-    if initiated_transfer.is_successful:
+    if rt.is_settled:
         raise ForbiddenTransferCancellation()
 
-    if not initiated_transfer.is_finalized:
-        rt = RunningTransfer.lock_instance((debtor_id, transfer_uuid))
-
-        # The `InitiatedTransfer` and `RunningTransfer` records are
-        # created together, and whenever the `RunningTransfer` gets
-        # removed, the `InitiatedTransfer` gets finalizad.
-        assert rt
-
-        if rt.is_settled:
-            raise ForbiddenTransferCancellation()
-        initiated_transfer.finalized_at = datetime.now(tz=timezone.utc)
-        initiated_transfer.error_code = SC_CANCELED_BY_THE_SENDER
-        db.session.delete(rt)
-
-    assert initiated_transfer.is_finalized and not initiated_transfer.is_successful
-    return initiated_transfer
+    _finalize_running_transfer(rt, error_code=SC_CANCELED_BY_THE_SENDER)
+    return rt
 
 
 @atomic
-def delete_initiated_transfer(debtor_id: int, transfer_uuid: UUID) -> bool:
-    number_of_deleted_rows = InitiatedTransfer.query.\
+def delete_running_transfer(debtor_id: int, transfer_uuid: UUID) -> None:
+    number_of_deleted_rows = RunningTransfer.query.\
         filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).\
         delete(synchronize_session=False)
 
-    assert number_of_deleted_rows in [0, 1]
-    if number_of_deleted_rows == 1:
-        Debtor.query.\
-            filter_by(debtor_id=debtor_id).\
-            update({Debtor.initiated_transfers_count: Debtor.initiated_transfers_count - 1}, synchronize_session=False)
+    if number_of_deleted_rows == 0:
+        raise TransferDoesNotExist()
 
-    return number_of_deleted_rows == 1
+    assert number_of_deleted_rows == 1
+    Debtor.query.\
+        filter_by(debtor_id=debtor_id).\
+        update({Debtor.running_transfers_count: Debtor.running_transfers_count - 1}, synchronize_session=False)
 
 
 @atomic
-def initiate_transfer(
+def initiate_running_transfer(
         debtor_id: int,
         transfer_uuid: UUID,
         recipient_creditor_id: int,
         amount: int,
         transfer_note_format: str,
-        transfer_note: str) -> InitiatedTransfer:
+        transfer_note: str) -> RunningTransfer:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
     assert 0 < amount <= MAX_INT64
 
-    _raise_error_if_transfer_exists(
-        debtor_id,
-        transfer_uuid,
-        recipient_creditor_id,
-        amount,
-        transfer_note_format,
-        transfer_note,
-    )
+    transfer_data = {
+        'amount': amount,
+        'recipient_creditor_id': recipient_creditor_id,
+        'transfer_note_format': transfer_note_format,
+        'transfer_note': transfer_note,
+    }
+
+    rt = get_running_transfer(debtor_id, transfer_uuid)
+    if rt:
+        if any(getattr(rt, attr) != value for attr, value in transfer_data.items()):
+            raise TransfersConflict()
+        raise TransferExists()
+
     debtor = _throttle_debtor_actions(debtor_id)
-    _increment_initiated_transfers_count(debtor)
+    debtor.running_transfers_count += 1
+    if debtor.running_transfers_count > current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
+        raise TransfersConflict()
 
-    _insert_running_transfer_or_raise_conflict_error(
-        debtor=debtor,
-        transfer_uuid=transfer_uuid,
-        recipient_creditor_id=recipient_creditor_id,
-        amount=amount,
-        transfer_note_format=transfer_note_format,
-        transfer_note=transfer_note,
-    )
-
-    new_transfer = InitiatedTransfer(
+    new_running_transfer = RunningTransfer(
         debtor_id=debtor_id,
         transfer_uuid=transfer_uuid,
-        recipient_creditor_id=recipient_creditor_id,
-        amount=amount,
-        transfer_note_format=transfer_note_format,
-        transfer_note=transfer_note,
+        **transfer_data,
     )
-
     with db.retry_on_integrity_error():
-        db.session.add(new_transfer)
+        db.session.add(new_running_transfer)
 
-    return new_transfer
+    db.session.add(PrepareTransferSignal(
+        debtor_id=debtor_id,
+        coordinator_request_id=new_running_transfer.issuing_coordinator_request_id,
+        min_locked_amount=amount,
+        max_locked_amount=amount,
+        sender_creditor_id=ROOT_CREDITOR_ID,
+        recipient_creditor_id=recipient_creditor_id,
+        min_account_balance=debtor.min_account_balance,
+    ))
+
+    return new_running_transfer
 
 
 @atomic
@@ -350,21 +340,11 @@ def process_rejected_issuing_transfer_signal(
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
-    if rt and not rt.is_settled:
-        if rt.debtor_id == debtor_id and ROOT_CREDITOR_ID == sender_creditor_id:
-            _finalize_initiated_transfer(
-                rt.debtor_id,
-                rt.transfer_uuid,
-                error_code=status_code,
-                total_locked_amount=total_locked_amount,
-            )
+    if rt and not rt.is_finalized:
+        if status_code != SC_OK and rt.debtor_id == debtor_id and ROOT_CREDITOR_ID == sender_creditor_id:
+            _finalize_running_transfer(rt, error_code=status_code, total_locked_amount=total_locked_amount)
         else:  # pragma:  no cover
-            _finalize_initiated_transfer(
-                rt.debtor_id,
-                rt.transfer_uuid,
-                error_code=SC_UNEXPECTED_ERROR,
-            )
-        db.session.delete(rt)
+            _finalize_running_transfer(rt, error_code=SC_UNEXPECTED_ERROR)
 
 
 @atomic
@@ -382,22 +362,32 @@ def process_prepared_issuing_transfer_signal(
     assert MIN_INT64 <= transfer_id <= MAX_INT64
     assert 0 < sender_locked_amount <= MAX_INT64
 
+    def dismiss_prepared_transfer():
+        db.session.add(FinalizeTransferSignal(
+            debtor_id=debtor_id,
+            sender_creditor_id=sender_creditor_id,
+            transfer_id=transfer_id,
+            coordinator_id=coordinator_id,
+            coordinator_request_id=coordinator_request_id,
+            committed_amount=0,
+            transfer_note_format='',
+            transfer_note='',
+        ))
+
     recipient_creditor_id = u64_to_i64(int(recipient))
+
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
-    rt_matches_the_signal = (
+    the_signal_matches_the_transfer = (
         rt is not None
         and rt.debtor_id == debtor_id
         and ROOT_CREDITOR_ID == sender_creditor_id
         and rt.recipient_creditor_id == recipient_creditor_id
         and rt.amount <= sender_locked_amount
     )
-    if rt_matches_the_signal:
+    if the_signal_matches_the_transfer:
         assert rt is not None
-        if not rt.is_settled:
-            # We settle the `RunningTransfer` record here, but we do
-            # not finalize the corresponding `InitiatedTransfer`
-            # record yet (it will be finalized when the
-            # `FinalizedTransferSignal` is received).
+
+        if not rt.is_finalized and rt.issuing_transfer_id is None:
             rt.issuing_transfer_id = transfer_id
 
         if rt.issuing_transfer_id == transfer_id:
@@ -413,17 +403,7 @@ def process_prepared_issuing_transfer_signal(
             ))
             return
 
-    # The newly prepared transfer is dismissed.
-    db.session.add(FinalizeTransferSignal(
-        debtor_id=debtor_id,
-        sender_creditor_id=sender_creditor_id,
-        transfer_id=transfer_id,
-        coordinator_id=coordinator_id,
-        coordinator_request_id=coordinator_request_id,
-        committed_amount=0,
-        transfer_note_format='',
-        transfer_note='',
-    ))
+    dismiss_prepared_transfer()
 
 
 @atomic
@@ -435,7 +415,8 @@ def process_finalized_issuing_transfer_signal(
         coordinator_request_id: int,
         recipient: str,
         committed_amount: int,
-        status_code: str) -> None:
+        status_code: str,
+        total_locked_amount: int) -> None:
 
     assert MIN_INT64 <= debtor_id <= MAX_INT64
     assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
@@ -444,20 +425,23 @@ def process_finalized_issuing_transfer_signal(
     assert 0 <= len(status_code.encode('ascii')) <= 30
 
     recipient_creditor_id = u64_to_i64(int(recipient))
+
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
-    rt_matches_the_signal = (
+    the_signal_matches_the_transfer = (
         rt is not None
         and rt.debtor_id == debtor_id
         and ROOT_CREDITOR_ID == sender_creditor_id
         and rt.issuing_transfer_id == transfer_id
     )
-    if rt_matches_the_signal:
+    if the_signal_matches_the_transfer:
         assert rt is not None
-        if committed_amount == rt.amount and recipient_creditor_id == rt.recipient_creditor_id:
-            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid)
+
+        if status_code == SC_OK and committed_amount == rt.amount and recipient_creditor_id == rt.recipient_creditor_id:
+            _finalize_running_transfer(rt)
+        elif status_code != SC_OK and committed_amount == 0 and recipient_creditor_id == rt.recipient_creditor_id:
+            _finalize_running_transfer(rt, error_code=status_code, total_locked_amount=total_locked_amount)
         else:  # pragma: no cover
-            _finalize_initiated_transfer(rt.debtor_id, rt.transfer_uuid, error_code=status_code)
-        db.session.delete(rt)
+            _finalize_running_transfer(rt, error_code=SC_UNEXPECTED_ERROR)
 
 
 @atomic
@@ -568,67 +552,6 @@ def insert_change_interest_rate_signal(
     ))
 
 
-def _insert_running_transfer_or_raise_conflict_error(
-        debtor: Debtor,
-        transfer_uuid: UUID,
-        recipient_creditor_id: int,
-        amount: int,
-        transfer_note_format: str,
-        transfer_note: str) -> RunningTransfer:
-
-    running_transfer = RunningTransfer(
-        debtor_id=debtor.debtor_id,
-        transfer_uuid=transfer_uuid,
-        recipient_creditor_id=recipient_creditor_id,
-        amount=amount,
-        transfer_note_format=transfer_note_format,
-        transfer_note=transfer_note,
-    )
-    db.session.add(running_transfer)
-    try:
-        db.session.flush()
-    except IntegrityError:
-        raise TransfersConflict()
-
-    db.session.add(PrepareTransferSignal(
-        debtor_id=debtor.debtor_id,
-        coordinator_request_id=running_transfer.issuing_coordinator_request_id,
-        min_locked_amount=amount,
-        max_locked_amount=amount,
-        sender_creditor_id=ROOT_CREDITOR_ID,
-        recipient_creditor_id=recipient_creditor_id,
-        min_account_balance=debtor.min_account_balance,
-    ))
-    return running_transfer
-
-
-def _raise_error_if_transfer_exists(
-        debtor_id: int,
-        transfer_uuid: UUID,
-        recipient_creditor_id: int,
-        amount: int,
-        transfer_note_format: str,
-        transfer_note: str) -> None:
-
-    t = InitiatedTransfer.query.filter_by(debtor_id=debtor_id, transfer_uuid=transfer_uuid).one_or_none()
-    if t:
-        is_same_transfer = (
-            t.recipient_creditor_id == recipient_creditor_id
-            and t.amount == amount
-            and t.transfer_note_format == transfer_note_format
-            and t.transfer_note == transfer_note
-        )
-        if is_same_transfer:
-            raise TransferExists(t)
-        raise TransfersConflict()
-
-
-def _increment_initiated_transfers_count(debtor: Debtor) -> None:
-    if debtor.initiated_transfers_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
-        raise TransfersConflict()
-    debtor.initiated_transfers_count += 1
-
-
 def _throttle_debtor_actions(debtor_id: int) -> Debtor:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor is None:
@@ -649,23 +572,9 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
     assert MIN_INT64 <= coordinator_id <= MAX_INT64
     assert MIN_INT64 < coordinator_request_id <= MAX_INT64
 
-    return RunningTransfer.query.filter_by(
-        debtor_id=coordinator_id,
-        issuing_coordinator_request_id=coordinator_request_id,
-    ).with_for_update().one_or_none()
-
-
-def _finalize_initiated_transfer(
-        debtor_id: int,
-        transfer_uuid: int,
-        error_code: str = None,
-        total_locked_amount: int = None) -> None:
-
-    initiated_transfer = InitiatedTransfer.lock_instance((debtor_id, transfer_uuid))
-    if initiated_transfer and initiated_transfer.finalized_at is None:
-        initiated_transfer.finalized_at = datetime.now(tz=timezone.utc)
-        initiated_transfer.error_code = error_code
-        initiated_transfer.total_locked_amount = total_locked_amount
+    return RunningTransfer.query.\
+        filter_by(debtor_id=coordinator_id, issuing_coordinator_request_id=coordinator_request_id).\
+        one_or_none()
 
 
 def _insert_configure_account_signal(debtor_id: int) -> None:
@@ -695,8 +604,15 @@ def _is_correct_debtor_id(debtor_id: int) -> bool:
 
 
 def _delete_debtor_transfers(debtor: Debtor) -> None:
-    debtor.initiated_transfers_count = 0
+    debtor.running_transfers_count = 0
 
-    InitiatedTransfer.query.\
+    RunningTransfer.query.\
         filter_by(debtor_id=debtor.debtor_id).\
         delete(synchronize_session=False)
+
+
+def _finalize_running_transfer(rt: RunningTransfer, error_code: str = None, total_locked_amount: int = None) -> None:
+    if not rt.is_finalized:
+        rt.finalized_at = datetime.now(tz=timezone.utc)
+        rt.error_code = error_code
+        rt.total_locked_amount = total_locked_amount

@@ -260,7 +260,7 @@ def test_change_debtor_policy(client, debtor):
     assert r.status_code == 403
 
 
-def test_initiate_transfer(client, debtor):
+def test_initiate_running_transfer(client, debtor):
     r = client.get('/debtors/666/transfers/')
     assert r.status_code == 404
 
@@ -342,7 +342,7 @@ def test_initiate_transfer(client, debtor):
             assert r.status_code == 201
 
 
-def test_cancel_transfer(client, debtor):
+def test_cancel_running_transfer(client, debtor):
     json_request_body = {
         'amount': 1000,
         'note': 'test',

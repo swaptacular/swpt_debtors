@@ -1,7 +1,7 @@
 import pytest
 from uuid import UUID
 from datetime import datetime, timezone, timedelta, date
-from swpt_debtors.models import RunningTransfer, Account, InitiatedTransfer, Debtor, \
+from swpt_debtors.models import RunningTransfer, Account, Debtor, \
     ConfigureAccountSignal, ROOT_CREDITOR_ID, BEGINNING_OF_TIME
 from swpt_debtors.extensions import db
 from swpt_debtors import procedures
@@ -26,28 +26,6 @@ def app_unsafe_session(app_unsafe_session):
         RunningTransfer.query.delete()
         PrepareTransferSignal.query.delete()
         db.session.commit()
-
-
-def test_scan_running_transfers(app_unsafe_session):
-    app = app_unsafe_session
-    running_transfer = RunningTransfer(
-        debtor_id=1,
-        transfer_uuid=TEST_UUID,
-        recipient_creditor_id=1111,
-        amount=1500,
-        transfer_note_format='',
-        transfer_note='',
-        issuing_transfer_id=666,
-        started_at=datetime(2000, 1, 1, tzinfo=timezone.utc)
-    )
-    db.session.add(running_transfer)
-    db.session.commit()
-    db.engine.execute('ANALYZE running_transfer')
-    assert len(RunningTransfer.query.all()) == 1
-    runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'scan_running_transfers', '--days', '0.000001', '--quit-early'])
-    assert result.exit_code == 0
-    assert len(RunningTransfer.query.all()) == 0
 
 
 def test_scan_accounts(app_unsafe_session):
@@ -258,7 +236,7 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     db.session.add(Debtor(debtor_id=1, status_flags=Debtor.STATUS_IS_ACTIVATED_FLAG))
-    procedures.initiate_transfer(1, TEST_UUID, 1, 50, '', '')
+    procedures.initiate_running_transfer(1, TEST_UUID, 1, 50, '', '')
     db.session.add(Debtor(debtor_id=2, status_flags=Debtor.STATUS_IS_ACTIVATED_FLAG))
     db.session.add(Account(
         debtor_id=1,

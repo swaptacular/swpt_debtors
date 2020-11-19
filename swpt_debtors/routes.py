@@ -367,7 +367,7 @@ class TransfersListEndpoint(MethodView):
         recipient_creditor_id = u64_to_i64(transfer_creation_request['recipient_creditor_id'])
         location = url_for('transfers.TransferEndpoint', _external=True, debtorId=debtorId, transferUuid=transfer_uuid)
         try:
-            transfer = procedures.initiate_transfer(
+            transfer = procedures.initiate_running_transfer(
                 debtor_id=debtorId,
                 transfer_uuid=transfer_uuid,
                 recipient_creditor_id=recipient_creditor_id,
@@ -393,7 +393,7 @@ class TransferEndpoint(MethodView):
     def get(self, debtorId, transferUuid):
         """Return a credit-issuing transfer."""
 
-        return procedures.get_initiated_transfer(debtorId, transferUuid) or abort(404)
+        return procedures.get_running_transfer(debtorId, transferUuid) or abort(404)
 
     @transfers_api.arguments(TransferCancelationRequestSchema)
     @transfers_api.response(TransferSchema(context=context))
@@ -408,7 +408,7 @@ class TransferEndpoint(MethodView):
         """
 
         try:
-            transfer = procedures.cancel_transfer(debtorId, transferUuid)
+            transfer = procedures.cancel_running_transfer(debtorId, transferUuid)
         except procedures.ForbiddenTransferCancellation:  # pragma: no cover
             abort(403)
         except procedures.TransferDoesNotExist:
@@ -427,4 +427,7 @@ class TransferEndpoint(MethodView):
 
         """
 
-        procedures.delete_initiated_transfer(debtorId, transferUuid)
+        try:
+            procedures.delete_running_transfer(debtorId, transferUuid)
+        except procedures.TransferDoesNotExist:
+            pass

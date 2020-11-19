@@ -3,10 +3,10 @@ from decimal import Decimal
 from typing import NamedTuple, Dict, List, TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
-from sqlalchemy.sql.expression import tuple_, or_, null
+from sqlalchemy.sql.expression import tuple_
 from flask import current_app
 from .extensions import db
-from .models import Debtor, RunningTransfer, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
+from .models import Debtor, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
     TryToDeleteAccountSignal, MAX_INT64, ROOT_CREDITOR_ID, \
     BEGINNING_OF_TIME
 
@@ -21,25 +21,6 @@ SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
 class CachedInterestRate(NamedTuple):
     interest_rate: float
     timestamp: datetime
-
-
-class RunningTransfersScanner(TableScanner):
-    """Garbage-collects staled running transfers."""
-
-    table = RunningTransfer.__table__
-    columns = [RunningTransfer.debtor_id, RunningTransfer.transfer_uuid, RunningTransfer.started_at]
-    pk = tuple_(table.c.debtor_id, table.c.transfer_uuid)
-
-    def __init__(self):
-        super().__init__()
-        self.abandon_interval = timedelta(days=current_app.config['APP_RUNNING_TRANSFERS_ABANDON_DAYS'])
-
-    @atomic
-    def process_rows(self, rows):
-        cutoff_ts = datetime.now(tz=timezone.utc) - self.abandon_interval
-        pks_to_delete = [(row[0], row[1]) for row in rows if row[2] < cutoff_ts]
-        if pks_to_delete:
-            db.session.execute(self.table.delete().where(self.pk.in_(pks_to_delete)))
 
 
 class AccountsScanner(TableScanner):

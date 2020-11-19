@@ -126,7 +126,7 @@ class Debtor(db.Model):
                 "to accumulate on creditors' accounts. The actual interest rate may be "
                 "different if interest rate limits are enforced.",
     )
-    initiated_transfers_count = db.Column(
+    running_transfers_count = db.Column(
         db.Integer,
         nullable=False,
         default=0,
@@ -269,62 +269,6 @@ class Debtor(db.Model):
         self.deactivation_date = datetime.now(tz=timezone.utc).date()
 
 
-class InitiatedTransfer(db.Model):
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
-    recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
-    amount = db.Column(
-        db.BigInteger,
-        nullable=False,
-        comment='The amount to be transferred. Must be positive.',
-    )
-    transfer_note_format = db.Column(
-        db.String,
-        nullable=False,
-        default='',
-        comment='The format used for the `note` field. An empty string signifies unstructured text.'
-    )
-    transfer_note = db.Column(
-        db.String,
-        nullable=False,
-        default='',
-        comment='A note from the debtor. Can be any string that the debtor wants the '
-                'recipient to see.',
-    )
-    initiated_at = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=get_now_utc,
-        comment='The moment at which the transfer was initiated.',
-    )
-    finalized_at = db.Column(
-        db.TIMESTAMP(timezone=True),
-        comment='The moment at which the transfer was finalized. A `null` means that the '
-                'transfer has not been finalized yet.',
-    )
-    error_code = db.Column(db.String)
-    total_locked_amount = db.Column(db.BigInteger)
-    __table_args__ = (
-        db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
-        db.CheckConstraint(amount > 0),
-        db.CheckConstraint(total_locked_amount >= 0),
-        db.CheckConstraint(or_(error_code == null(), finalized_at != null())),
-        {
-            'comment': 'Represents an initiated issuing transfer. A new row is inserted when '
-                       'a debtor creates a new issuing transfer. The row is deleted when the '
-                       'debtor acknowledges (purges) the transfer.',
-        }
-    )
-
-    @property
-    def is_finalized(self):
-        return bool(self.finalized_at)
-
-    @property
-    def is_successful(self):
-        return bool(self.finalized_at and self.error_code is None)
-
-
 class RunningTransfer(db.Model):
     _icr_seq = db.Sequence('issuing_coordinator_request_id_seq', metadata=db.Model.metadata)
 
@@ -351,12 +295,19 @@ class RunningTransfer(db.Model):
         comment='A note from the debtor. Can be any string that the debtor wants the '
                 'recipient to see.',
     )
-    started_at = db.Column(
+    initiated_at = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,
         default=get_now_utc,
-        comment='The moment at which the transfer was started.',
+        comment='The moment at which the transfer was initiated.',
     )
+    finalized_at = db.Column(
+        db.TIMESTAMP(timezone=True),
+        comment='The moment at which the transfer was finalized. A `null` means that the '
+                'transfer has not been finalized yet.',
+    )
+    error_code = db.Column(db.String)
+    total_locked_amount = db.Column(db.BigInteger)
     issuing_coordinator_request_id = db.Column(
         db.BigInteger,
         nullable=False,
@@ -373,21 +324,30 @@ class RunningTransfer(db.Model):
     )
     __mapper_args__ = {'eager_defaults': True}
     __table_args__ = (
+        db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
+        db.CheckConstraint(amount > 0),
+        db.CheckConstraint(total_locked_amount >= 0),
+        db.CheckConstraint(or_(error_code == null(), finalized_at != null())),
         db.Index(
             'idx_issuing_coordinator_request_id',
             debtor_id,
             issuing_coordinator_request_id,
             unique=True,
         ),
-        db.CheckConstraint(amount > 0),
         {
-            'comment': 'Represents a running issuing transfer.',
+            'comment': 'Represents an initiated issuing transfer. A new row is inserted when '
+                       'a debtor creates a new issuing transfer. The row is deleted when the '
+                       'debtor acknowledges (purges) the transfer.',
         }
     )
 
     @property
     def is_settled(self):
         return self.issuing_transfer_id is not None
+
+    @property
+    def is_finalized(self):
+        return bool(self.finalized_at)
 
 
 class Account(db.Model):

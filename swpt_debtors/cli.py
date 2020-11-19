@@ -7,7 +7,7 @@ from flask.cli import with_appcontext
 from swpt_debtors.models import MIN_INT64, MAX_INT64
 from swpt_debtors import procedures
 from .extensions import db
-from .table_scanners import RunningTransfersScanner, AccountsScanner, DebtorScanner
+from .table_scanners import AccountsScanner, DebtorScanner
 
 
 @click.group('swpt_debtors')
@@ -79,28 +79,6 @@ def configure_interval(min_id, max_id):
         sys.exit(1)
 
     procedures.configure_node(min_debtor_id=min_id, max_debtor_id=max_id)
-
-
-@swpt_debtors.command('scan_running_transfers')
-@with_appcontext
-@click.option('-d', '--days', type=float, help='The number of days.')
-@click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
-def scan_running_transfers(days, quit_early):
-    """Start a process that garbage-collects staled running transfers.
-
-    The specified number of days determines the intended duration of a
-    single pass through the running transfers table. If the number of
-    days is not specified, the value of the environment variable
-    APP_RUNNING_TRANSFERS_SCAN_DAYS is taken. If it is not set, the
-    default number of days is 7.
-
-    """
-
-    click.echo('Scanning running transfers...')
-    days = days or float(current_app.config['APP_RUNNING_TRANSFERS_SCAN_DAYS'])
-    assert days > 0.0
-    scanner = RunningTransfersScanner()
-    scanner.run(db.engine, timedelta(days=days), quit_early=quit_early)
 
 
 @swpt_debtors.command('scan_accounts')

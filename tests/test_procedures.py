@@ -3,10 +3,10 @@ import time
 from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_debtors import __version__
-from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, InitiatedTransfer, \
+from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
     RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, \
     MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, BEGINNING_OF_TIME, \
-    SC_OK
+    SC_OK, SC_CANCELED_BY_THE_SENDER
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
 
@@ -220,7 +220,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert d.deactivation_date is not None
     assert d.is_deactivated
     assert d.reservation_id is None
-    assert d.initiated_transfers_count == 0
+    assert d.running_transfers_count == 0
     assert d.balance == -1000
 
 
@@ -279,100 +279,92 @@ def test_update_debtor_policy(db_session, debtor, current_ts):
         p.update_debtor_policy(D_ID, None, [], 11 * [LowerLimit(-1000, current_ts.date())])
 
 
-def test_initiated_transfers(db_session, debtor):
-    Debtor.get_instance(D_ID).initiated_transfers_count = 1
-    db_session.add(InitiatedTransfer(
+def test_running_transfers(db_session, debtor):
+    Debtor.get_instance(D_ID).running_transfers_count = 1
+    db_session.add(RunningTransfer(
         debtor_id=D_ID,
         transfer_uuid=TEST_UUID,
         recipient_creditor_id=C_ID,
+        transfer_note_format='fmt',
+        transfer_note='note',
         amount=1001,
     ))
     db_session.commit()
-    assert p.get_debtor(D_ID).initiated_transfers_count == 1
+    assert p.get_debtor(D_ID).running_transfers_count == 1
     with pytest.raises(p.DebtorDoesNotExist):
         p.get_debtor_transfer_uuids(1234567890)
     uuids = p.get_debtor_transfer_uuids(D_ID)
     assert uuids == [TEST_UUID]
 
-    assert p.get_initiated_transfer(1234567890, TEST_UUID) is None
-    t = p.get_initiated_transfer(D_ID, TEST_UUID)
+    assert p.get_running_transfer(1234567890, TEST_UUID) is None
+    t = p.get_running_transfer(D_ID, TEST_UUID)
     assert t.debtor_id == D_ID
     assert t.transfer_uuid == TEST_UUID
     assert t.amount == 1001
     assert t.recipient_creditor_id == C_ID
 
-    result = p.delete_initiated_transfer(D_ID, TEST_UUID)
-    assert result is True
-    assert p.get_debtor(D_ID).initiated_transfers_count == 0
-    assert p.get_initiated_transfer(D_ID, TEST_UUID) is None
+    p.delete_running_transfer(D_ID, TEST_UUID)
+    assert p.get_debtor(D_ID).running_transfers_count == 0
+    assert p.get_running_transfer(D_ID, TEST_UUID) is None
 
 
 def test_delete_non_existing_initiated_transfer(db_session):
-    assert p.delete_initiated_transfer(D_ID, TEST_UUID) is False
+    with pytest.raises(p.TransferDoesNotExist):
+        p.delete_running_transfer(D_ID, TEST_UUID)
 
 
-def test_initiate_transfer(db_session, debtor):
+def test_initiate_running_transfer(db_session, debtor):
     assert len(RunningTransfer.query.all()) == 0
-    assert len(InitiatedTransfer.query.all()) == 0
     assert p.get_debtor_transfer_uuids(D_ID) == []
-    t = p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
-    assert len(InitiatedTransfer.query.all()) == 1
+    t = p.initiate_running_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
+    assert len(RunningTransfer.query.all()) == 1
     assert t.debtor_id == D_ID
     assert t.transfer_uuid == TEST_UUID
     assert t.recipient_creditor_id == C_ID
     assert t.amount == 1000
     assert t.transfer_note_format == 'fmt'
     assert t.transfer_note == 'test'
-    assert not t.is_finalized
-    running_transfers = RunningTransfer.query.all()
-    assert len(running_transfers) == 1
-    rt = running_transfers[0]
-    assert rt.debtor_id == D_ID
-    assert rt.transfer_uuid == TEST_UUID
-    assert rt.recipient_creditor_id == C_ID
-    assert rt.amount == 1000
-    assert rt.transfer_note_format == 'fmt'
-    assert rt.transfer_note == 'test'
+    assert not t.is_settled
     assert not t.is_finalized
     with pytest.raises(p.TransferExists):
-        p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
+        p.initiate_running_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
     with pytest.raises(p.TransfersConflict):
-        p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1001, 'fmt', 'test')
+        p.initiate_running_transfer(D_ID, TEST_UUID, C_ID, 1001, 'fmt', 'test')
     with pytest.raises(p.DebtorDoesNotExist):
-        p.initiate_transfer(1234567890, TEST_UUID, C_ID, 1001, 'fmt', 'test')
+        p.initiate_running_transfer(1234567890, TEST_UUID, C_ID, 1001, 'fmt', 'test')
     assert len(p.get_debtor_transfer_uuids(D_ID)) == 1
     assert len(RunningTransfer.query.all()) == 1
 
-    p.delete_initiated_transfer(D_ID, TEST_UUID)
-    assert len(RunningTransfer.query.all()) == 1
-    with pytest.raises(p.TransfersConflict):
-        p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
+    p.delete_running_transfer(D_ID, TEST_UUID)
+    assert len(RunningTransfer.query.all()) == 0
 
 
 def test_too_many_initiated_transfers(db_session, debtor):
-    Debtor.get_instance(D_ID).initiated_transfers_count = 1
-    db_session.add(InitiatedTransfer(
+    Debtor.get_instance(D_ID).running_transfers_count = 1
+    db_session.add(RunningTransfer(
         debtor_id=D_ID,
         transfer_uuid=TEST_UUID,
         recipient_creditor_id=C_ID,
         amount=1000,
+        transfer_note_format='',
+        transfer_note='',
     ))
     db_session.commit()
-    assert len(InitiatedTransfer.query.all()) == 1
-    assert p.get_debtor(D_ID).initiated_transfers_count == 1
+    assert len(RunningTransfer.query.all()) == 1
+    assert p.get_debtor(D_ID).running_transfers_count == 1
     for i in range(1, 10):
         suffix = '{:0>4}'.format(i)
         uuid = f'123e4567-e89b-12d3-a456-42665544{suffix}',
-        p.initiate_transfer(D_ID, uuid, C_ID, 1000, '', '')
-    assert len(InitiatedTransfer.query.all()) == 10
-    assert p.get_debtor(D_ID).initiated_transfers_count == 10
+        p.initiate_running_transfer(D_ID, uuid, C_ID, 1000, '', '')
+    assert len(RunningTransfer.query.all()) == 10
+    assert p.get_debtor(D_ID).running_transfers_count == 10
     with pytest.raises(p.TransfersConflict):
-        p.initiate_transfer(D_ID, '123e4567-e89b-12d3-a456-426655440010', C_ID, 1000, '', '')
+        p.initiate_running_transfer(D_ID, '123e4567-e89b-12d3-a456-426655440010', C_ID, 1000, '', '')
 
 
 def test_successful_transfer(db_session, debtor):
     assert len(PrepareTransferSignal.query.all()) == 0
-    p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
+    p.initiate_running_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
     pts_list = PrepareTransferSignal.query.all()
     assert len(pts_list) == 1
     pts = pts_list[0]
@@ -409,11 +401,11 @@ def test_successful_transfer(db_session, debtor):
     rt = rt_list[0]
     assert rt.is_settled
     assert rt.issuing_transfer_id is not None
-    it_list = InitiatedTransfer.query.all()
+    it_list = RunningTransfer.query.all()
     assert len(it_list) == 1
     it = it_list[0]
     assert not it.is_finalized
-    assert not it.is_successful
+    assert it.error_code is None
 
     p.process_finalized_issuing_transfer_signal(
         debtor_id=D_ID,
@@ -424,33 +416,96 @@ def test_successful_transfer(db_session, debtor):
         recipient=str(C_ID),
         committed_amount=1000,
         status_code=SC_OK,
+        total_locked_amount=0,
     )
-    it_list = InitiatedTransfer.query.all()
+    it_list = RunningTransfer.query.all()
     assert len(it_list) == 1
     it = it_list[0]
     assert it.is_finalized
-    assert it.is_successful
+    assert it.error_code is None
 
 
-def test_failed_transfer(db_session, debtor):
-    p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
+def test_rejected_transfer(db_session, debtor):
+    p.initiate_running_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
     pts = PrepareTransferSignal.query.all()[0]
     p.process_rejected_issuing_transfer_signal(
         D_ID, pts.coordinator_request_id, 'TEST', 0, D_ID, p.ROOT_CREDITOR_ID)
     assert len(FinalizeTransferSignal.query.all()) == 0
 
-    assert len(RunningTransfer.query.all()) == 0
-    it_list = InitiatedTransfer.query.all()
+    it_list = RunningTransfer.query.all()
     assert len(it_list) == 1
     it = it_list[0]
     assert it.is_finalized
-    assert not it.is_successful
+    assert it.error_code == 'TEST'
 
     p.process_rejected_issuing_transfer_signal(
         D_ID, pts.coordinator_request_id, 'TEST', 0, D_ID, p.ROOT_CREDITOR_ID)
-    assert len(RunningTransfer.query.all()) == 0
-    it_list == InitiatedTransfer.query.all()
+    it_list == RunningTransfer.query.all()
     assert len(it_list) == 1 and it_list[0].is_finalized
+
+
+def test_failed_transfer(db_session, debtor):
+    assert len(PrepareTransferSignal.query.all()) == 0
+    p.initiate_running_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
+    pts_list = PrepareTransferSignal.query.all()
+    assert len(pts_list) == 1
+    pts = pts_list[0]
+    assert pts.debtor_id == D_ID
+    assert pts.coordinator_request_id is not None
+    assert pts.min_locked_amount == pts.max_locked_amount == 1000
+    assert pts.sender_creditor_id == ROOT_CREDITOR_ID
+    assert pts.recipient_creditor_id == C_ID
+    assert pts.min_account_balance == debtor.min_account_balance
+    coordinator_request_id = pts.coordinator_request_id
+
+    p.process_prepared_issuing_transfer_signal(
+        debtor_id=D_ID,
+        sender_creditor_id=ROOT_CREDITOR_ID,
+        transfer_id=777,
+        recipient=str(C_ID),
+        sender_locked_amount=1000,
+        coordinator_id=D_ID,
+        coordinator_request_id=coordinator_request_id,
+    )
+    assert len(PrepareTransferSignal.query.all()) == 1
+    fpts_list = FinalizeTransferSignal.query.all()
+    assert len(fpts_list) == 1
+    fpts = fpts_list[0]
+    assert fpts.debtor_id == D_ID
+    assert fpts.sender_creditor_id == ROOT_CREDITOR_ID
+    assert fpts.transfer_id is not None
+    assert fpts.committed_amount == 1000
+    assert fpts.transfer_note == 'test'
+    assert fpts.__marshmallow_schema__.dump(fpts)['transfer_note'] == 'test'
+
+    rt_list = RunningTransfer.query.all()
+    assert len(rt_list) == 1
+    rt = rt_list[0]
+    assert rt.is_settled
+    assert rt.issuing_transfer_id is not None
+    it_list = RunningTransfer.query.all()
+    assert len(it_list) == 1
+    it = it_list[0]
+    assert not it.is_finalized
+    assert it.error_code is None
+
+    p.process_finalized_issuing_transfer_signal(
+        debtor_id=D_ID,
+        sender_creditor_id=p.ROOT_CREDITOR_ID,
+        transfer_id=777,
+        coordinator_id=D_ID,
+        coordinator_request_id=coordinator_request_id,
+        recipient=str(C_ID),
+        committed_amount=0,
+        status_code='TEST_ERROR',
+        total_locked_amount=666,
+    )
+    it_list = RunningTransfer.query.all()
+    assert len(it_list) == 1
+    it = it_list[0]
+    assert it.is_finalized
+    assert it.error_code == 'TEST_ERROR'
+    assert it.total_locked_amount == 666
 
 
 def test_process_account_purge_signal(db_session, debtor, current_ts):
@@ -506,17 +561,17 @@ def test_process_account_maintenance_signal(db_session, debtor, current_ts):
     assert a.last_maintenance_request_ts == current_ts
 
 
-def test_cancel_transfer_success(db_session, debtor):
-    p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
+def test_cancel_running_transfer_success(db_session, debtor):
+    p.initiate_running_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
     coordinator_request_id = PrepareTransferSignal.query.one().coordinator_request_id
 
-    t = p.cancel_transfer(D_ID, TEST_UUID)
+    t = p.cancel_running_transfer(D_ID, TEST_UUID)
     assert t.is_finalized
-    assert not t.is_successful
+    assert t.error_code == SC_CANCELED_BY_THE_SENDER
 
-    t = p.cancel_transfer(D_ID, TEST_UUID)
+    t = p.cancel_running_transfer(D_ID, TEST_UUID)
     assert t.is_finalized
-    assert not t.is_successful
+    assert t.error_code == SC_CANCELED_BY_THE_SENDER
 
     p.process_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
@@ -527,13 +582,13 @@ def test_cancel_transfer_success(db_session, debtor):
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,
     )
-    t = p.cancel_transfer(D_ID, TEST_UUID)
+    t = p.cancel_running_transfer(D_ID, TEST_UUID)
     assert t.is_finalized
-    assert not t.is_successful
+    assert t.error_code == SC_CANCELED_BY_THE_SENDER
 
 
-def test_cancel_transfer_failure(db_session, debtor):
-    p.initiate_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
+def test_cancel_running_transfer_failure(db_session, debtor):
+    p.initiate_running_transfer(D_ID, TEST_UUID, C_ID, 1000, 'fmt', 'test')
     coordinator_request_id = PrepareTransferSignal.query.one().coordinator_request_id
 
     p.process_prepared_issuing_transfer_signal(
@@ -546,9 +601,9 @@ def test_cancel_transfer_failure(db_session, debtor):
         coordinator_request_id=coordinator_request_id,
     )
     with pytest.raises(p.ForbiddenTransferCancellation):
-        p.cancel_transfer(D_ID, TEST_UUID)
+        p.cancel_running_transfer(D_ID, TEST_UUID)
     with pytest.raises(p.ForbiddenTransferCancellation):
-        p.cancel_transfer(D_ID, TEST_UUID)
+        p.cancel_running_transfer(D_ID, TEST_UUID)
 
     p.process_finalized_issuing_transfer_signal(
         debtor_id=D_ID,
@@ -559,11 +614,12 @@ def test_cancel_transfer_failure(db_session, debtor):
         recipient=str(C_ID),
         committed_amount=1000,
         status_code=SC_OK,
+        total_locked_amount=0,
     )
     with pytest.raises(p.ForbiddenTransferCancellation):
-        p.cancel_transfer(D_ID, TEST_UUID)
+        p.cancel_running_transfer(D_ID, TEST_UUID)
     with pytest.raises(p.ForbiddenTransferCancellation):
-        p.cancel_transfer(D_ID, TEST_UUID)
+        p.cancel_running_transfer(D_ID, TEST_UUID)
 
 
 def test_activate_new_creditor(db_session):

@@ -1,11 +1,11 @@
 from copy import copy
 from marshmallow import Schema, fields, validate, pre_dump, post_dump, post_load, \
     validates, missing, ValidationError
-from flask import url_for, current_app
+from flask import url_for
 from swpt_lib.utils import i64_to_u64
 from .lower_limits import LowerLimit
 from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
-    TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, Debtor, InitiatedTransfer
+    TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, Debtor, RunningTransfer
 
 URI_DESCRIPTION = '\
 The URI of this object. Can be a relative URI.'
@@ -476,7 +476,7 @@ class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
         required=True,
         validate=validate.Range(min=1, max=MAX_INT64),
         format="int64",
-        description=InitiatedTransfer.amount.comment,
+        description='The amount to be transferred. Must be positive.',
         example=1000,
     )
     transfer_note_format = fields.String(
@@ -490,7 +490,8 @@ class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
         missing='',
         validate=validate.Length(max=TRANSFER_NOTE_MAX_BYTES),
         data_key='note',
-        description=InitiatedTransfer.transfer_note.comment,
+        description='A note from the debtor. Can be any string that the debtor wants the '
+                    'recipient to see.',
         example='Hello, World!',
     )
 
@@ -543,7 +544,7 @@ class TransferSchema(Schema):
         dump_only=True,
         validate=validate.Range(min=1, max=MAX_INT64),
         format="int64",
-        description=InitiatedTransfer.amount.comment,
+        description='The amount to be transferred. Must be positive.',
         example=1000,
     )
     transfer_note_format = fields.String(
@@ -558,14 +559,15 @@ class TransferSchema(Schema):
         required=True,
         dump_only=True,
         data_key='note',
-        description=InitiatedTransfer.transfer_note.comment,
+        description='A note from the debtor. Can be any string that the debtor wants the '
+                    'recipient to see.',
         example='Hello, World!',
     )
     initiated_at = fields.DateTime(
         required=True,
         dump_only=True,
         data_key='initiatedAt',
-        description=InitiatedTransfer.initiated_at.comment,
+        description='The moment at which the transfer was initiated.',
     )
     checkup_at = fields.Method(
         'get_checkup_at_string',
@@ -587,7 +589,7 @@ class TransferSchema(Schema):
 
     @pre_dump
     def process_initiated_transfer_instance(self, obj, many):
-        assert isinstance(obj, InitiatedTransfer)
+        assert isinstance(obj, RunningTransfer)
         obj = copy(obj)
         obj.uri = url_for(
             self.context['Transfer'],
