@@ -18,7 +18,6 @@ T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
 
 TD_SECOND = timedelta(seconds=1)
-ACTIVATION_STATUS_MASK = Debtor.STATUS_IS_ACTIVATED_FLAG | Debtor.STATUS_IS_DEACTIVATED_FLAG
 
 
 class MisconfiguredNode(Exception):
@@ -101,7 +100,7 @@ def get_debtor_ids(start_from: int, count: int = 1) -> Tuple[List[int], Optional
     query = db.session.\
         query(Debtor.debtor_id).\
         filter(Debtor.debtor_id >= start_from).\
-        filter(Debtor.status_flags.op('&')(ACTIVATION_STATUS_MASK) == Debtor.STATUS_IS_ACTIVATED_FLAG).\
+        filter(Debtor.status_flags.op('&')(Debtor.STATUS_IS_ACTIVATED_FLAG) != 0).\
         order_by(Debtor.debtor_id).\
         limit(count)
     debtor_ids = [t[0] for t in query.all()]

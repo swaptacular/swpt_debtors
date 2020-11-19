@@ -337,6 +337,12 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description="The current annual interest rate (in percents) at which "
                     "interest accumulates on creditors' accounts.",
     )
+    optional_deactivation_date = fields.Date(
+        dump_only=True,
+        data_key='deactivationDate',
+        description="The date on which the debtor was deactivated. If this field is not present, "
+                    "this means that the debtor has not been deactivated yet.",
+    )
 
     @pre_dump
     def process_debtor_instance(self, obj, many):
@@ -344,6 +350,9 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         obj = copy(obj)
         obj.uri = url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
+
+        if obj.deactivation_date is not None:
+            obj.optional_deactivation_date = obj.deactivation_date
 
         return obj
 

@@ -108,9 +108,7 @@ class Debtor(db.Model):
         comment='The date on which the debtor was deactivated. When a debtor gets '
                 'deactivated, all its belonging objects (transfers, etc.) are '
                 'removed. To be deactivated, the debtor must be activated first. Once '
-                'deactivated, a debtor stays deactivated until it is deleted. A '
-                '`NULL` value for this column means either that the debtor has not '
-                'been deactivated yet, or that the deactivation date is unknown.',
+                'deactivated, a debtor stays deactivated until it is deleted.',
     )
     balance = db.Column(
         db.BigInteger,
@@ -190,6 +188,10 @@ class Debtor(db.Model):
         db.CheckConstraint(or_(
             status_flags.op('&')(STATUS_IS_DEACTIVATED_FLAG) == 0,
             status_flags.op('&')(STATUS_IS_ACTIVATED_FLAG) != 0,
+        )),
+        db.CheckConstraint(or_(
+            deactivation_date == null(),
+            status_flags.op('&')(STATUS_IS_DEACTIVATED_FLAG) != 0,
         )),
         db.CheckConstraint(actions_throttle_count >= 0),
         db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
