@@ -42,7 +42,7 @@ def _get_all_pages(client, url, page_type, streaming=False):
     return items
 
 
-def test_auto_genereate_creditor_id(client):
+def test_auto_genereate_debtor_id(client):
     r = client.post('/debtors/.debtor-reserve', json={})
     assert r.status_code == 200
     data = r.get_json()
@@ -57,7 +57,10 @@ def test_create_debtor(client):
     r = client.get('/debtors/2/')
     assert r.status_code == 403
 
-    r = client.post('/debtors/2/reserve', headers={'X-Swpt-User-Id': 'creditors:2'}, json={})
+    r = client.post('/debtors/2/reserve', headers={'X-Swpt-User-Id': 'INVALID_USER_ID'}, json={})
+    assert r.status_code == 403
+
+    r = client.post('/debtors/2/reserve', headers={'X-Swpt-User-Id': 'debtors:2'}, json={})
     assert r.status_code == 403
 
     r = client.post('/debtors/2/reserve', json={})
@@ -89,6 +92,8 @@ def test_create_debtor(client):
     data = r.get_json()
     assert data['type'] == 'Debtor'
     assert data['uri'] == '/debtors/2/'
+    assert data['transfersList'] == {'uri': '/debtors/2/transfers/'}
+    assert data['createTransfer'] == {'uri': '/debtors/2/transfers/'}
     assert iso8601.parse_date(data['createdAt'])
 
     r = client.post('/debtors/2/activate', json={

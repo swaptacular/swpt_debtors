@@ -338,6 +338,15 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description="The URI of the debtor's list of credit-issuing transfers (`TransfersList`).",
         example={'uri': '/debtors/2/transfers/'},
     )
+    create_transfer = fields.Nested(
+        ObjectReferenceSchema,
+        required=True,
+        dump_only=True,
+        data_key='createTransfer',
+        description='A URI to which a `TransferCreationRequest` can be POST-ed to '
+                    'create a new `Transfer`.',
+        example={'uri': '/debtors/2/transfers/'},
+    )
     created_at = fields.DateTime(
         required=True,
         dump_only=True,
@@ -398,6 +407,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         obj = copy(obj)
         obj.uri = url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
+        obj.create_transfer = obj.transfers_list
 
         if obj.deactivation_date is not None:
             obj.optional_deactivation_date = obj.deactivation_date
