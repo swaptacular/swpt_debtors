@@ -111,9 +111,9 @@ class Debtor(db.Model):
     running_transfers_count = db.Column(db.Integer, nullable=False, default=0)
     actions_count = db.Column(db.Integer, nullable=False, default=0)
     actions_count_reset_date = db.Column(db.DATE, nullable=False, default=get_now_utc)
-    deactivation_date = db.Column(
-        db.DATE,
-        comment='The date on which the debtor was deactivated. When a debtor gets '
+    deactivated_at = db.Column(
+        db.TIMESTAMP(timezone=True),
+        comment='The moment at which the debtor was deactivated. When a debtor gets '
                 'deactivated, all its belonging objects (transfers, etc.) are '
                 'removed. To be deactivated, the debtor must be activated first. Once '
                 'deactivated, a debtor stays deactivated until it is deleted.',
@@ -156,7 +156,7 @@ class Debtor(db.Model):
             status_flags.op('&')(STATUS_IS_ACTIVATED_FLAG) != 0,
         )),
         db.CheckConstraint(or_(
-            deactivation_date == null(),
+            deactivated_at == null(),
             status_flags.op('&')(STATUS_IS_DEACTIVATED_FLAG) != 0,
         )),
         db.CheckConstraint(or_(
@@ -238,7 +238,7 @@ class Debtor(db.Model):
         self.debtor_info_content_type = None
 
         self.status_flags |= Debtor.STATUS_IS_DEACTIVATED_FLAG
-        self.deactivation_date = datetime.now(tz=timezone.utc).date()
+        self.deactivated_at = datetime.now(tz=timezone.utc)
 
 
 class RunningTransfer(db.Model):

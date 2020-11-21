@@ -37,12 +37,12 @@ def test_deactivate_debtor(db_session, debtor):
     debtor = p.get_debtor(D_ID)
     assert debtor.is_activated
     assert debtor.is_deactivated
-    assert debtor.deactivation_date is not None
+    assert debtor.deactivated_at is not None
 
     p.deactivate_debtor(D_ID)
     debtor = p.get_debtor(D_ID)
     assert debtor.is_deactivated
-    assert debtor.deactivation_date is not None
+    assert debtor.deactivated_at is not None
 
     p.deactivate_debtor(1234567890)
     assert p.get_debtor(1234567890) is None
@@ -217,7 +217,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert a.status_flags == 0
     assert len(ChangeInterestRateSignal.query.all()) == 0
     d = Debtor.query.filter_by(debtor_id=D_ID).one()
-    assert d.deactivation_date is not None
+    assert d.deactivated_at is not None
     assert d.is_deactivated
     assert d.reservation_id is None
     assert d.running_transfers_count == 0

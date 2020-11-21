@@ -290,11 +290,11 @@ def test_scan_debtors(app_unsafe_session, current_ts):
     procedures.deactivate_debtor(6)
     Debtor.query.filter_by(debtor_id=3).update({
         'created_at': current_ts - timedelta(days=3000),
-        'deactivation_date': (current_ts - timedelta(days=3000)).date(),
+        'deactivated_at': current_ts - timedelta(days=3000),
     })
     Debtor.query.filter_by(debtor_id=4).update({
         'created_at': current_ts - timedelta(days=3000),
-        'deactivation_date': (current_ts - timedelta(days=3000)).date(),
+        'deactivated_at': current_ts - timedelta(days=3000),
     })
     db.session.commit()
     app = app_unsafe_session

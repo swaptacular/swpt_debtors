@@ -50,11 +50,11 @@ def test_serialize_debtor_schema(db_session):
     assert obj['interestRateTarget'] == 0.0
     assert obj['interestRate'] == 0.0
     assert obj['transfersList'] == {'uri': '/debtors/1/transfers/'}
-    assert 'deactivationDate' not in obj
+    assert 'deactivatedAt' not in obj
 
     debtor.deactivate()
     obj = s.dump(debtor)
-    assert iso8601.parse_date(obj['deactivationDate'])
+    assert iso8601.parse_date(obj['deactivatedAt'])
 
 
 def test_deserialize_debtor_schema(db_session):

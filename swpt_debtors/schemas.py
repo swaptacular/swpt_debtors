@@ -389,10 +389,10 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description="The current annual interest rate (in percents) at which "
                     "interest accumulates on creditors' accounts.",
     )
-    optional_deactivation_date = fields.Date(
+    optional_deactivated_at = fields.DateTime(
         dump_only=True,
-        data_key='deactivationDate',
-        description="The date on which the debtor was deactivated. If this field is not present, "
+        data_key='deactivatedAt',
+        description="The moment at which the debtor was deactivated. If this field is not present, "
                     "this means that the debtor has not been deactivated yet.",
     )
     optional_debtor_info = fields.Nested(
@@ -409,8 +409,8 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
         obj.create_transfer = obj.transfers_list
 
-        if obj.deactivation_date is not None:
-            obj.optional_deactivation_date = obj.deactivation_date
+        if obj.deactivated_at is not None:
+            obj.optional_deactivated_at = obj.deactivated_at
 
         if obj.debtor_info_iri is not None:
             debtor_info = {'iri': obj.debtor_info_iri}
