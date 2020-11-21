@@ -115,7 +115,7 @@ def test_create_debtor(client):
     assert data['uri'] == '/debtors/3/'
     assert data['balance'] == 0
     assert iso8601.parse_date(data['createdAt'])
-    assert 'debtorInfo' not in data
+    assert 'info' not in data
 
     r = client.post('/debtors/3/activate', json={})
     assert r.status_code == 409
@@ -189,7 +189,9 @@ def test_change_debtor_policy(client, debtor):
     assert data['balance'] == 0
     assert data['interestRate'] == 0.0
     assert data['interestRateTarget'] == 0.0
-    assert data['interestRateLowerLimits'] == []
+    assert data['interestRateLowerLimits'] == [
+        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '9999-12-31', 'value': -50.0},
+    ]
     assert data['balanceLowerLimits'] == []
 
     r = client.patch('/debtors/123/', json={
@@ -202,7 +204,7 @@ def test_change_debtor_policy(client, debtor):
             {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
             {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
         ],
-        'debtorInfo': {
+        'info': {
             'type': 'DebtorInfo',
             'iri': 'http://example.com/',
             'contentType': 'text/plain',
@@ -218,12 +220,13 @@ def test_change_debtor_policy(client, debtor):
     assert data['interestRateLowerLimits'] == [
         {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
         {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
+        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '9999-12-31', 'value': -50.0},
     ]
     assert data['balanceLowerLimits'] == [
         {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
         {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
     ]
-    assert data['debtorInfo'] == {
+    assert data['info'] == {
         'type': 'DebtorInfo',
         'iri': 'http://example.com/',
         'contentType': 'text/plain',
@@ -243,6 +246,7 @@ def test_change_debtor_policy(client, debtor):
     assert data['interestRateLowerLimits'] == [
         {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
         {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
+        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '9999-12-31', 'value': -50.0},
     ]
     assert data['balanceLowerLimits'] == [
         {'type': 'BalanceLowerLimit', 'enforcedUntil': '2030-12-31', 'value': -200},

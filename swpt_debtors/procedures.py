@@ -190,7 +190,7 @@ def update_debtor_balance(debtor_id: int, balance: int) -> None:
 @atomic
 def update_debtor_policy(
         debtor_id: int,
-        interest_rate_target: Optional[float],
+        interest_rate_target: float,
         new_interest_rate_limits: LowerLimitSequence,
         new_balance_limits: LowerLimitSequence,
         debtor_info_iri: Optional[str],
@@ -215,8 +215,7 @@ def update_debtor_policy(
     except TooLongLimitSequence:
         raise ConflictingPolicy('There are too many balance limits.')
 
-    if interest_rate_target is not None:
-        debtor.interest_rate_target = interest_rate_target
+    debtor.interest_rate_target = interest_rate_target
     debtor.interest_rate_lower_limits = interest_rate_lower_limits
     debtor.balance_lower_limits = balance_lower_limits
     debtor.debtor_info_iri = debtor_info_iri

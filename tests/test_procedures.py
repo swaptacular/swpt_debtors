@@ -6,7 +6,7 @@ from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
     RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, \
     MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, BEGINNING_OF_TIME, \
-    SC_OK, SC_CANCELED_BY_THE_SENDER
+    SC_OK, SC_CANCELED_BY_THE_SENDER, VERY_DISTANT_DATE
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
 
@@ -265,21 +265,22 @@ def test_update_debtor_policy(db_session, debtor, current_ts):
                            None, None, None)
     debtor = p.get_debtor(D_ID)
     assert debtor.interest_rate_target == 6.66
-    assert len(debtor.interest_rate_lower_limits) == 1
+    assert len(debtor.interest_rate_lower_limits) == 2
     assert debtor.interest_rate_lower_limits[0] == LowerLimit(0.0, date_years_ago)
+    assert debtor.interest_rate_lower_limits[1] == LowerLimit(INTEREST_RATE_FLOOR, VERY_DISTANT_DATE)
     assert len(debtor.balance_lower_limits) == 1
     assert debtor.balance_lower_limits[0] == LowerLimit(-1000, date_years_ago)
 
-    p.update_debtor_policy(D_ID, None, [], [], None, None, None)
+    p.update_debtor_policy(D_ID, 0.0, [], [], None, None, None)
     debtor = p.get_debtor(D_ID)
-    assert debtor.interest_rate_target == 6.66
-    assert len(debtor.interest_rate_lower_limits) == 0
+    assert debtor.interest_rate_target == 0.0
+    assert len(debtor.interest_rate_lower_limits) == 1
     assert len(debtor.balance_lower_limits) == 0
 
     with pytest.raises(p.ConflictingPolicy):
-        p.update_debtor_policy(D_ID, None, 11 * [LowerLimit(0.0, current_ts.date())], [], None, None, None)
+        p.update_debtor_policy(D_ID, 0.0, 11 * [LowerLimit(0.0, current_ts.date())], [], None, None, None)
     with pytest.raises(p.ConflictingPolicy):
-        p.update_debtor_policy(D_ID, None, [], 11 * [LowerLimit(-1000, current_ts.date())], None, None, None)
+        p.update_debtor_policy(D_ID, 0.0, [], 11 * [LowerLimit(-1000, current_ts.date())], None, None, None)
 
 
 def test_running_transfers(db_session, debtor):

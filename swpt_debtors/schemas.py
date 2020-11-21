@@ -433,9 +433,9 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description="The moment at which the debtor was deactivated. If this field is not present, "
                     "this means that the debtor has not been deactivated yet.",
     )
-    optional_debtor_info = fields.Nested(
+    optional_info = fields.Nested(
         DebtorInfoSchema,
-        data_key='debtorInfo',
+        data_key='info',
         description='Optional link to additional information about the debtor.',
     )
 
@@ -457,7 +457,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
                 debtor_info['optional_content_type'] = obj.debtor_info_content_type
             if obj.debtor_info_sha256 is not None:
                 debtor_info['optional_sha256'] = b16encode(obj.debtor_info_sha256).decode()
-            obj.optional_debtor_info = debtor_info
+            obj.optional_info = debtor_info
 
         return obj
 

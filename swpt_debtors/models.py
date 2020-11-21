@@ -18,6 +18,7 @@ MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
 MAX_UINT64 = (1 << 64) - 1
 BEGINNING_OF_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
+VERY_DISTANT_DATE = date(9999, 12, 31)
 INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
 TRANSFER_NOTE_MAX_BYTES = 500
@@ -132,6 +133,7 @@ class Debtor(db.Model):
     # Interest Rate Lower Limits
     irll_values = db.Column(
         pg.ARRAY(db.REAL, dimensions=1),
+        default=[INTEREST_RATE_FLOOR],
         comment=(
             'Enforced interest rate lower limits. Each element in this array '
             'should have a corresponding element in the `irll_cutoffs` array '
@@ -140,7 +142,7 @@ class Debtor(db.Model):
             'they are treated as equal to {ceil}.'
         ).format(ceil=INTEREST_RATE_CEIL),
     )
-    irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
+    irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1), default=[VERY_DISTANT_DATE])
 
     __mapper_args__ = {
         'primary_key': [debtor_id],
@@ -186,7 +188,7 @@ class Debtor(db.Model):
         interest_rate = self.interest_rate_lower_limits.current_limits(on_day).apply_to_value(interest_rate)
 
         # Apply the absolute interest rate limits.
-        if interest_rate < INTEREST_RATE_FLOOR:
+        if interest_rate < INTEREST_RATE_FLOOR:  # pragma: no cover
             interest_rate = INTEREST_RATE_FLOOR
         if interest_rate > INTEREST_RATE_CEIL:
             interest_rate = INTEREST_RATE_CEIL

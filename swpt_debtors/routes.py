@@ -317,12 +317,12 @@ class DebtorEndpoint(MethodView):
         """Update debtor's policy."""
 
         ensure_debtor_permissions()
-        optional_info = policy_update_request.get('optional_debtor_info')
+        optional_info = policy_update_request.get('optional_info')
         optional_sha256 = optional_info and optional_info.get('optional_sha256')
         try:
             debtor = procedures.update_debtor_policy(
                 debtor_id=debtorId,
-                interest_rate_target=policy_update_request.get('interest_rate_target'),
+                interest_rate_target=policy_update_request['interest_rate_target'],
                 new_interest_rate_limits=policy_update_request['interest_rate_lower_limits'],
                 new_balance_limits=policy_update_request['balance_lower_limits'],
                 debtor_info_iri=optional_info and optional_info['iri'],

@@ -46,7 +46,9 @@ def test_serialize_debtor_schema(db_session):
     assert iso8601.parse_date(obj['createdAt'])
     assert obj['balance'] == 0
     assert obj['balanceLowerLimits'] == []
-    assert obj['interestRateLowerLimits'] == []
+    assert obj['interestRateLowerLimits'] == [
+        {'type': 'InterestRateLowerLimit', 'value': -50.0, 'enforcedUntil': '9999-12-31'},
+    ]
     assert obj['interestRateTarget'] == 0.0
     assert obj['interestRate'] == 0.0
     assert obj['transfersList'] == {'uri': '/debtors/1/transfers/'}
