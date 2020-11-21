@@ -93,6 +93,36 @@ class ObjectReferencesPageSchema(Schema):
         return obj
 
 
+class DebtorIdentitySchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='DebtorIdentity',
+        default='DebtorIdentity',
+        description='The type of this object.',
+        example='DebtorIdentity',
+    )
+    uri = fields.String(
+        required=True,
+        validate=validate.Length(max=100),
+        format='uri',
+        description="The URI of the debtor. The information contained in the URI must be "
+                    "enough to uniquely and reliably identify the debtor. Note that "
+                    "a network request *should not be needed* to identify the debtor. "
+                    "\n\n"
+                    "For example, if the debtor happens to be a bank, the URI would reveal "
+                    "the type of the debtor (a bank), and the ID of the bank. Note that "
+                    "some debtors may be used only to represent a physical value measurement "
+                    "unit (like ounces of gold). Those *dummy debtors* do not represent a "
+                    "person or an organization, do not owe anything to anyone, and are used "
+                    "solely as identifiers of value measurement units.",
+        example='swpt:1',
+    )
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'uri' in obj
+        return obj
+
+
 class DebtorsListSchema(Schema):
     uri = fields.String(
         required=True,
@@ -330,6 +360,14 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description='The type of this object.',
         example='Debtor',
     )
+    identity = fields.Nested(
+        DebtorIdentitySchema,
+        required=True,
+        dump_only=True,
+        data_key='identity',
+        description="Debtor's `DebtorIdentity`.",
+        example={'type': 'DebtorIdentity', 'uri': 'swpt:2'},
+    )
     transfers_list = fields.Nested(
         ObjectReferenceSchema,
         required=True,
@@ -406,6 +444,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         assert isinstance(obj, Debtor)
         obj = copy(obj)
         obj.uri = url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)
+        obj.identity = {'uri': f'swpt:{i64_to_u64(obj.debtor_id)}'}
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
         obj.create_transfer = obj.transfers_list
 

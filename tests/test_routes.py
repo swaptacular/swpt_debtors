@@ -92,6 +92,7 @@ def test_create_debtor(client):
     data = r.get_json()
     assert data['type'] == 'Debtor'
     assert data['uri'] == '/debtors/2/'
+    assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:2'}
     assert data['transfersList'] == {'uri': '/debtors/2/transfers/'}
     assert data['createTransfer'] == {'uri': '/debtors/2/transfers/'}
     assert iso8601.parse_date(data['createdAt'])
