@@ -38,6 +38,7 @@ class Configuration(metaclass=MetaFlaskEnv):
     OPENAPI_REDOC_URL = 'https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js'
     OPENAPI_SWAGGER_UI_PATH = 'swagger-ui'
     OPENAPI_SWAGGER_UI_URL = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/'
+    APP_AUTHORITY_URI = 'urn:example:authority'
     APP_MAX_LIMITS_COUNT = 10
     APP_TRANSFERS_FINALIZATION_AVG_SECONDS = 5.0
     APP_MAX_TRANSFERS_PER_MONTH = 300

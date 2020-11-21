@@ -2,7 +2,7 @@ from copy import copy
 from base64 import b16encode
 from marshmallow import Schema, fields, validate, pre_dump, post_dump, post_load, \
     validates, missing, ValidationError
-from flask import url_for
+from flask import url_for, current_app
 from swpt_lib.utils import i64_to_u64
 from .lower_limits import LowerLimit
 from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
@@ -93,6 +93,30 @@ class ObjectReferencesPageSchema(Schema):
         return obj
 
 
+class AuthorityIdentitySchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='AuthorityIdentity',
+        default='AuthorityIdentity',
+        description='The type of this object.',
+        example='AuthorityIdentity',
+    )
+    uri = fields.String(
+        required=True,
+        validate=validate.Length(max=100),
+        format='uri',
+        description="The information contained in this field must be enough to uniquely and "
+                    "reliably identify the accounting authority that manages this debtor. Note "
+                    "that a network request *should not be needed* to identify the accounting "
+                    "authority.",
+        example='urn:example:authority',
+    )
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'uri' in obj
+        return obj
+
+
 class DebtorIdentitySchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='DebtorIdentity',
@@ -104,16 +128,9 @@ class DebtorIdentitySchema(ValidateTypeMixin, Schema):
         required=True,
         validate=validate.Length(max=100),
         format='uri',
-        description="The URI of the debtor. The information contained in the URI must be "
-                    "enough to uniquely and reliably identify the debtor. Note that "
-                    "a network request *should not be needed* to identify the debtor. "
-                    "\n\n"
-                    "For example, if the debtor happens to be a bank, the URI would reveal "
-                    "the type of the debtor (a bank), and the ID of the bank. Note that "
-                    "some debtors may be used only to represent a physical value measurement "
-                    "unit (like ounces of gold). Those *dummy debtors* do not represent a "
-                    "person or an organization, do not owe anything to anyone, and are used "
-                    "solely as identifiers of value measurement units.",
+        description="The information contained in this field must be enough to uniquely and "
+                    "reliably identify the debtor. Note that a network request *should not "
+                    "be needed* to identify the debtor.",
         example='swpt:1',
     )
 
@@ -360,6 +377,14 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description='The type of this object.',
         example='Debtor',
     )
+    authority = fields.Nested(
+        AuthorityIdentitySchema,
+        required=True,
+        dump_only=True,
+        data_key='authority',
+        description="The accounting authority that manages this debtor.",
+        example={'type': 'AuthorityIdentity', 'uri': 'urn:example:authority'},
+    )
     identity = fields.Nested(
         DebtorIdentitySchema,
         required=True,
@@ -373,7 +398,8 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         required=True,
         dump_only=True,
         data_key='transfersList',
-        description="The URI of the debtor's list of credit-issuing transfers (`TransfersList`).",
+        description="The URI of the debtor's list of pending credit-issuing transfers "
+                    "(`TransfersList`).",
         example={'uri': '/debtors/2/transfers/'},
     )
     create_transfer = fields.Nested(
@@ -381,8 +407,8 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         required=True,
         dump_only=True,
         data_key='createTransfer',
-        description='A URI to which a `TransferCreationRequest` can be POST-ed to '
-                    'create a new `Transfer`.',
+        description='A URI to which the debtor can POST `TransferCreationRequest`s to '
+                    'create new credit-issuing transfers.',
         example={'uri': '/debtors/2/transfers/'},
     )
     created_at = fields.DateTime(
@@ -444,6 +470,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         assert isinstance(obj, Debtor)
         obj = copy(obj)
         obj.uri = url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)
+        obj.authority = {'uri': current_app.config['APP_AUTHORITY_URI']}
         obj.identity = {'uri': f'swpt:{i64_to_u64(obj.debtor_id)}'}
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
         obj.create_transfer = obj.transfers_list

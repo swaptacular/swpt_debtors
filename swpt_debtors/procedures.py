@@ -188,7 +188,7 @@ def update_debtor_balance(debtor_id: int, balance: int) -> None:
 
 
 @atomic
-def update_debtor_policy(
+def update_debtor(
         debtor_id: int,
         interest_rate_target: float,
         new_interest_rate_limits: LowerLimitSequence,

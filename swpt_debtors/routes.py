@@ -155,7 +155,7 @@ class DebtorsListEndpoint(MethodView):
     @admin_api.response(DebtorsListSchema, example=specs.DEBTORS_LIST_EXAMPLE)
     @admin_api.doc(operationId='getDebtorsList', security=specs.SCOPE_ACCESS_READONLY)
     def get(self):
-        """Return a paginated list of links to all active debtors."""
+        """Return a paginated list of links to all activated debtors."""
 
         return {
             'uri': url_for('admin.DebtorsListEndpoint'),
@@ -169,16 +169,16 @@ class DebtorEnumerateEndpoint(MethodView):
     @admin_api.response(ObjectReferencesPageSchema(context=context), example=specs.DEBTOR_LINKS_EXAMPLE)
     @admin_api.doc(operationId='getDebtorsPage', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
-        """Return a collection of active debtors.
+        """Return a collection of activated debtors.
 
         The returned object will be a fragment (a page) of a paginated
-        list. The paginated list contains references to all active
+        list. The paginated list contains references to all activated
         debtors on the server. The returned fragment, and all the
         subsequent fragments, will be sorted by debtor ID, starting
         from the `debtorID` specified in the path. The sorting order
         is implementation-specific.
 
-        **Note:** To obtain references to all active debtors, the
+        **Note:** To obtain references to all activated debtors, the
         client should start with the debtor ID that precedes all other
         IDs in the sorting order.
 
@@ -286,7 +286,7 @@ class RedirectToDebtorEndpoint(MethodView):
                      responses={204: specs.DEBTOR_DOES_NOT_EXIST,
                                 303: specs.DEBTOR_EXISTS})
     def get(self):
-        """Redirect to the debtor's policy."""
+        """Redirect to the debtor's record."""
 
         ensure_debtor_permissions()
         debtorId = g.debtor_id
@@ -300,7 +300,7 @@ class DebtorEndpoint(MethodView):
     @debtors_api.response(DebtorSchema(context=context))
     @debtors_api.doc(operationId='getDebtor')
     def get(self, debtorId):
-        """Return debtor's policy."""
+        """Return debtor."""
 
         debtor = procedures.get_active_debtor(debtorId)
         if not debtor:
@@ -313,18 +313,18 @@ class DebtorEndpoint(MethodView):
                      security=specs.SCOPE_ACCESS_MODIFY,
                      responses={403: specs.FORBIDDEN_OPERATION,
                                 409: specs.CONFLICTING_POLICY})
-    def patch(self, policy_update_request, debtorId):
-        """Update debtor's policy."""
+    def patch(self, debtor_update_request, debtorId):
+        """Update debtor."""
 
         ensure_debtor_permissions()
-        optional_info = policy_update_request.get('optional_info')
+        optional_info = debtor_update_request.get('optional_info')
         optional_sha256 = optional_info and optional_info.get('optional_sha256')
         try:
-            debtor = procedures.update_debtor_policy(
+            debtor = procedures.update_debtor(
                 debtor_id=debtorId,
-                interest_rate_target=policy_update_request['interest_rate_target'],
-                new_interest_rate_limits=policy_update_request['interest_rate_lower_limits'],
-                new_balance_limits=policy_update_request['balance_lower_limits'],
+                interest_rate_target=debtor_update_request['interest_rate_target'],
+                new_interest_rate_limits=debtor_update_request['interest_rate_lower_limits'],
+                new_balance_limits=debtor_update_request['balance_lower_limits'],
                 debtor_info_iri=optional_info and optional_info['iri'],
                 debtor_info_sha256=optional_sha256 and b16decode(optional_sha256),
                 debtor_info_content_type=optional_info and optional_info.get('optional_content_type'),
