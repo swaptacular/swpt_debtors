@@ -1,6 +1,7 @@
 import iso8601
 from .extensions import broker, APP_QUEUE_NAME
 from . import procedures
+from .models import CT_ISSUING, MAX_INT64
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
@@ -58,7 +59,8 @@ def on_prepared_issuing_transfer_signal(
         recipient: str,
         *args, **kwargs) -> None:
 
-    assert coordinator_type == 'issuing'
+    assert coordinator_type == CT_ISSUING
+
     procedures.process_prepared_issuing_transfer_signal(
         debtor_id,
         creditor_id,
@@ -81,7 +83,10 @@ def on_rejected_issuing_transfer_signal(
         creditor_id: int,
         *args, **kwargs) -> None:
 
-    assert coordinator_type == 'issuing'
+    assert coordinator_type == CT_ISSUING
+    assert status_code == '' or len(status_code) <= 30 and status_code.encode('ascii')
+    assert 0 <= total_locked_amount <= MAX_INT64
+
     procedures.process_rejected_issuing_transfer_signal(
         coordinator_id,
         coordinator_request_id,
@@ -108,7 +113,10 @@ def on_finalized_issuing_transfer_signal(
         total_locked_amount: int,
         *args, **kwargs) -> None:
 
-    assert coordinator_type == 'issuing'
+    assert coordinator_type == CT_ISSUING
+    assert status_code == '' or len(status_code) <= 30 and status_code.encode('ascii')
+    assert 0 <= total_locked_amount <= MAX_INT64
+
     procedures.process_finalized_issuing_transfer_signal(
         debtor_id,
         creditor_id,

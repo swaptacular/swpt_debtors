@@ -332,6 +332,9 @@ def test_initiate_running_transfer(client, debtor):
     r = client.post('/debtors/123/transfers/', json=json_request_body)
     assert r.status_code == 409
 
+    r = client.post('/debtors/123/transfers/', json={**json_request_body, **{'recipient': {'uri': 'INVALID'}}})
+    assert r.status_code == 422
+
     r = client.post('/debtors/123/transfers/', json={**json_request_body, **{'recipient': {'uri': 'swpt:555/1111'}}})
     assert r.status_code == 422
 

@@ -24,6 +24,8 @@ INTEREST_RATE_CEIL = 100.0
 TRANSFER_NOTE_MAX_BYTES = 500
 ROOT_CREDITOR_ID = 0
 
+CT_ISSUING = 'issuing'
+
 SC_OK = 'OK'
 SC_UNEXPECTED_ERROR = 'UNEXPECTED_ERROR'
 SC_INSUFFICIENT_AVAILABLE_AMOUNT = 'INSUFFICIENT_AVAILABLE_AMOUNT'
@@ -400,7 +402,7 @@ class PrepareTransferSignal(Signal):
         min_locked_amount = fields.Integer(attribute='amount', dump_only=True)
         max_locked_amount = fields.Integer(attribute='amount', dump_only=True)
         debtor_id = fields.Integer()
-        sender_creditor_id = fields.Integer(data_key='creditor_id')
+        creditor_id = fields.Integer()
         recipient = fields.String()
         inserted_at = fields.DateTime(data_key='ts')
         max_commit_delay = fields.Constant(MAX_INT32)
@@ -410,7 +412,7 @@ class PrepareTransferSignal(Signal):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
     amount = db.Column(db.BigInteger, nullable=False)
-    sender_creditor_id = db.Column(db.BigInteger, nullable=False)
+    creditor_id = db.Column(db.BigInteger, nullable=False)
     recipient = db.Column(db.String, nullable=False)
     min_account_balance = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
@@ -424,7 +426,7 @@ class FinalizeTransferSignal(Signal):
 
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()
-        sender_creditor_id = fields.Integer(data_key='creditor_id')
+        creditor_id = fields.Integer()
         transfer_id = fields.Integer()
         coordinator_type = fields.String(default='issuing')
         coordinator_id = fields.Integer()
@@ -437,7 +439,7 @@ class FinalizeTransferSignal(Signal):
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    sender_creditor_id = db.Column(db.BigInteger, nullable=False)
+    creditor_id = db.Column(db.BigInteger, nullable=False)
     coordinator_id = db.Column(db.BigInteger, nullable=False)
     coordinator_request_id = db.Column(db.BigInteger, nullable=False)
     transfer_id = db.Column(db.BigInteger, nullable=False)

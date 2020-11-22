@@ -389,14 +389,14 @@ def test_successful_transfer(db_session, debtor):
     assert pts.debtor_id == D_ID
     assert pts.coordinator_request_id is not None
     assert pts.amount == 1000
-    assert pts.sender_creditor_id == ROOT_CREDITOR_ID
+    assert pts.creditor_id == ROOT_CREDITOR_ID
     assert pts.recipient == recipient
     assert pts.min_account_balance == debtor.min_account_balance
     coordinator_request_id = pts.coordinator_request_id
 
     p.process_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
-        sender_creditor_id=ROOT_CREDITOR_ID,
+        creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
         recipient=str(C_ID),
         sender_locked_amount=1000,
@@ -408,7 +408,7 @@ def test_successful_transfer(db_session, debtor):
     assert len(fpts_list) == 1
     fpts = fpts_list[0]
     assert fpts.debtor_id == D_ID
-    assert fpts.sender_creditor_id == ROOT_CREDITOR_ID
+    assert fpts.creditor_id == ROOT_CREDITOR_ID
     assert fpts.transfer_id is not None
     assert fpts.committed_amount == 1000
     assert fpts.transfer_note == 'test'
@@ -427,7 +427,7 @@ def test_successful_transfer(db_session, debtor):
 
     p.process_finalized_issuing_transfer_signal(
         debtor_id=D_ID,
-        sender_creditor_id=p.ROOT_CREDITOR_ID,
+        creditor_id=p.ROOT_CREDITOR_ID,
         transfer_id=777,
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,
@@ -472,14 +472,14 @@ def test_failed_transfer(db_session, debtor):
     assert pts.debtor_id == D_ID
     assert pts.coordinator_request_id is not None
     assert pts.amount == 1000
-    assert pts.sender_creditor_id == ROOT_CREDITOR_ID
+    assert pts.creditor_id == ROOT_CREDITOR_ID
     assert pts.recipient == recipient
     assert pts.min_account_balance == debtor.min_account_balance
     coordinator_request_id = pts.coordinator_request_id
 
     p.process_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
-        sender_creditor_id=ROOT_CREDITOR_ID,
+        creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
         recipient=str(C_ID),
         sender_locked_amount=1000,
@@ -491,7 +491,7 @@ def test_failed_transfer(db_session, debtor):
     assert len(fpts_list) == 1
     fpts = fpts_list[0]
     assert fpts.debtor_id == D_ID
-    assert fpts.sender_creditor_id == ROOT_CREDITOR_ID
+    assert fpts.creditor_id == ROOT_CREDITOR_ID
     assert fpts.transfer_id is not None
     assert fpts.committed_amount == 1000
     assert fpts.transfer_note == 'test'
@@ -510,7 +510,7 @@ def test_failed_transfer(db_session, debtor):
 
     p.process_finalized_issuing_transfer_signal(
         debtor_id=D_ID,
-        sender_creditor_id=p.ROOT_CREDITOR_ID,
+        creditor_id=p.ROOT_CREDITOR_ID,
         transfer_id=777,
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,
@@ -594,7 +594,7 @@ def test_cancel_running_transfer_success(db_session, debtor):
 
     p.process_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
-        sender_creditor_id=ROOT_CREDITOR_ID,
+        creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
         recipient=str(C_ID),
         sender_locked_amount=1000,
@@ -612,7 +612,7 @@ def test_cancel_running_transfer_failure(db_session, debtor):
 
     p.process_prepared_issuing_transfer_signal(
         debtor_id=D_ID,
-        sender_creditor_id=ROOT_CREDITOR_ID,
+        creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
         recipient=str(C_ID),
         sender_locked_amount=1000,
@@ -626,7 +626,7 @@ def test_cancel_running_transfer_failure(db_session, debtor):
 
     p.process_finalized_issuing_transfer_signal(
         debtor_id=D_ID,
-        sender_creditor_id=p.ROOT_CREDITOR_ID,
+        creditor_id=p.ROOT_CREDITOR_ID,
         transfer_id=777,
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,

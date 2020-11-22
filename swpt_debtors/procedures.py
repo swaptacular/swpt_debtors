@@ -6,7 +6,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import true
-from swpt_lib.utils import Seqnum, u64_to_i64
+from swpt_lib.utils import Seqnum
 from .extensions import db
 from .lower_limits import LowerLimitSequence, TooLongLimitSequence
 from .models import Debtor, Account, ChangeInterestRateSignal, FinalizeTransferSignal, \
@@ -313,7 +313,7 @@ def initiate_running_transfer(
         debtor_id=debtor_id,
         coordinator_request_id=new_running_transfer.coordinator_request_id,
         amount=amount,
-        sender_creditor_id=ROOT_CREDITOR_ID,
+        creditor_id=ROOT_CREDITOR_ID,
         recipient=recipient,
         min_account_balance=debtor.min_account_balance,
     ))
@@ -335,16 +335,11 @@ def process_rejected_issuing_transfer_signal(
         status_code: str,
         total_locked_amount: int,
         debtor_id: int,
-        sender_creditor_id: int) -> None:
-
-    assert status_code == '' or len(status_code) <= 30 and status_code.encode('ascii')
-    assert 0 <= total_locked_amount <= MAX_INT64
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
+        creditor_id: int) -> None:
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     if rt and not rt.is_finalized:
-        if status_code != SC_OK and rt.debtor_id == debtor_id and ROOT_CREDITOR_ID == sender_creditor_id:
+        if status_code != SC_OK and rt.debtor_id == debtor_id and ROOT_CREDITOR_ID == creditor_id:
             _finalize_running_transfer(rt, error_code=status_code, total_locked_amount=total_locked_amount)
         else:  # pragma:  no cover
             _finalize_running_transfer(rt, error_code=SC_UNEXPECTED_ERROR)
@@ -353,22 +348,17 @@ def process_rejected_issuing_transfer_signal(
 @atomic
 def process_prepared_issuing_transfer_signal(
         debtor_id: int,
-        sender_creditor_id: int,
+        creditor_id: int,
         transfer_id: int,
         coordinator_id: int,
         coordinator_request_id: int,
         sender_locked_amount: int,
         recipient: str) -> None:
 
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
-    assert MIN_INT64 <= transfer_id <= MAX_INT64
-    assert 0 < sender_locked_amount <= MAX_INT64
-
     def dismiss_prepared_transfer():
         db.session.add(FinalizeTransferSignal(
             debtor_id=debtor_id,
-            sender_creditor_id=sender_creditor_id,
+            creditor_id=creditor_id,
             transfer_id=transfer_id,
             coordinator_id=coordinator_id,
             coordinator_request_id=coordinator_request_id,
@@ -381,7 +371,7 @@ def process_prepared_issuing_transfer_signal(
     the_signal_matches_the_transfer = (
         rt is not None
         and rt.debtor_id == debtor_id
-        and ROOT_CREDITOR_ID == sender_creditor_id
+        and ROOT_CREDITOR_ID == creditor_id
         and rt.recipient == recipient
         and rt.amount <= sender_locked_amount
     )
@@ -394,7 +384,7 @@ def process_prepared_issuing_transfer_signal(
         if rt.transfer_id == transfer_id:
             db.session.add(FinalizeTransferSignal(
                 debtor_id=rt.debtor_id,
-                sender_creditor_id=ROOT_CREDITOR_ID,
+                creditor_id=ROOT_CREDITOR_ID,
                 transfer_id=transfer_id,
                 coordinator_id=coordinator_id,
                 coordinator_request_id=coordinator_request_id,
@@ -410,7 +400,7 @@ def process_prepared_issuing_transfer_signal(
 @atomic
 def process_finalized_issuing_transfer_signal(
         debtor_id: int,
-        sender_creditor_id: int,
+        creditor_id: int,
         transfer_id: int,
         coordinator_id: int,
         coordinator_request_id: int,
@@ -419,17 +409,11 @@ def process_finalized_issuing_transfer_signal(
         status_code: str,
         total_locked_amount: int) -> None:
 
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert MIN_INT64 <= sender_creditor_id <= MAX_INT64
-    assert MIN_INT64 <= transfer_id <= MAX_INT64
-    assert 0 <= committed_amount <= MAX_INT64
-    assert 0 <= len(status_code.encode('ascii')) <= 30
-
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     the_signal_matches_the_transfer = (
         rt is not None
         and rt.debtor_id == debtor_id
-        and ROOT_CREDITOR_ID == sender_creditor_id
+        and ROOT_CREDITOR_ID == creditor_id
         and rt.transfer_id == transfer_id
     )
     if the_signal_matches_the_transfer:
