@@ -276,18 +276,16 @@ def delete_running_transfer(debtor_id: int, transfer_uuid: UUID) -> None:
 def initiate_running_transfer(
         debtor_id: int,
         transfer_uuid: UUID,
-        recipient_creditor_id: int,
+        recipient_uri: str,
+        recipient: str,
         amount: int,
         transfer_note_format: str,
         transfer_note: str) -> RunningTransfer:
 
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert MIN_INT64 <= recipient_creditor_id <= MAX_INT64
-    assert 0 < amount <= MAX_INT64
-
     transfer_data = {
         'amount': amount,
-        'recipient_creditor_id': recipient_creditor_id,
+        'recipient_uri': recipient_uri,
+        'recipient': recipient,
         'transfer_note_format': transfer_note_format,
         'transfer_note': transfer_note,
     }
@@ -316,7 +314,7 @@ def initiate_running_transfer(
         coordinator_request_id=new_running_transfer.coordinator_request_id,
         amount=amount,
         sender_creditor_id=ROOT_CREDITOR_ID,
-        recipient_creditor_id=recipient_creditor_id,
+        recipient=recipient,
         min_account_balance=debtor.min_account_balance,
     ))
 
@@ -379,14 +377,12 @@ def process_prepared_issuing_transfer_signal(
             transfer_note='',
         ))
 
-    recipient_creditor_id = u64_to_i64(int(recipient))
-
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     the_signal_matches_the_transfer = (
         rt is not None
         and rt.debtor_id == debtor_id
         and ROOT_CREDITOR_ID == sender_creditor_id
-        and rt.recipient_creditor_id == recipient_creditor_id
+        and rt.recipient == recipient
         and rt.amount <= sender_locked_amount
     )
     if the_signal_matches_the_transfer:
@@ -429,8 +425,6 @@ def process_finalized_issuing_transfer_signal(
     assert 0 <= committed_amount <= MAX_INT64
     assert 0 <= len(status_code.encode('ascii')) <= 30
 
-    recipient_creditor_id = u64_to_i64(int(recipient))
-
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
     the_signal_matches_the_transfer = (
         rt is not None
@@ -441,9 +435,9 @@ def process_finalized_issuing_transfer_signal(
     if the_signal_matches_the_transfer:
         assert rt is not None
 
-        if status_code == SC_OK and committed_amount == rt.amount and recipient_creditor_id == rt.recipient_creditor_id:
+        if status_code == SC_OK and committed_amount == rt.amount and recipient == rt.recipient:
             _finalize_running_transfer(rt)
-        elif status_code != SC_OK and committed_amount == 0 and recipient_creditor_id == rt.recipient_creditor_id:
+        elif status_code != SC_OK and committed_amount == 0 and recipient == rt.recipient:
             _finalize_running_transfer(rt, error_code=status_code, total_locked_amount=total_locked_amount)
         else:  # pragma: no cover
             _finalize_running_transfer(rt, error_code=SC_UNEXPECTED_ERROR)

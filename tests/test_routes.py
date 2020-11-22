@@ -300,7 +300,7 @@ def test_initiate_running_transfer(client, debtor):
         'amount': 1000,
         'noteFormat': 'fmt',
         'note': 'test',
-        'creditorId': 1111,
+        'recipient': {'uri': 'swpt:123/1111'},
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
     r = client.post('/debtors/123/transfers/', json=json_request_body)
@@ -309,7 +309,7 @@ def test_initiate_running_transfer(client, debtor):
     assert data['amount'] == 1000
     assert iso8601.parse_date(data['initiatedAt'])
     assert 'result' not in data
-    assert data['creditorId'] == 1111
+    assert data['recipient'] == {'type': 'AccountIdentity', 'uri': 'swpt:123/1111'}
     assert data['type'] == 'Transfer'
     assert data['uri'] == '/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
     assert data['noteFormat'] == 'fmt'
@@ -332,7 +332,10 @@ def test_initiate_running_transfer(client, debtor):
     r = client.post('/debtors/123/transfers/', json=json_request_body)
     assert r.status_code == 409
 
-    r = client.post('/debtors/555/transfers/', json=json_request_body)
+    r = client.post('/debtors/123/transfers/', json={**json_request_body, **{'recipient': {'uri': 'swpt:555/1111'}}})
+    assert r.status_code == 422
+
+    r = client.post('/debtors/555/transfers/', json={**json_request_body, **{'recipient': {'uri': 'swpt:555/1111'}}})
     assert r.status_code == 404
 
     r = client.get('/debtors/123/transfers/')
@@ -356,7 +359,7 @@ def test_initiate_running_transfer(client, debtor):
         suffix = '{:0>4}'.format(i)
         json_request_body = {
             'amount': 1,
-            'creditorId': 1111,
+            'recipient': {'uri': 'swpt:123/1111'},
             'transferUuid': f'123e4567-e89b-12d3-a456-42665544{suffix}',
         }
         r = client.post('/debtors/123/transfers/', json=json_request_body)
@@ -370,7 +373,7 @@ def test_cancel_running_transfer(client, debtor):
     json_request_body = {
         'amount': 1000,
         'note': 'test',
-        'creditorId': 1111,
+        'recipient': {'uri': 'swpt:123/1111'},
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
     r = client.post('/debtors/123/transfers/', json=json_request_body)

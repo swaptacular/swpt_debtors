@@ -248,8 +248,9 @@ class RunningTransfer(db.Model):
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     transfer_uuid = db.Column(pg.UUID(as_uuid=True), primary_key=True)
-    recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
     amount = db.Column(db.BigInteger, nullable=False)
+    recipient_uri = db.Column(db.String, nullable=False)
+    recipient = db.Column(db.String, nullable=False)
     transfer_note_format = db.Column(db.String, nullable=False)
     transfer_note = db.Column(db.String, nullable=False)
     initiated_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
@@ -400,7 +401,7 @@ class PrepareTransferSignal(Signal):
         max_locked_amount = fields.Integer(attribute='amount', dump_only=True)
         debtor_id = fields.Integer()
         sender_creditor_id = fields.Integer(data_key='creditor_id')
-        recipient = fields.Function(lambda obj: str(i64_to_u64(obj.recipient_creditor_id)))
+        recipient = fields.String()
         inserted_at = fields.DateTime(data_key='ts')
         max_commit_delay = fields.Constant(MAX_INT32)
         min_account_balance = fields.Integer()
@@ -410,7 +411,7 @@ class PrepareTransferSignal(Signal):
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
     amount = db.Column(db.BigInteger, nullable=False)
     sender_creditor_id = db.Column(db.BigInteger, nullable=False)
-    recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
+    recipient = db.Column(db.String, nullable=False)
     min_account_balance = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
         db.CheckConstraint(amount >= 0),

@@ -139,6 +139,33 @@ class DebtorIdentitySchema(ValidateTypeMixin, Schema):
         return obj
 
 
+class AccountIdentitySchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        missing='AccountIdentity',
+        default='AccountIdentity',
+        description='The type of this object.',
+        example='AccountIdentity',
+    )
+    uri = fields.String(
+        required=True,
+        validate=validate.Length(max=200),
+        format='uri',
+        description="The information contained in this field must be enough to: 1) uniquely "
+                    "and reliably identify the debtor, 2) uniquely and reliably identify "
+                    "the creditor's account with the debtor. Note that a network request "
+                    "*should not be needed* to identify the account."
+                    "\n\n"
+                    "For example, if the debtor happens to be a bank, the URI would reveal "
+                    "the type of the debtor (a bank), the ID of the bank, and the bank "
+                    "account number.",
+    )
+
+    @post_dump
+    def assert_required_fields(self, obj, many):
+        assert 'uri' in obj
+        return obj
+
+
 class DebtorsListSchema(Schema):
     uri = fields.String(
         required=True,
@@ -595,13 +622,12 @@ class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
         description="A client-generated UUID for the transfer.",
         example='123e4567-e89b-12d3-a456-426655440000',
     )
-    recipient_creditor_id = fields.Integer(
+    recipient_identity = fields.Nested(
+        AccountIdentitySchema,
         required=True,
-        validate=validate.Range(min=0, max=MAX_UINT64),
-        format='int64',
-        data_key='creditorId',
-        description="The recipient's creditor ID.",
-        example=1111,
+        data_key='recipient',
+        description="The recipient's `AccountIdentity` information.",
+        example={'type': 'AccountIdentity', 'uri': 'swpt:2/1111'}
     )
     amount = fields.Integer(
         required=True,
@@ -708,6 +734,7 @@ class TransferSchema(TransferCreationRequestSchema):
             transferUuid=obj.transfer_uuid,
         )
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
+        obj.recipient_identity = {'uri': obj.recipient_uri}
 
         if obj.finalized_at:
             result = {'finalized_at': obj.finalized_at}

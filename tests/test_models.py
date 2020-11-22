@@ -51,7 +51,8 @@ def test_limit_properties(db_session):
 def test_running_transfer_attrs(debtor, db_session, current_ts):
     debtor_id = debtor.debtor_id
     transfer_uuid = uuid.uuid4()
-    t = RunningTransfer(debtor_id=debtor_id, transfer_uuid=transfer_uuid, recipient_creditor_id=C_ID,
+    t = RunningTransfer(debtor_id=debtor_id, transfer_uuid=transfer_uuid,
+                        recipient_uri='swpt:2/1', recipient='1',
                         amount=1, transfer_note_format='fmt', transfer_note='a test note')
     db_session.add(t)
     db_session.commit()

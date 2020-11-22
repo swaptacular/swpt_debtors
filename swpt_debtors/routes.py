@@ -7,6 +7,7 @@ from flask import redirect, url_for, request, current_app, g
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib.utils import u64_to_i64
+from swpt_lib.swpt_uris import parse_account_uri
 from .schemas import DebtorSchema, TransferSchema, \
     TransfersListSchema, TransferCreationRequestSchema, \
     TransfersList, TransferCancelationRequestSchema, DebtorReservationRequestSchema, \
@@ -368,15 +369,24 @@ class TransfersListEndpoint(MethodView):
     def post(self, transfer_creation_request, debtorId):
         """Initiate a credit-issuing transfer."""
 
-        transfer_uuid = transfer_creation_request['transfer_uuid']
-        recipient_creditor_id = u64_to_i64(transfer_creation_request['recipient_creditor_id'])
-        location = url_for('transfers.TransferEndpoint', _external=True, debtorId=debtorId, transferUuid=transfer_uuid)
+        recipient_uri = transfer_creation_request['recipient_identity']['uri']
+        try:
+            recipient_debtor_id, recipient = parse_account_uri(recipient_uri)
+        except ValueError:
+            abort(422, errors={'json': {'recipient': {'uri': ['The URI can not be recognized.']}}})
+
+        if recipient_debtor_id != debtorId:
+            abort(422, errors={'json': {'recipient': {'uri': ['Invalid recipient account.']}}})
+
+        uuid = transfer_creation_request['transfer_uuid']
+        location = url_for('transfers.TransferEndpoint', _external=True, debtorId=debtorId, transferUuid=uuid)
         try:
             transfer = procedures.initiate_running_transfer(
                 debtor_id=debtorId,
-                transfer_uuid=transfer_uuid,
-                recipient_creditor_id=recipient_creditor_id,
+                transfer_uuid=uuid,
                 amount=transfer_creation_request['amount'],
+                recipient_uri=recipient_uri,
+                recipient=recipient,
                 transfer_note_format=transfer_creation_request['transfer_note_format'],
                 transfer_note=transfer_creation_request['transfer_note'],
             )

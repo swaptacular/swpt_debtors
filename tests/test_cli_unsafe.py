@@ -236,7 +236,7 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
     db.session.add(Debtor(debtor_id=1, status_flags=Debtor.STATUS_IS_ACTIVATED_FLAG))
-    procedures.initiate_running_transfer(1, TEST_UUID, 1, 50, '', '')
+    procedures.initiate_running_transfer(1, TEST_UUID, 'swpt:1/1', '1', 50, '', '')
     db.session.add(Debtor(debtor_id=2, status_flags=Debtor.STATUS_IS_ACTIVATED_FLAG))
     db.session.add(Account(
         debtor_id=1,

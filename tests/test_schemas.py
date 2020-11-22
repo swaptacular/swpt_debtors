@@ -100,7 +100,8 @@ def test_serialize_transfer(app):
     ts = schemas.TransferSchema(context=context)
 
     transfer_data = {
-        'recipient_creditor_id': 2,
+        'recipient_uri': 'swpt:2/1111',
+        'recipient': '1111',
         'transfer_uuid': '123e4567-e89b-12d3-a456-426655440000',
         'debtor_id': -1,
         'amount': 1000,
@@ -120,7 +121,7 @@ def test_serialize_transfer(app):
         "transferUuid": "123e4567-e89b-12d3-a456-426655440000",
         "transfersList": {"uri": "/debtors/18446744073709551615/transfers/"},
         "initiatedAt": "1970-01-01T00:00:00+00:00",
-        "creditorId": 2,
+        "recipient": {"type": "AccountIdentity", "uri": "swpt:2/1111"},
         "amount": 1000,
         "noteFormat": "json",
         "note": '{"note": "test"}',
@@ -144,7 +145,7 @@ def test_serialize_transfer(app):
         "transferUuid": "123e4567-e89b-12d3-a456-426655440000",
         "transfersList": {"uri": "/debtors/18446744073709551615/transfers/"},
         "initiatedAt": "1970-01-01T00:00:00+00:00",
-        "creditorId": 2,
+        "recipient": {"type": "AccountIdentity", "uri": "swpt:2/1111"},
         "amount": 1000,
         "noteFormat": "json",
         "note": '{"note": "test"}',
@@ -164,7 +165,7 @@ def test_serialize_transfer(app):
         "transferUuid": "123e4567-e89b-12d3-a456-426655440000",
         "transfersList": {"uri": "/debtors/18446744073709551615/transfers/"},
         "initiatedAt": "1970-01-01T00:00:00+00:00",
-        "creditorId": 2,
+        "recipient": {"type": "AccountIdentity", "uri": "swpt:2/1111"},
         "amount": 1000,
         "noteFormat": "json",
         "note": '{"note": "test"}',
