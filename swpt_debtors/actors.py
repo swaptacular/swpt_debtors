@@ -1,7 +1,7 @@
 import iso8601
-from .extensions import broker, APP_QUEUE_NAME
-from . import procedures
-from .models import CT_ISSUING, MAX_INT64
+from swpt_debtors.extensions import broker, APP_QUEUE_NAME
+from swpt_debtors import procedures
+from swpt_debtors.models import CT_ISSUING, MAX_INT64
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)

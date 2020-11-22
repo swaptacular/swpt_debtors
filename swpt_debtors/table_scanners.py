@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
 from sqlalchemy.sql.expression import tuple_
 from flask import current_app
-from .extensions import db
-from .models import Debtor, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
+from swpt_debtors.extensions import db
+from swpt_debtors.models import Debtor, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
     TryToDeleteAccountSignal, MAX_INT64, ROOT_CREDITOR_ID, \
     BEGINNING_OF_TIME
 

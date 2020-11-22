@@ -7,10 +7,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import true
 from swpt_lib.utils import Seqnum
-from .extensions import db
-from .lower_limits import LowerLimitSequence, TooLongLimitSequence
-from .models import Debtor, Account, ChangeInterestRateSignal, FinalizeTransferSignal, \
-    RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
+from swpt_debtors.extensions import db
+from swpt_debtors.lower_limits import LowerLimitSequence, TooLongLimitSequence
+from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
+    FinalizeTransferSignal, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
     NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
     SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
 

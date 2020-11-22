@@ -93,7 +93,7 @@ class LowerLimitSequence(abc.Sequence):
     def current_limits(self, current_date: date) -> LowerLimitSequence:
         """Return a new sequence containing only the limits effectual to the `current_date`."""
 
-        return LowerLimitSequence(l for l in self._limits if l.cutoff >= current_date)
+        return LowerLimitSequence(limit for limit in self._limits if limit.cutoff >= current_date)
 
     def apply_to_value(self, value: Real) -> Real:
         """Take a value, apply the limits, and return a possibly bigger value."""
@@ -107,7 +107,7 @@ class LowerLimitSequence(abc.Sequence):
     def _apply_eliminator(self, eliminator: LowerLimit) -> None:
         value = eliminator.value
         cutoff = eliminator.cutoff
-        self._limits = [l for l in self._limits if l.value > value or l.cutoff > cutoff]
+        self._limits = [limit for limit in self._limits if limit.value > value or limit.cutoff > cutoff]
         self._limits.append(eliminator)
 
     def _get_max_limits_count(self) -> int:

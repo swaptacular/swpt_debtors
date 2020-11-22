@@ -7,8 +7,8 @@ import dramatiq
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import func, null, true, or_, and_
 from swpt_lib.utils import i64_to_u64
-from .lower_limits import lower_limits_property
-from .extensions import db, broker, MAIN_EXCHANGE_NAME
+from swpt_debtors.lower_limits import lower_limits_property
+from swpt_debtors.extensions import db, broker, MAIN_EXCHANGE_NAME
 
 MIN_INT16 = -1 << 15
 MAX_INT16 = (1 << 15) - 1

@@ -4,8 +4,8 @@ from marshmallow import Schema, fields, validate, pre_dump, post_dump, post_load
     validates, missing, ValidationError
 from flask import url_for, current_app
 from swpt_lib.utils import i64_to_u64
-from .lower_limits import LowerLimit
-from .models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, MAX_UINT64, \
+from swpt_debtors.lower_limits import LowerLimit
+from swpt_debtors.models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
     TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, Debtor, RunningTransfer
 
 URI_DESCRIPTION = '\

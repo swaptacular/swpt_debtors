@@ -8,14 +8,14 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib.utils import u64_to_i64
 from swpt_lib.swpt_uris import parse_account_uri
-from .schemas import DebtorSchema, TransferSchema, \
+from swpt_debtors.schemas import DebtorSchema, TransferSchema, \
     TransfersListSchema, TransferCreationRequestSchema, \
     TransfersList, TransferCancelationRequestSchema, DebtorReservationRequestSchema, \
     DebtorReservationSchema, DebtorsListSchema, ObjectReferencesPageSchema, \
     DebtorActivationRequestSchema, DebtorDeactivationRequestSchema
-from .models import MIN_INT64
-from . import specs
-from . import procedures
+from swpt_debtors.models import MIN_INT64
+from swpt_debtors import specs
+from swpt_debtors import procedures
 
 READ_ONLY_METHODS = ['GET', 'HEAD', 'OPTIONS']
 

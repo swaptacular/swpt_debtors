@@ -6,8 +6,8 @@ from flask import current_app
 from flask.cli import with_appcontext
 from swpt_debtors.models import MIN_INT64, MAX_INT64
 from swpt_debtors import procedures
-from .extensions import db
-from .table_scanners import AccountsScanner, DebtorScanner
+from swpt_debtors.extensions import db
+from swpt_debtors.table_scanners import AccountsScanner, DebtorScanner
 
 
 @click.group('swpt_debtors')
