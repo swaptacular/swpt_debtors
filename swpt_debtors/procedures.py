@@ -318,7 +318,6 @@ def initiate_running_transfer(
         debtor_id=debtor_id,
         coordinator_request_id=new_running_transfer.coordinator_request_id,
         amount=amount,
-        creditor_id=ROOT_CREDITOR_ID,
         recipient=recipient,
         min_account_balance=debtor.min_account_balance,
     ))
@@ -569,7 +568,6 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
 def _insert_configure_account_signal(debtor_id: int) -> None:
     db.session.add(ConfigureAccountSignal(
         debtor_id=debtor_id,
-        ts=datetime.now(tz=timezone.utc),
     ))
 
 

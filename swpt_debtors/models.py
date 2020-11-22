@@ -380,7 +380,7 @@ class ConfigureAccountSignal(Signal):
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()
         creditor_id = fields.Constant(ROOT_CREDITOR_ID)
-        ts = fields.DateTime()
+        inserted_at = fields.DateTime(data_key='ts')
         seqnum = fields.Constant(0)
         negligible_amount = fields.Constant(0.0)
         config_flags = fields.Constant(0)
@@ -388,7 +388,6 @@ class ConfigureAccountSignal(Signal):
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
 
 
 class PrepareTransferSignal(Signal):
@@ -402,7 +401,7 @@ class PrepareTransferSignal(Signal):
         min_locked_amount = fields.Integer(attribute='amount', dump_only=True)
         max_locked_amount = fields.Integer(attribute='amount', dump_only=True)
         debtor_id = fields.Integer()
-        creditor_id = fields.Integer()
+        creditor_id = fields.Constant(ROOT_CREDITOR_ID)
         recipient = fields.String()
         inserted_at = fields.DateTime(data_key='ts')
         max_commit_delay = fields.Constant(MAX_INT32)
@@ -412,7 +411,6 @@ class PrepareTransferSignal(Signal):
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
     amount = db.Column(db.BigInteger, nullable=False)
-    creditor_id = db.Column(db.BigInteger, nullable=False)
     recipient = db.Column(db.String, nullable=False)
     min_account_balance = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
