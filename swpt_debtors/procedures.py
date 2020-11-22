@@ -352,7 +352,7 @@ def process_prepared_issuing_transfer_signal(
         transfer_id: int,
         coordinator_id: int,
         coordinator_request_id: int,
-        sender_locked_amount: int,
+        locked_amount: int,
         recipient: str) -> None:
 
     def dismiss_prepared_transfer():
@@ -368,12 +368,13 @@ def process_prepared_issuing_transfer_signal(
         ))
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
+
     the_signal_matches_the_transfer = (
         rt is not None
         and rt.debtor_id == debtor_id
         and ROOT_CREDITOR_ID == creditor_id
         and rt.recipient == recipient
-        and rt.amount <= sender_locked_amount
+        and rt.amount <= locked_amount
     )
     if the_signal_matches_the_transfer:
         assert rt is not None
@@ -410,6 +411,7 @@ def process_finalized_issuing_transfer_signal(
         total_locked_amount: int) -> None:
 
     rt = _find_running_transfer(coordinator_id, coordinator_request_id)
+
     the_signal_matches_the_transfer = (
         rt is not None
         and rt.debtor_id == debtor_id

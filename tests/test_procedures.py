@@ -399,7 +399,7 @@ def test_successful_transfer(db_session, debtor):
         creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
         recipient=str(C_ID),
-        sender_locked_amount=1000,
+        locked_amount=1000,
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,
     )
@@ -482,7 +482,7 @@ def test_failed_transfer(db_session, debtor):
         creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
         recipient=str(C_ID),
-        sender_locked_amount=1000,
+        locked_amount=1000,
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,
     )
@@ -597,7 +597,7 @@ def test_cancel_running_transfer_success(db_session, debtor):
         creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
         recipient=str(C_ID),
-        sender_locked_amount=1000,
+        locked_amount=1000,
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,
     )
@@ -615,7 +615,7 @@ def test_cancel_running_transfer_failure(db_session, debtor):
         creditor_id=ROOT_CREDITOR_ID,
         transfer_id=777,
         recipient=str(C_ID),
-        sender_locked_amount=1000,
+        locked_amount=1000,
         coordinator_id=D_ID,
         coordinator_request_id=coordinator_request_id,
     )
