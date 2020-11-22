@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 5487d9ce1b83
+Revision ID: 701d24f9e0be
 Revises: 8d09bea9c7d1
-Create Date: 2020-11-21 17:46:26.551938
+Create Date: 2020-11-22 19:56:26.047830
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '5487d9ce1b83'
+revision = '701d24f9e0be'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -80,7 +80,7 @@ def upgrade():
     sa.Column('running_transfers_count', sa.Integer(), nullable=False),
     sa.Column('actions_count', sa.Integer(), nullable=False),
     sa.Column('actions_count_reset_date', sa.DATE(), nullable=False),
-    sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment atn which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted.'),
+    sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted.'),
     sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` field. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `null` is the same as an empty array.'),
     sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.Column('irll_values', postgresql.ARRAY(sa.REAL(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `null` is the same as an empty array. If the array contains values bigger that 100.0, they are treated as equal to 100.0.'),
@@ -123,13 +123,11 @@ def upgrade():
     sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
-    sa.Column('min_locked_amount', sa.BigInteger(), nullable=False),
-    sa.Column('max_locked_amount', sa.BigInteger(), nullable=False),
+    sa.Column('amount', sa.BigInteger(), nullable=False),
     sa.Column('sender_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('min_account_balance', sa.BigInteger(), nullable=False),
-    sa.CheckConstraint('max_locked_amount >= min_locked_amount'),
-    sa.CheckConstraint('min_locked_amount > 0'),
+    sa.CheckConstraint('amount >= 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'coordinator_request_id')
     )
     op.create_table('try_to_delete_account_signal',
@@ -153,7 +151,7 @@ def upgrade():
     sa.Column('total_locked_amount', sa.BigInteger(), nullable=True),
     sa.Column('coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('coordinator_request_id_seq')"), nullable=False),
     sa.Column('transfer_id', sa.BigInteger(), nullable=True),
-    sa.CheckConstraint('amount > 0'),
+    sa.CheckConstraint('amount >= 0'),
     sa.CheckConstraint('error_code IS NULL OR finalized_at IS NOT NULL'),
     sa.CheckConstraint('total_locked_amount >= 0'),
     sa.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),

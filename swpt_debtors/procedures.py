@@ -314,8 +314,7 @@ def initiate_running_transfer(
     db.session.add(PrepareTransferSignal(
         debtor_id=debtor_id,
         coordinator_request_id=new_running_transfer.coordinator_request_id,
-        min_locked_amount=amount,
-        max_locked_amount=amount,
+        amount=amount,
         sender_creditor_id=ROOT_CREDITOR_ID,
         recipient_creditor_id=recipient_creditor_id,
         min_account_balance=debtor.min_account_balance,

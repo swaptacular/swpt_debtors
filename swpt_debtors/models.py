@@ -261,7 +261,7 @@ class RunningTransfer(db.Model):
     __mapper_args__ = {'eager_defaults': True}
     __table_args__ = (
         db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
-        db.CheckConstraint(amount > 0),
+        db.CheckConstraint(amount >= 0),
         db.CheckConstraint(total_locked_amount >= 0),
         db.CheckConstraint(or_(error_code == null(), finalized_at != null())),
         db.Index('idx_coordinator_request_id', debtor_id, coordinator_request_id, unique=True),
@@ -396,8 +396,8 @@ class PrepareTransferSignal(Signal):
         coordinator_type = fields.String(default='issuing')
         coordinator_id = fields.Integer(attribute='debtor_id', dump_only=True)
         coordinator_request_id = fields.Integer()
-        min_locked_amount = fields.Integer()
-        max_locked_amount = fields.Integer()
+        min_locked_amount = fields.Integer(attribute='amount', dump_only=True)
+        max_locked_amount = fields.Integer(attribute='amount', dump_only=True)
         debtor_id = fields.Integer()
         sender_creditor_id = fields.Integer(data_key='creditor_id')
         recipient = fields.Function(lambda obj: str(i64_to_u64(obj.recipient_creditor_id)))
@@ -408,14 +408,12 @@ class PrepareTransferSignal(Signal):
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
-    min_locked_amount = db.Column(db.BigInteger, nullable=False)
-    max_locked_amount = db.Column(db.BigInteger, nullable=False)
+    amount = db.Column(db.BigInteger, nullable=False)
     sender_creditor_id = db.Column(db.BigInteger, nullable=False)
     recipient_creditor_id = db.Column(db.BigInteger, nullable=False)
     min_account_balance = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
-        db.CheckConstraint(min_locked_amount > 0),
-        db.CheckConstraint(max_locked_amount >= min_locked_amount),
+        db.CheckConstraint(amount >= 0),
     )
 
 

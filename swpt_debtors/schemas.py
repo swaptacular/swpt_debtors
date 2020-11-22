@@ -21,8 +21,7 @@ ESTABLISHED_LIMITS_NOTE = '\
 **Note:** Established limits can not be removed. They will continue \
 to be enforced until the specified expiration date. Therefore, when \
 the policy is being updated, this field should contain only the \
-additional limits that have to be added to the existing ones. This can \
-be an empty array.'
+additional limits that have to be added to the existing ones.'
 
 TRANSFER_NOTE_FORMAT_REGEX = r'^[0-9A-Za-z.-]{0,8}$'
 
@@ -426,13 +425,13 @@ class DebtorSchema(ValidateTypeMixin, Schema):
     )
     balance_lower_limits = fields.Nested(
         BalanceLowerLimitSchema(many=True),
-        required=True,
+        missing=[],
         data_key='balanceLowerLimits',
         description=f'Enforced lower limits for the `balance` field.\n\n{ESTABLISHED_LIMITS_NOTE}',
     )
     interest_rate_lower_limits = fields.Nested(
         InterestRateLowerLimitSchema(many=True),
-        required=True,
+        missing=[],
         data_key='interestRateLowerLimits',
         description=f'Enforced lower limits for the `interestRate` field.\n\n{ESTABLISHED_LIMITS_NOTE}',
     )
@@ -606,9 +605,11 @@ class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
     )
     amount = fields.Integer(
         required=True,
-        validate=validate.Range(min=1, max=MAX_INT64),
-        format="int64",
-        description='The amount to be transferred. Must be positive.',
+        validate=validate.Range(min=0, max=MAX_INT64),
+        format='int64',
+        description="The amount that has to be transferred. Must be a non-negative "
+                    "number. Setting this value to zero can be useful when the debtor wants to "
+                    "verify whether the recipient's account exists and accepts incoming transfers.",
         example=1000,
     )
     transfer_note_format = fields.String(
@@ -633,7 +634,7 @@ class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
             raise ValidationError(f'The total byte-length of the note exceeds {TRANSFER_NOTE_MAX_BYTES} bytes.')
 
 
-class TransferSchema(Schema):
+class TransferSchema(TransferCreationRequestSchema):
     uri = fields.String(
         required=True,
         dump_only=True,
@@ -655,29 +656,6 @@ class TransferSchema(Schema):
         data_key='transfersList',
         description="The URI of creditor's `TransfersList`.",
         example={'uri': '/debtors/2/transfers/'},
-    )
-    transfer_uuid = fields.UUID(
-        required=True,
-        data_key='transferUuid',
-        description="A client-generated UUID for the transfer.",
-        example='123e4567-e89b-12d3-a456-426655440000',
-    )
-    recipient_creditor_id = fields.Integer(
-        required=True,
-        dump_only=True,
-        validate=validate.Range(min=0, max=MAX_UINT64),
-        format='int64',
-        data_key='creditorId',
-        description="The recipient's creditor ID.",
-        example=1111,
-    )
-    amount = fields.Integer(
-        required=True,
-        dump_only=True,
-        validate=validate.Range(min=1, max=MAX_INT64),
-        format="int64",
-        description='The amount to be transferred. Must be positive.',
-        example=1000,
     )
     transfer_note_format = fields.String(
         required=True,
