@@ -306,6 +306,7 @@ class DebtorEndpoint(MethodView):
         debtor = procedures.get_active_debtor(debtorId)
         if not debtor:
             abort(403)
+
         return debtor, {'Cache-Control': 'max-age=86400'}
 
     @debtors_api.arguments(DebtorSchema)
@@ -334,6 +335,7 @@ class DebtorEndpoint(MethodView):
             abort(403)
         except procedures.ConflictingPolicy as e:
             abort(409, message=e.message)
+
         return debtor
 
 
@@ -351,12 +353,13 @@ class TransfersListEndpoint(MethodView):
     @transfers_api.response(TransfersListSchema(context=context))
     @transfers_api.doc(operationId='getTransfersList', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
-        """Return the debtor's list of credit-issuing transfers."""
+        """Return the debtor's list of initiated transfers."""
 
         try:
             transfer_uuids = procedures.get_debtor_transfer_uuids(debtorId)
         except procedures.DebtorDoesNotExist:
             abort(404)
+
         return TransfersList(debtor_id=debtorId, items=transfer_uuids)
 
     @transfers_api.arguments(TransferCreationRequestSchema)
@@ -369,12 +372,12 @@ class TransfersListEndpoint(MethodView):
     def post(self, transfer_creation_request, debtorId):
         """Initiate a credit-issuing transfer."""
 
+        # Verify the recipient.
         recipient_uri = transfer_creation_request['recipient_identity']['uri']
         try:
             recipient_debtor_id, recipient = parse_account_uri(recipient_uri)
         except ValueError:
             abort(422, errors={'json': {'recipient': {'uri': ['The URI can not be recognized.']}}})
-
         if recipient_debtor_id != debtorId:
             abort(422, errors={'json': {'recipient': {'uri': ['Invalid recipient account.']}}})
 
@@ -398,6 +401,7 @@ class TransfersListEndpoint(MethodView):
             abort(409)
         except procedures.TransferExists:
             return redirect(location, code=303)
+
         return transfer, {'Location': location}
 
 
@@ -406,7 +410,7 @@ class TransferEndpoint(MethodView):
     @transfers_api.response(TransferSchema(context=context))
     @transfers_api.doc(operationId='getTransfer', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId, transferUuid):
-        """Return a credit-issuing transfer."""
+        """Return a transfer."""
 
         return procedures.get_running_transfer(debtorId, transferUuid) or abort(404)
 
@@ -416,7 +420,7 @@ class TransferEndpoint(MethodView):
                        security=specs.SCOPE_ACCESS_MODIFY,
                        responses={403: specs.TRANSFER_CANCELLATION_FAILURE})
     def post(self, cancel_transfer_request, debtorId, transferUuid):
-        """Try to cancel a credit-issuing transfer.
+        """Try to cancel a transfer.
 
         **Note:** This is an idempotent operation.
 
@@ -434,7 +438,7 @@ class TransferEndpoint(MethodView):
     @transfers_api.response(code=204)
     @transfers_api.doc(operationId='deleteTransfer', security=specs.SCOPE_ACCESS_MODIFY)
     def delete(self, debtorId, transferUuid):
-        """Delete a credit-issuing transfer.
+        """Delete a transfer.
 
         Note that deleting a running (not finalized) transfer does not
         cancel it. To ensure that a running transfer has not been
