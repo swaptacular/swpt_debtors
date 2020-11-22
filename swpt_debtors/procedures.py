@@ -197,8 +197,8 @@ def update_debtor(
         debtor_info_content_type: Optional[str],
         debtor_info_sha256: Optional[bytes]) -> Debtor:
 
-    debtor = _throttle_debtor_actions(debtor_id)
     current_ts = datetime.now(tz=timezone.utc)
+    debtor = _throttle_debtor_actions(debtor_id, current_ts)
     date_week_ago = (current_ts - timedelta(days=7)).date()
 
     interest_rate_lower_limits = debtor.interest_rate_lower_limits
@@ -227,11 +227,15 @@ def update_debtor(
 
 @atomic
 def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
-    debtor_query = Debtor.query.filter_by(debtor_id=debtor_id)
-    if not db.session.query(debtor_query.exists()).scalar():
+    debtor = get_active_debtor(debtor_id, lock=True)
+    if debtor is None:
         raise DebtorDoesNotExist()
 
-    rows = db.session.query(RunningTransfer.transfer_uuid).filter_by(debtor_id=debtor_id).all()
+    rows = db.session.\
+        query(RunningTransfer.transfer_uuid).\
+        filter_by(debtor_id=debtor_id).\
+        all()
+
     return [uuid for (uuid,) in rows]
 
 
@@ -282,6 +286,7 @@ def initiate_running_transfer(
         transfer_note_format: str,
         transfer_note: str) -> RunningTransfer:
 
+    current_ts = datetime.now(tz=timezone.utc)
     transfer_data = {
         'amount': amount,
         'recipient_uri': recipient_uri,
@@ -296,7 +301,7 @@ def initiate_running_transfer(
             raise TransfersConflict()
         raise TransferExists()
 
-    debtor = _throttle_debtor_actions(debtor_id)
+    debtor = _throttle_debtor_actions(debtor_id, current_ts)
     debtor.running_transfers_count += 1
     if debtor.running_transfers_count > current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
         raise TransfersConflict()
@@ -537,26 +542,25 @@ def insert_change_interest_rate_signal(
     ))
 
 
-def _throttle_debtor_actions(debtor_id: int) -> Debtor:
+def _throttle_debtor_actions(debtor_id: int, current_ts: datetime) -> Debtor:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor is None:
         raise DebtorDoesNotExist()
 
-    current_date = datetime.now(tz=timezone.utc).date()
+    current_date = current_ts.date()
     number_of_elapsed_days = (current_date - debtor.actions_count_reset_date).days
     if number_of_elapsed_days > 30:  # pragma: no cover
         debtor.actions_count = 0
         debtor.actions_count_reset_date = current_date
+
     if debtor.actions_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
         raise TooManyManagementActions()
+
     debtor.actions_count += 1
     return debtor
 
 
 def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> Optional[RunningTransfer]:
-    assert MIN_INT64 <= coordinator_id <= MAX_INT64
-    assert MIN_INT64 < coordinator_request_id <= MAX_INT64
-
     return RunningTransfer.query.\
         filter_by(debtor_id=coordinator_id, coordinator_request_id=coordinator_request_id).\
         one_or_none()
