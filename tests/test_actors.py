@@ -6,18 +6,6 @@ D_ID = -1
 C_ID = 1
 
 
-def test_create_debtor(db_session):
-    a.create_debtor(
-        debtor_id=D_ID,
-    )
-
-
-def test_deactivate_debtor(db_session):
-    a.deactivate_debtor(
-        debtor_id=D_ID,
-    )
-
-
 def test_on_account_update_signal(db_session):
     a.on_account_update_signal(
         debtor_id=D_ID,
@@ -83,6 +71,7 @@ def test_on_finalized_issuing_transfer_signal(db_session):
         ts='2019-10-01T00:00:00Z',
         committed_amount=100,
         status_code='OK',
+        total_locked_amount=0,
     )
 
 

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 325350a4bd71
+Revision ID: 7bb41b7b7da9
 Revises: 8d09bea9c7d1
-Create Date: 2020-08-31 21:27:25.214294
+Create Date: 2020-11-22 23:10:10.954654
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '325350a4bd71'
+revision = '7bb41b7b7da9'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -43,7 +43,7 @@ def upgrade():
     comment='Tells who owes what to whom. This table is a replica of the table with the same name in the `swpt_accounts` service. It is used to perform maintenance routines like changing interest rates. Most of the columns get their values from the corresponding fields in the last applied `AccountChangeSignal`.'
     )
     op.create_table('capitalize_interest_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
@@ -52,7 +52,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('change_interest_rate_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
@@ -61,112 +61,115 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('configure_account_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
-    sa.Column('ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
     op.create_table('debtor',
-    sa.Column('debtor_id', sa.BigInteger(), autoincrement=False, nullable=False),
-    sa.Column('status', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - has activity, 2 - has account."),
-    sa.Column('created_at_date', sa.DATE(), nullable=False, comment='The date on which the debtor was created.'),
-    sa.Column('deactivated_at_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. A `null` means that the debtor has not been deactivated yet. Management operations (like policy updates and credit issuing) are not allowed on deactivated debtors. Once deactivated, a debtor stays deactivated until it is deleted.'),
-    sa.Column('balance', sa.BigInteger(), nullable=False, comment='The total issued amount with a negative sign. Normally, it will be a negative number or a zero. A positive value, although theoretically possible, should be very rare.'),
-    sa.Column('balance_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='Updated on each change of the `balance` field.'),
-    sa.Column('interest_rate_target', sa.REAL(), nullable=False, comment="The annual rate (in percents) at which the debtor wants the interest to accumulate on creditors' accounts. The actual interest rate may be different if interest rate limits are enforced."),
-    sa.Column('initiated_transfers_count', sa.Integer(), nullable=False, comment='The number of initiated issuing transfers for this debtor. It is incremented when a new row for the debtor is inserted in the `initiated_transfer` table, and decremented when a row is deleted. It is needed for performance reasons.'),
-    sa.Column('actions_throttle_date', sa.DATE(), nullable=False, comment='The date at which `actions_throttle_count` was zeroed out for the last time. This field is used to limit the number of management actions per month that a debtor is allowed to do.'),
-    sa.Column('actions_throttle_count', sa.Integer(), nullable=False, comment='The number of management actions that have been initiated after `actions_throttle_date`. This field is used to limit the number of management actions per month that a debtor is allowed to do. It gets zeroed out once a month.'),
+    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('status_flags', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is activated, 2 - is deactivated."),
+    sa.Column('reservation_id', sa.BigInteger(), server_default=sa.text("nextval('debtor_reservation_id_seq')"), nullable=True),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('balance', sa.BigInteger(), nullable=False),
+    sa.Column('interest_rate_target', sa.REAL(), nullable=False),
+    sa.Column('debtor_info_iri', sa.String(), nullable=True),
+    sa.Column('debtor_info_content_type', sa.String(), nullable=True),
+    sa.Column('debtor_info_sha256', sa.LargeBinary(), nullable=True),
+    sa.Column('running_transfers_count', sa.Integer(), nullable=False),
+    sa.Column('actions_count', sa.Integer(), nullable=False),
+    sa.Column('actions_count_reset_date', sa.DATE(), nullable=False),
+    sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted.'),
     sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` field. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `null` is the same as an empty array.'),
     sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.Column('irll_values', postgresql.ARRAY(sa.REAL(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `null` is the same as an empty array. If the array contains values bigger that 100.0, they are treated as equal to 100.0.'),
     sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.CheckConstraint('actions_throttle_count >= 0'),
+    sa.CheckConstraint('(status_flags & 2) = 0 OR (status_flags & 1) != 0'),
+    sa.CheckConstraint('actions_count >= 0'),
     sa.CheckConstraint('bll_cutoffs IS NULL OR array_ndims(bll_cutoffs) = 1'),
     sa.CheckConstraint('bll_values IS NULL OR array_ndims(bll_values) = 1'),
+    sa.CheckConstraint('deactivated_at IS NULL OR (status_flags & 2) != 0'),
+    sa.CheckConstraint('debtor_info_sha256 IS NULL OR octet_length(debtor_info_sha256) = 32'),
     sa.CheckConstraint('interest_rate_target >= -50.0 AND interest_rate_target <= 100.0'),
     sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
-    sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1'),
-    sa.PrimaryKeyConstraint('debtor_id'),
-    comment="Represents debtor's principal information."
+    sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1')
     )
+    op.create_index('idx_debtor_pk', 'debtor', ['debtor_id'], unique=True)
     op.create_table('finalize_transfer_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
-    sa.Column('sender_creditor_id', sa.BigInteger(), nullable=False),
+    sa.Column('creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
     sa.Column('transfer_id', sa.BigInteger(), nullable=False),
+    sa.Column('transfer_note_format', sa.String(), nullable=False),
     sa.Column('transfer_note', sa.String(), nullable=False),
     sa.Column('committed_amount', sa.BigInteger(), nullable=False),
     sa.CheckConstraint('committed_amount >= 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
+    op.create_table('node_config',
+    sa.Column('is_effective', sa.BOOLEAN(), nullable=False),
+    sa.Column('min_debtor_id', sa.BigInteger(), nullable=False),
+    sa.Column('max_debtor_id', sa.BigInteger(), nullable=False),
+    sa.CheckConstraint('is_effective = true'),
+    sa.CheckConstraint('min_debtor_id <= max_debtor_id'),
+    sa.PrimaryKeyConstraint('is_effective'),
+    comment='Represents the global node configuration (a singleton). The node is responsible only for debtor IDs that are within the interval [min_debtor_id, max_debtor_id].'
+    )
     op.create_table('prepare_transfer_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('coordinator_request_id', sa.BigInteger(), nullable=False),
-    sa.Column('min_locked_amount', sa.BigInteger(), nullable=False),
-    sa.Column('max_locked_amount', sa.BigInteger(), nullable=False),
-    sa.Column('sender_creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False),
+    sa.Column('amount', sa.BigInteger(), nullable=False),
+    sa.Column('recipient', sa.String(), nullable=False),
     sa.Column('min_account_balance', sa.BigInteger(), nullable=False),
-    sa.CheckConstraint('max_locked_amount >= min_locked_amount'),
-    sa.CheckConstraint('min_locked_amount > 0'),
+    sa.CheckConstraint('amount >= 0'),
     sa.PrimaryKeyConstraint('debtor_id', 'coordinator_request_id')
     )
-    op.create_table('running_transfer',
-    sa.Column('debtor_id', sa.BigInteger(), nullable=False),
-    sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False, comment='The recipient of the transfer.'),
-    sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
-    sa.Column('transfer_note', sa.String(), nullable=False, comment='A note from the debtor. Can be any string that the debtor wants the recipient to see.'),
-    sa.Column('started_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was started.'),
-    sa.Column('issuing_coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('issuing_coordinator_request_id_seq')"), nullable=False, comment='This is the value of the `coordinator_request_id` parameter, which has been sent with the `prepare_transfer` message for the transfer. The value of `debtor_id` is sent as the `coordinator_id` parameter. `coordinator_type` is "issuing".'),
-    sa.Column('issuing_transfer_id', sa.BigInteger(), nullable=True, comment="This value, along with `debtor_id` uniquely identifies the successfully prepared transfer. (The sender is always the debtor's account.)"),
-    sa.CheckConstraint('amount > 0'),
-    sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
-    comment='Represents a running issuing transfer. Important note: The records for the successfully finalized issuing transfers (those for which `issuing_transfer_id` is not `null`), must not be deleted right away. Instead, after they have been finalized, they should stay in the database until the corresponding `FinalizedTransferSignal` is received.'
-    )
-    op.create_index('idx_issuing_coordinator_request_id', 'running_transfer', ['debtor_id', 'issuing_coordinator_request_id'], unique=True)
     op.create_table('try_to_delete_account_signal',
-    sa.Column('inserted_at_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('creditor_id', sa.BigInteger(), nullable=False),
     sa.Column('request_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
     )
-    op.create_table('initiated_transfer',
+    op.create_table('running_transfer',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('transfer_uuid', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('recipient_creditor_id', sa.BigInteger(), nullable=False),
-    sa.Column('amount', sa.BigInteger(), nullable=False, comment='The amount to be transferred. Must be positive.'),
-    sa.Column('transfer_note', sa.String(), nullable=False, comment='A note from the debtor. Can be any string that the debtor wants the recipient to see.'),
-    sa.Column('initiated_at_ts', sa.TIMESTAMP(timezone=True), nullable=False, comment='The moment at which the transfer was initiated.'),
-    sa.Column('finalized_at_ts', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the transfer was finalized. A `null` means that the transfer has not been finalized yet.'),
-    sa.Column('is_successful', sa.BOOLEAN(), nullable=False, comment='Whether the transfer has been successful or not.'),
-    sa.Column('error', postgresql.JSON(astext_type=sa.Text()), nullable=True, comment='Describes the reason of the failure, in case the transfer has not been successful.'),
-    sa.CheckConstraint('amount > 0'),
-    sa.CheckConstraint('finalized_at_ts IS NULL OR is_successful = true OR error IS NOT NULL'),
-    sa.CheckConstraint('is_successful = false OR finalized_at_ts IS NOT NULL'),
+    sa.Column('amount', sa.BigInteger(), nullable=False),
+    sa.Column('recipient_uri', sa.String(), nullable=False),
+    sa.Column('recipient', sa.String(), nullable=False),
+    sa.Column('transfer_note_format', sa.String(), nullable=False),
+    sa.Column('transfer_note', sa.String(), nullable=False),
+    sa.Column('initiated_at', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('finalized_at', sa.TIMESTAMP(timezone=True), nullable=True),
+    sa.Column('error_code', sa.String(), nullable=True),
+    sa.Column('total_locked_amount', sa.BigInteger(), nullable=True),
+    sa.Column('coordinator_request_id', sa.BigInteger(), server_default=sa.text("nextval('coordinator_request_id_seq')"), nullable=False),
+    sa.Column('transfer_id', sa.BigInteger(), nullable=True),
+    sa.CheckConstraint('amount >= 0'),
+    sa.CheckConstraint('error_code IS NULL OR finalized_at IS NOT NULL'),
+    sa.CheckConstraint('total_locked_amount >= 0'),
     sa.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('debtor_id', 'transfer_uuid'),
     comment='Represents an initiated issuing transfer. A new row is inserted when a debtor creates a new issuing transfer. The row is deleted when the debtor acknowledges (purges) the transfer.'
     )
+    op.create_index('idx_coordinator_request_id', 'running_transfer', ['debtor_id', 'coordinator_request_id'], unique=True)
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table('initiated_transfer')
-    op.drop_table('try_to_delete_account_signal')
-    op.drop_index('idx_issuing_coordinator_request_id', table_name='running_transfer')
+    op.drop_index('idx_coordinator_request_id', table_name='running_transfer')
     op.drop_table('running_transfer')
+    op.drop_table('try_to_delete_account_signal')
     op.drop_table('prepare_transfer_signal')
+    op.drop_table('node_config')
     op.drop_table('finalize_transfer_signal')
+    op.drop_index('idx_debtor_pk', table_name='debtor')
     op.drop_table('debtor')
     op.drop_table('configure_account_signal')
     op.drop_table('change_interest_rate_signal')

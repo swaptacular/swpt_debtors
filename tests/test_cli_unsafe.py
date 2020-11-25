@@ -1,7 +1,8 @@
 import pytest
 from uuid import UUID
 from datetime import datetime, timezone, timedelta, date
-from swpt_debtors.models import RunningTransfer, Account, InitiatedTransfer, ROOT_CREDITOR_ID, BEGINNING_OF_TIME
+from swpt_debtors.models import RunningTransfer, Account, Debtor, \
+    ConfigureAccountSignal, ROOT_CREDITOR_ID, BEGINNING_OF_TIME
 from swpt_debtors.extensions import db
 from swpt_debtors import procedures
 
@@ -25,27 +26,6 @@ def app_unsafe_session(app_unsafe_session):
         RunningTransfer.query.delete()
         PrepareTransferSignal.query.delete()
         db.session.commit()
-
-
-def test_scan_running_transfers(app_unsafe_session):
-    app = app_unsafe_session
-    running_transfer = RunningTransfer(
-        debtor_id=1,
-        transfer_uuid=TEST_UUID,
-        recipient_creditor_id=1111,
-        amount=1500,
-        transfer_note='',
-        issuing_transfer_id=666,
-        started_at_ts=datetime(2000, 1, 1, tzinfo=timezone.utc)
-    )
-    db.session.add(running_transfer)
-    db.session.commit()
-    db.engine.execute('ANALYZE running_transfer')
-    assert len(RunningTransfer.query.all()) == 1
-    runner = app.test_cli_runner()
-    result = runner.invoke(args=['swpt_debtors', 'scan_running_transfers', '--days', '0.000001', '--quit-early'])
-    assert result.exit_code == 0
-    assert len(RunningTransfer.query.all()) == 0
 
 
 def test_scan_accounts(app_unsafe_session):
@@ -255,9 +235,9 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
 
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
-    db.session.add(Debtor(debtor_id=1, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
-    procedures.initiate_transfer(1, TEST_UUID, 1, 50, '')
-    db.session.add(Debtor(debtor_id=2, status=Debtor.STATUS_HAS_ACCOUNT_FLAG))
+    db.session.add(Debtor(debtor_id=1, status_flags=Debtor.STATUS_IS_ACTIVATED_FLAG))
+    procedures.initiate_running_transfer(1, TEST_UUID, 'swpt:1/1', '1', 50, '', '')
+    db.session.add(Debtor(debtor_id=2, status_flags=Debtor.STATUS_IS_ACTIVATED_FLAG))
     db.session.add(Account(
         debtor_id=1,
         creditor_id=ROOT_CREDITOR_ID,
@@ -281,10 +261,54 @@ def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     result = runner.invoke(args=['swpt_debtors', 'scan_accounts', '--hours', '0.000024', '--quit-early'])
     assert result.exit_code == 0
     assert len(Debtor.query.all()) == 2
-    d = Debtor.query.filter_by(debtor_id=1).one()
-    assert d
-    assert not d.status & Debtor.STATUS_HAS_ACCOUNT_FLAG
-    assert d.deactivated_at_date is not None
-    assert d.initiated_transfers_count == 0
-    assert len(InitiatedTransfer.query.filter_by(debtor_id=1).all()) == 0
     assert len(Account.query.all()) == 0
+
+
+def _create_new_debtor(debtor_id: int, activate: bool = False):
+    debtor = procedures.reserve_debtor(debtor_id)
+    if activate:
+        procedures.activate_debtor(debtor_id, debtor.reservation_id)
+
+
+@pytest.mark.unsafe
+def test_scan_debtors(app_unsafe_session, current_ts):
+    Debtor.query.delete()
+    ConfigureAccountSignal.query.delete()
+    db.session.commit()
+
+    _create_new_debtor(1, activate=False)
+    _create_new_debtor(2, activate=False)
+    _create_new_debtor(3, activate=True)
+    _create_new_debtor(4, activate=True)
+    _create_new_debtor(5, activate=True)
+    _create_new_debtor(6, activate=True)
+    Debtor.query.filter_by(debtor_id=1).update({
+        'created_at': current_ts - timedelta(days=30),
+    })
+    procedures.deactivate_debtor(3)
+    procedures.deactivate_debtor(4)
+    procedures.deactivate_debtor(6)
+    Debtor.query.filter_by(debtor_id=3).update({
+        'created_at': current_ts - timedelta(days=3000),
+        'deactivated_at': current_ts - timedelta(days=3000),
+    })
+    Debtor.query.filter_by(debtor_id=4).update({
+        'created_at': current_ts - timedelta(days=3000),
+        'deactivated_at': current_ts - timedelta(days=3000),
+    })
+    db.session.commit()
+    app = app_unsafe_session
+    assert len(Debtor.query.all()) == 6
+
+    db.engine.execute('ANALYZE account')
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=['swpt_debtors', 'scan_debtors', '--days', '0.000001', '--quit-early'])
+    assert result.exit_code == 0
+
+    debtors = Debtor.query.all()
+    assert len(debtors) == 5
+    assert sorted([d.debtor_id for d in debtors]) == [2, 3, 4, 5, 6]
+
+    Debtor.query.delete()
+    ConfigureAccountSignal.query.delete()
+    db.session.commit()

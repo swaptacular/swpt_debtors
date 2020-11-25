@@ -1,10 +1,13 @@
 from datetime import timedelta
+import sys
 import click
 from os import environ
 from flask import current_app
 from flask.cli import with_appcontext
-from .extensions import db
-from .table_scanners import RunningTransfersScanner, AccountsScanner
+from swpt_debtors.models import MIN_INT64, MAX_INT64
+from swpt_debtors import procedures
+from swpt_debtors.extensions import db
+from swpt_debtors.table_scanners import AccountsScanner, DebtorScanner
 
 
 @click.group('swpt_debtors')
@@ -49,26 +52,33 @@ def subscribe(queue_name):  # pragma: no cover
                 click.echo(f'Unsubscribed "{queue_name}" from "{MAIN_EXCHANGE_NAME}.{routing_key}".')
 
 
-@swpt_debtors.command('scan_running_transfers')
+@swpt_debtors.command('configure_interval')
 @with_appcontext
-@click.option('-d', '--days', type=float, help='The number of days.')
-@click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
-def scan_running_transfers(days, quit_early):
-    """Start a process that garbage-collects staled running transfers.
+@click.argument('min_id', type=int)
+@click.argument('max_id', type=int)
+def configure_interval(min_id, max_id):
+    """Configures the server to manage debtor IDs between MIN_ID and MAX_ID.
 
-    The specified number of days determines the intended duration of a
-    single pass through the running transfers table. If the number of
-    days is not specified, the value of the environment variable
-    APP_RUNNING_TRANSFERS_SCAN_DAYS is taken. If it is not set, the
-    default number of days is 7.
+    The passed debtor IDs must be between -9223372036854775808 and
+    9223372036854775807. Use "--" to pass negative integers. For
+    example:
+
+    $ flask swpt_debtors configure_interval -- -16 0
 
     """
 
-    click.echo('Scanning running transfers...')
-    days = days or float(current_app.config['APP_RUNNING_TRANSFERS_SCAN_DAYS'])
-    assert days > 0.0
-    scanner = RunningTransfersScanner()
-    scanner.run(db.engine, timedelta(days=days), quit_early=quit_early)
+    def validate(value):
+        if not MIN_INT64 <= value <= MAX_INT64:
+            click.echo(f'Error: {value} is not a valid debtor ID.')
+            sys.exit(1)
+
+    validate(min_id)
+    validate(max_id)
+    if min_id > max_id:
+        click.echo('Error: an invalid interval has been specified.')
+        sys.exit(1)
+
+    procedures.configure_node(min_debtor_id=min_id, max_debtor_id=max_id)
 
 
 @swpt_debtors.command('scan_accounts')
@@ -91,3 +101,25 @@ def scan_accounts(hours, quit_early):
     assert hours > 0.0
     scanner = AccountsScanner(hours)
     scanner.run(db.engine, timedelta(hours=hours), quit_early=quit_early)
+
+
+@swpt_debtors.command('scan_debtors')
+@with_appcontext
+@click.option('-d', '--days', type=float, help='The number of days.')
+@click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
+def scan_debtors(days, quit_early):
+    """Start a process that garbage-collects inactive debtors.
+
+    The specified number of days determines the intended duration of a
+    single pass through the debtors table. If the number of days is
+    not specified, the value of the configuration variable
+    APP_DEBTORS_SCAN_DAYS is taken. If it is not set, the default
+    number of days is 7.
+
+    """
+
+    click.echo('Scanning debtors...')
+    days = days or float(current_app.config['APP_DEBTORS_SCAN_DAYS'])
+    assert days > 0.0
+    scanner = DebtorScanner()
+    scanner.run(db.engine, timedelta(days=days), quit_early=quit_early)

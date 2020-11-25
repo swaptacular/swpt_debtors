@@ -1,20 +1,7 @@
 import iso8601
-from .extensions import broker, APP_QUEUE_NAME
-from . import procedures
-
-
-@broker.actor(queue_name=APP_QUEUE_NAME)
-def create_debtor(debtor_id: int) -> None:
-    """Make sure a debtor with ID `debtor_id` exists."""
-
-    procedures.lock_or_create_debtor(debtor_id)
-
-
-@broker.actor(queue_name=APP_QUEUE_NAME)
-def deactivate_debtor(debtor_id: int) -> None:
-    """Permanently deactivate a debtor."""
-
-    procedures.deactivate_debtor(debtor_id)
+from swpt_debtors.extensions import broker, APP_QUEUE_NAME
+from swpt_debtors import procedures
+from swpt_debtors.models import CT_ISSUING, MAX_INT64
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
@@ -72,7 +59,8 @@ def on_prepared_issuing_transfer_signal(
         recipient: str,
         *args, **kwargs) -> None:
 
-    assert coordinator_type == 'issuing'
+    assert coordinator_type == CT_ISSUING
+
     procedures.process_prepared_issuing_transfer_signal(
         debtor_id,
         creditor_id,
@@ -95,7 +83,10 @@ def on_rejected_issuing_transfer_signal(
         creditor_id: int,
         *args, **kwargs) -> None:
 
-    assert coordinator_type == 'issuing'
+    assert coordinator_type == CT_ISSUING
+    assert status_code == '' or len(status_code) <= 30 and status_code.encode('ascii')
+    assert 0 <= total_locked_amount <= MAX_INT64
+
     procedures.process_rejected_issuing_transfer_signal(
         coordinator_id,
         coordinator_request_id,
@@ -119,9 +110,13 @@ def on_finalized_issuing_transfer_signal(
         ts: str,
         committed_amount: int,
         status_code: str,
+        total_locked_amount: int,
         *args, **kwargs) -> None:
 
-    assert coordinator_type == 'issuing'
+    assert coordinator_type == CT_ISSUING
+    assert status_code == '' or len(status_code) <= 30 and status_code.encode('ascii')
+    assert 0 <= total_locked_amount <= MAX_INT64
+
     procedures.process_finalized_issuing_transfer_signal(
         debtor_id,
         creditor_id,
@@ -131,6 +126,7 @@ def on_finalized_issuing_transfer_signal(
         recipient,
         committed_amount,
         status_code,
+        total_locked_amount,
     )
 
 

@@ -13,10 +13,14 @@ config_dict = {
     'TESTING': True,
     'SERVER_NAME': server_name,
     'SWPT_SERVER_NAME': server_name,
+    'APP_AUTHORITY_URI': 'urn:example:authority',
     'APP_MAX_LIMITS_COUNT': 10,
+    'APP_CREDITORS_PER_PAGE': 2,
     'APP_TRANSFERS_FINALIZATION_AVG_SECONDS': 10.0,
     'APP_MAX_TRANSFERS_PER_MONTH': 10,
-    'APP_AUTHORITY_URI': 'http://example.com/authority',
+    'APP_SUPERUSER_SUBJECT_REGEX': '^debtors-superuser$',
+    'APP_SUPERVISOR_SUBJECT_REGEX': '^debtors-supervisor$',
+    'APP_DEBTOR_SUBJECT_REGEX': '^debtors:([0-9]+)$',
 }
 
 
