@@ -1,0 +1,213 @@
+[
+  {
+    "id": "options",
+    "version": "v0.36.0-beta.4",
+    "upstream": {
+      "url": "$RESOURCE_SERVER",
+      "preserve_host": true
+    },
+    "match": {
+      "url": "<https?://[^/]+/creditors/.*>",
+      "methods": [
+        "OPTIONS"
+      ]
+    },
+    "authenticators": [
+      {
+        "handler": "noop"
+      }
+    ],
+    "authorizer": {
+      "handler": "allow"
+    },
+    "mutators": [
+      {
+        "handler": "noop"
+      }
+    ]
+  },
+
+  {
+    "id": "docs",
+    "version": "v0.36.0-beta.4",
+    "upstream": {
+      "url": "$RESOURCE_SERVER",
+      "preserve_host": true
+    },
+    "match": {
+      "url": "<https?://[^/]+/creditors/\\.docs(/.*)?$>",
+      "methods": [
+        "GET", "HEAD"
+      ]
+    },
+    "authenticators": [
+      {
+        "handler": "noop"
+      }
+    ],
+    "authorizer": {
+      "handler": "allow"
+    },
+    "mutators": [
+      {
+        "handler": "noop"
+      }
+    ]
+  },
+
+  {
+    "id": "access.lookup",
+    "version": "v0.36.0-beta.4",
+    "upstream": {
+      "url": "$RESOURCE_SERVER",
+      "preserve_host": true
+    },
+    "match": {
+      "url": "<https?://[^/]+/creditors/.*[./-](lookup)$>",
+      "methods": [
+        "POST"
+      ]
+    },
+    "authenticators": [
+      {
+        "handler": "oauth2_introspection",
+        "config": {
+          "required_scope": ["access.readonly"]
+        }
+      }
+    ],
+    "authorizer": {
+      "handler": "allow"
+    },
+    "mutators": [
+      {
+        "handler": "header"
+      }
+    ]
+  },
+
+  {
+    "id": "access.get",
+    "version": "v0.36.0-beta.4",
+    "upstream": {
+      "url": "$RESOURCE_SERVER",
+      "preserve_host": true
+    },
+    "match": {
+      "url": "<https?://[^/]+/creditors/(?!\\.docs(/.*)?$).*>",
+      "methods": [
+        "GET", "HEAD"
+      ]
+    },
+    "authenticators": [
+      {
+        "handler": "oauth2_introspection",
+        "config": {
+          "required_scope": ["access.readonly"]
+        }
+      }
+    ],
+    "authorizer": {
+      "handler": "allow"
+    },
+    "mutators": [
+      {
+        "handler": "header"
+      }
+    ]
+  },
+
+  {
+    "id": "access.modify",
+    "version": "v0.36.0-beta.4",
+    "upstream": {
+      "url": "$RESOURCE_SERVER",
+      "preserve_host": true
+    },
+    "match": {
+      "url": "<https?://[^/]+/creditors/(?!.*[./-](lookup|reserve|activate|deactivate)$).*>",
+      "methods": [
+        "POST", "PUT", "PATCH", "DELETE"
+      ]
+    },
+    "authenticators": [
+      {
+        "handler": "oauth2_introspection",
+        "config": {
+          "required_scope": ["access"]
+        }
+      }
+    ],
+    "authorizer": {
+      "handler": "allow"
+    },
+    "mutators": [
+      {
+        "handler": "header"
+      }
+    ]
+  },
+
+  {
+    "id": "activate",
+    "version": "v0.36.0-beta.4",
+    "upstream": {
+      "url": "$RESOURCE_SERVER",
+      "preserve_host": true
+    },
+    "match": {
+      "url": "<https?://[^/]+/creditors/.*[./-](reserve|activate)$>",
+      "methods": [
+        "POST"
+      ]
+    },
+    "authenticators": [
+      {
+        "handler": "oauth2_introspection",
+        "config": {
+          "required_scope": ["activate"]
+        }
+      }
+    ],
+    "authorizer": {
+      "handler": "allow"
+    },
+    "mutators": [
+      {
+        "handler": "header"
+      }
+    ]
+  },
+
+  {
+    "id": "deactivate",
+    "version": "v0.36.0-beta.4",
+    "upstream": {
+      "url": "$RESOURCE_SERVER",
+      "preserve_host": true
+    },
+    "match": {
+      "url": "<https?://[^/]+/creditors/.*[./-](deactivate)$>",
+      "methods": [
+        "POST"
+      ]
+    },
+    "authenticators": [
+      {
+        "handler": "oauth2_introspection",
+        "config": {
+          "required_scope": ["deactivate"]
+        }
+      }
+    ],
+    "authorizer": {
+      "handler": "allow"
+    },
+    "mutators": [
+      {
+        "handler": "header"
+      }
+    ]
+  }
+
+]

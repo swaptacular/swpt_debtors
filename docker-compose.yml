@@ -15,6 +15,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: app-image
     volumes:
       - './swpt_debtors:/usr/src/app/swpt_debtors'
     ports:
@@ -33,6 +34,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: app-image
     volumes:
       - './swpt_debtors:/usr/src/app/swpt_debtors'
     ports:
@@ -50,6 +52,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: app-image
     volumes:
       - './swpt_debtors:/usr/src/app/swpt_debtors'
     ports:
@@ -68,6 +71,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: app-image
     volumes:
       - './swpt_debtors:/usr/src/app/swpt_debtors'
     env_file: .env
