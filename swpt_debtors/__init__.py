@@ -89,6 +89,7 @@ class Configuration(metaclass=MetaEnvReader):
 
 
 def create_app(config_dict={}):
+    from werkzeug.middleware.proxy_fix import ProxyFix
     from flask import Flask
     from swpt_lib.utils import Int64Converter
     from .extensions import db, migrate, broker, api
@@ -97,6 +98,7 @@ def create_app(config_dict={}):
     from . import models  # noqa
 
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_port=1)
     app.url_map.converters['i64'] = Int64Converter
     app.config.from_object(Configuration)
     app.config.from_mapping(config_dict)
