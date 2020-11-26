@@ -7,7 +7,7 @@
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/creditors/.*>",
+      "url": "<https?://[^/]+/debtors/.*>",
       "methods": [
         "OPTIONS"
       ]
@@ -35,7 +35,7 @@
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/creditors/(\\.docs(/.*)?|.*[./-](public))$>",
+      "url": "<https?://[^/]+/debtors/(\\.docs(/.*)?|.*[./-](public))$>",
       "methods": [
         "GET", "HEAD"
       ]
@@ -63,7 +63,7 @@
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/creditors/.*[./-](lookup)$>",
+      "url": "<https?://[^/]+/debtors/.*[./-](lookup)$>",
       "methods": [
         "POST"
       ]
@@ -94,7 +94,7 @@
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/creditors/(?!\\.docs(/.*)?$|.*[./-](public)$).*>",
+      "url": "<https?://[^/]+/debtors/(?!\\.docs(/.*)?$|.*[./-](public)$).*>",
       "methods": [
         "GET", "HEAD"
       ]
@@ -125,7 +125,7 @@
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/creditors/(?!.*[./-](lookup|reserve|activate|deactivate)$).*>",
+      "url": "<https?://[^/]+/debtors/(?!.*[./-](lookup|reserve|activate|deactivate)$).*>",
       "methods": [
         "POST", "PUT", "PATCH", "DELETE"
       ]
@@ -156,7 +156,7 @@
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/creditors/.*[./-](reserve|activate)$>",
+      "url": "<https?://[^/]+/debtors/.*[./-](reserve|activate)$>",
       "methods": [
         "POST"
       ]
@@ -187,7 +187,7 @@
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/creditors/.*[./-](deactivate)$>",
+      "url": "<https?://[^/]+/debtors/.*[./-](deactivate)$>",
       "methods": [
         "POST"
       ]
