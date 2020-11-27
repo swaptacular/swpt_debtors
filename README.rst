@@ -20,7 +20,12 @@ How to run it
 
      $ cp env.development .env
 
-4. To start the containers, run this command::
+4. To run the unit tests, use this command::
+
+     $ docker-compose run tests-server test
+
+5. To run the minimal set of services needed for development, use this
+   command::
 
      $ docker-compose up --build -d
 

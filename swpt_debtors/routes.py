@@ -101,7 +101,7 @@ def calc_reservation_deadline(created_at: datetime) -> datetime:
 def calc_checkup_datetime(debtor_id: int, initiated_at: datetime) -> datetime:
     current_ts = datetime.now(tz=timezone.utc)
     current_delay = current_ts - initiated_at
-    average_delay = timedelta(seconds=float(current_app.config['APP_TRANSFERS_FINALIZATION_AVG_SECONDS']))
+    average_delay = timedelta(seconds=current_app.config['APP_TRANSFERS_FINALIZATION_AVG_SECONDS'])
     return current_ts + max(current_delay, average_delay)
 
 
