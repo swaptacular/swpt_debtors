@@ -2,7 +2,6 @@ from datetime import datetime, date, timedelta, timezone
 from random import randint
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, List, Tuple
-from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import true
@@ -195,10 +194,11 @@ def update_debtor(
         new_balance_limits: LowerLimitSequence,
         debtor_info_iri: Optional[str],
         debtor_info_content_type: Optional[str],
-        debtor_info_sha256: Optional[bytes]) -> Debtor:
+        debtor_info_sha256: Optional[bytes],
+        max_actions_per_month: int = MAX_INT32) -> Debtor:
 
     current_ts = datetime.now(tz=timezone.utc)
-    debtor = _throttle_debtor_actions(debtor_id, current_ts)
+    debtor = _throttle_debtor_actions(debtor_id, max_actions_per_month, current_ts)
     date_week_ago = (current_ts - timedelta(days=7)).date()
 
     interest_rate_lower_limits = debtor.interest_rate_lower_limits
@@ -284,7 +284,8 @@ def initiate_running_transfer(
         recipient: str,
         amount: int,
         transfer_note_format: str,
-        transfer_note: str) -> RunningTransfer:
+        transfer_note: str,
+        max_actions_per_month: int = MAX_INT32) -> RunningTransfer:
 
     current_ts = datetime.now(tz=timezone.utc)
     transfer_data = {
@@ -301,9 +302,9 @@ def initiate_running_transfer(
             raise TransfersConflict()
         raise TransferExists()
 
-    debtor = _throttle_debtor_actions(debtor_id, current_ts)
+    debtor = _throttle_debtor_actions(debtor_id, max_actions_per_month, current_ts)
     debtor.running_transfers_count += 1
-    if debtor.running_transfers_count > current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
+    if debtor.running_transfers_count > max_actions_per_month:
         raise TransfersConflict()
 
     new_running_transfer = RunningTransfer(
@@ -541,7 +542,7 @@ def insert_change_interest_rate_signal(
     ))
 
 
-def _throttle_debtor_actions(debtor_id: int, current_ts: datetime) -> Debtor:
+def _throttle_debtor_actions(debtor_id: int, max_actions_per_month: int, current_ts: datetime) -> Debtor:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor is None:
         raise DebtorDoesNotExist()
@@ -552,7 +553,7 @@ def _throttle_debtor_actions(debtor_id: int, current_ts: datetime) -> Debtor:
         debtor.actions_count = 0
         debtor.actions_count_reset_date = current_date
 
-    if debtor.actions_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
+    if debtor.actions_count >= max_actions_per_month:
         raise TooManyManagementActions()
 
     debtor.actions_count += 1

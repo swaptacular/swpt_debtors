@@ -330,6 +330,7 @@ class DebtorEndpoint(MethodView):
                 debtor_info_iri=optional_info and optional_info['iri'],
                 debtor_info_sha256=optional_sha256 and b16decode(optional_sha256),
                 debtor_info_content_type=optional_info and optional_info.get('optional_content_type'),
+                max_actions_per_month=current_app.config['APP_MAX_TRANSFERS_PER_MONTH'],
             )
         except (procedures.DebtorDoesNotExist, procedures.TooManyManagementActions):
             abort(403)
@@ -392,6 +393,7 @@ class TransfersListEndpoint(MethodView):
                 recipient=recipient,
                 transfer_note_format=transfer_creation_request['transfer_note_format'],
                 transfer_note=transfer_creation_request['transfer_note'],
+                max_actions_per_month=current_app.config['APP_MAX_TRANSFERS_PER_MONTH'],
             )
         except procedures.TooManyManagementActions:
             abort(403)
