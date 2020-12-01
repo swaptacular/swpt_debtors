@@ -226,7 +226,7 @@ class DebtorReserveEndpoint(MethodView):
         except procedures.DebtorExists:
             abort(409)
         except procedures.InvalidDebtor:  # pragma: no cover
-            abort(500, message='The agent is not responsible for this debtor.')
+            abort(500, message='The node is not responsible for this debtor.')
 
         return debtor
 
@@ -252,7 +252,7 @@ class DebtorActivateEndpoint(MethodView):
         except procedures.InvalidReservationId:
             abort(422, errors={'json': {'reservationId': ['Invalid ID.']}})
         except procedures.InvalidDebtor:  # pragma: no cover
-            abort(500, message='The agent is not responsible for this debtor.')
+            abort(500, message='The node is not responsible for this debtor.')
 
         return debtor
 

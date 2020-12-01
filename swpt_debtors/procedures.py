@@ -73,11 +73,11 @@ def configure_node(min_debtor_id: int, max_debtor_id: int) -> None:
     assert MIN_INT64 <= max_debtor_id <= MAX_INT64
     assert min_debtor_id <= max_debtor_id
 
-    agent_config = NodeConfig.query.with_for_update().one_or_none()
+    node_config = NodeConfig.query.with_for_update().one_or_none()
 
-    if agent_config:
-        agent_config.min_debtor_id = min_debtor_id
-        agent_config.max_debtor_id = max_debtor_id
+    if node_config:
+        node_config.min_debtor_id = min_debtor_id
+        node_config.max_debtor_id = max_debtor_id
     else:  # pragma: no cover
         with db.retry_on_integrity_error():
             db.session.add(NodeConfig(
