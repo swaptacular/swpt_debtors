@@ -6,7 +6,7 @@ from swpt_lib.utils import i64_to_u64
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
     RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, \
-    MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, BEGINNING_OF_TIME, \
+    MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, TS0, \
     SC_OK, SC_CANCELED_BY_THE_SENDER, VERY_DISTANT_DATE
 from swpt_debtors import procedures as p
 from swpt_debtors.lower_limits import LowerLimit
@@ -65,7 +65,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         principal=1000,
         interest=12.5,
         interest_rate=-0.5,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
+        last_interest_rate_change_ts=TS0,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -98,7 +98,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         principal=1000,
         interest=12.5,
         interest_rate=-0.5,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
+        last_interest_rate_change_ts=TS0,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -126,7 +126,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         principal=1001,
         interest=12.5,
         interest_rate=-0.5,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
+        last_interest_rate_change_ts=TS0,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -149,7 +149,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         principal=1001,
         interest=12.6,
         interest_rate=-0.6,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
+        last_interest_rate_change_ts=TS0,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -177,7 +177,7 @@ def test_process_account_update_signal(db_session, debtor, current_ts):
         principal=1002,
         interest=12.6,
         interest_rate=-0.6,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
+        last_interest_rate_change_ts=TS0,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -204,7 +204,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
         principal=-1000,
         interest=0.0,
         interest_rate=0.0,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
+        last_interest_rate_change_ts=TS0,
         creation_date=date(2018, 10, 20),
         negligible_amount=2.0,
         config_flags=0,
@@ -241,7 +241,7 @@ def test_process_root_account_change_signal(db_session, debtor, current_ts):
         principal=-9999,
         interest=0,
         interest_rate=0.0,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
+        last_interest_rate_change_ts=TS0,
         creation_date=date(2018, 10, 20),
         negligible_amount=5.5,
         config_flags=0,
@@ -535,7 +535,7 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
         principal=0,
         interest=0.0,
         interest_rate=0.0,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
+        last_interest_rate_change_ts=TS0,
         creation_date=creation_date,
         negligible_amount=2.0,
         config_flags=0,
@@ -559,7 +559,7 @@ def test_process_account_maintenance_signal(db_session, debtor, current_ts):
         principal=-10,
         interest=0.0,
         interest_rate=0.0,
-        last_interest_rate_change_ts=BEGINNING_OF_TIME,
+        last_interest_rate_change_ts=TS0,
         creation_date=current_ts.date(),
         negligible_amount=2.0,
         config_flags=0,

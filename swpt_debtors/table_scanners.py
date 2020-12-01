@@ -7,8 +7,7 @@ from sqlalchemy.sql.expression import tuple_
 from flask import current_app
 from swpt_debtors.extensions import db
 from swpt_debtors.models import Debtor, Account, CapitalizeInterestSignal, ChangeInterestRateSignal, \
-    TryToDeleteAccountSignal, MAX_INT64, ROOT_CREDITOR_ID, \
-    BEGINNING_OF_TIME
+    TryToDeleteAccountSignal, MAX_INT64, ROOT_CREDITOR_ID, TS0
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -27,7 +26,7 @@ class AccountsScanner(TableScanner):
     """Executes accounts maintenance operations."""
 
     table = Account.__table__
-    old_interest_rate = CachedInterestRate(0.0, BEGINNING_OF_TIME)
+    old_interest_rate = CachedInterestRate(0.0, TS0)
     pk = tuple_(Account.debtor_id, Account.creditor_id)
 
     def __init__(self, hours: float):

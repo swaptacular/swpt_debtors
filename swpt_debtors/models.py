@@ -16,12 +16,13 @@ MAX_INT32 = (1 << 31) - 1
 MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
 MAX_UINT64 = (1 << 64) - 1
-BEGINNING_OF_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
+TS0 = datetime(1970, 1, 1, tzinfo=timezone.utc)
 VERY_DISTANT_DATE = date(9999, 12, 31)
 INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
 TRANSFER_NOTE_MAX_BYTES = 500
 ROOT_CREDITOR_ID = 0
+DEFAULT_CONFIG_FLAGS = 0
 
 CT_ISSUING = 'issuing'
 
@@ -105,6 +106,8 @@ class Debtor(db.Model):
     )
     reservation_id = db.Column(db.BigInteger, server_default=_ad_seq.next_value())
     created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    last_config_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
+    last_config_seqnum = db.Column(db.Integer, nullable=False, default=0)
     balance = db.Column(db.BigInteger, nullable=False, default=0)
     interest_rate_target = db.Column(db.REAL, nullable=False, default=0.0)
     debtor_info_iri = db.Column(db.String)
@@ -333,21 +336,21 @@ class Account(db.Model):
     last_interest_capitalization_ts = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,
-        default=BEGINNING_OF_TIME,
+        default=TS0,
         comment='The moment at which the last interest capitalization was triggered. It is '
                 'used to avoid capitalizing interest too often.',
     )
     last_deletion_attempt_ts = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,
-        default=BEGINNING_OF_TIME,
+        default=TS0,
         comment='The moment at which the last deletion attempt was made. It is used to '
                 'avoid trying to delete the account too often.',
     )
     last_maintenance_request_ts = db.Column(
         db.TIMESTAMP(timezone=True),
         nullable=False,
-        default=BEGINNING_OF_TIME,
+        default=TS0,
         comment='The moment at which the last account maintenance operation request was made. It '
                 'is used to avoid triggering account maintenance operations too often.',
     )
@@ -379,14 +382,17 @@ class ConfigureAccountSignal(Signal):
     class __marshmallow__(Schema):
         debtor_id = fields.Integer()
         creditor_id = fields.Constant(ROOT_CREDITOR_ID)
-        inserted_at = fields.DateTime(data_key='ts')
-        seqnum = fields.Constant(0)
+        ts = fields.DateTime()
+        seqnum = fields.Integer()
         negligible_amount = fields.Constant(0.0)
-        config_flags = fields.Constant(0)
-        config = fields.Constant('')
+        config = fields.String()
+        config_flags = fields.Integer()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
-    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    ts = db.Column(db.TIMESTAMP(timezone=True), primary_key=True)
+    seqnum = db.Column(db.Integer, primary_key=True)
+    config = db.Column(db.String, nullable=False)
+    config_flags = db.Column(db.Integer, nullable=False)
 
 
 class PrepareTransferSignal(Signal):

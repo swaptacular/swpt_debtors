@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 7bb41b7b7da9
+Revision ID: 9b6a7a7fead4
 Revises: 8d09bea9c7d1
-Create Date: 2020-11-22 23:10:10.954654
+Create Date: 2020-12-01 16:24:38.477713
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '7bb41b7b7da9'
+revision = '9b6a7a7fead4'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -63,14 +63,19 @@ def upgrade():
     op.create_table('configure_account_signal',
     sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
-    sa.Column('signal_id', sa.BigInteger(), autoincrement=True, nullable=False),
-    sa.PrimaryKeyConstraint('debtor_id', 'signal_id')
+    sa.Column('ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('seqnum', sa.Integer(), nullable=False),
+    sa.Column('config', sa.String(), nullable=False),
+    sa.Column('config_flags', sa.Integer(), nullable=False),
+    sa.PrimaryKeyConstraint('debtor_id', 'ts', 'seqnum')
     )
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('status_flags', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is activated, 2 - is deactivated."),
     sa.Column('reservation_id', sa.BigInteger(), server_default=sa.text("nextval('debtor_reservation_id_seq')"), nullable=True),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('last_config_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('last_config_seqnum', sa.Integer(), nullable=False),
     sa.Column('balance', sa.BigInteger(), nullable=False),
     sa.Column('interest_rate_target', sa.REAL(), nullable=False),
     sa.Column('debtor_info_iri', sa.String(), nullable=True),

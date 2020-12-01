@@ -6,13 +6,13 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import true
-from swpt_lib.utils import Seqnum
+from swpt_lib.utils import Seqnum, increment_seqnum
 from swpt_debtors.extensions import db
 from swpt_debtors.lower_limits import LowerLimitSequence, TooLongLimitSequence
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
     FinalizeTransferSignal, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
     NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
-    SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
+    DEFAULT_CONFIG_FLAGS, SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -138,7 +138,7 @@ def activate_debtor(debtor_id: int, reservation_id: int) -> Debtor:
         if reservation_id != debtor.reservation_id or debtor.is_deactivated:
             raise InvalidReservationId()
         debtor.activate()
-        _insert_configure_account_signal(debtor_id)
+        _insert_configure_account_signal(debtor)
 
     return debtor
 
@@ -565,9 +565,21 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
         one_or_none()
 
 
-def _insert_configure_account_signal(debtor_id: int) -> None:
+def _insert_configure_account_signal(
+        debtor: Debtor,
+        config: str = '',
+        config_flags: int = DEFAULT_CONFIG_FLAGS) -> None:
+
+    current_ts = datetime.now(tz=timezone.utc)
+    debtor.last_config_ts = max(current_ts, debtor.last_config_ts)
+    debtor.last_config_seqnum = increment_seqnum(debtor.last_config_seqnum)
+
     db.session.add(ConfigureAccountSignal(
-        debtor_id=debtor_id,
+        debtor_id=debtor.debtor_id,
+        ts=debtor.last_config_ts,
+        seqnum=debtor.last_config_seqnum,
+        config=config,
+        config_flags=config_flags,
     ))
 
 
