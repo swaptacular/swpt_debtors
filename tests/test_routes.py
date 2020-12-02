@@ -181,106 +181,77 @@ def test_get_debtors_list(client):
     ]
 
 
-def test_change_debtor_policy(client, debtor):
+def test_get_debtor(client, debtor):
     r = client.get('/debtors/123/')
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'Debtor'
     assert data['uri'] == '/debtors/123/'
-    assert data['balance'] == 0
-    assert data['interestRate'] == 0.0
-    assert data['interestRateTarget'] == 0.0
-    assert data['interestRateLowerLimits'] == [
-        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '9999-12-31', 'value': -50.0},
-    ]
-    assert data['balanceLowerLimits'] == []
-
-    r = client.patch('/debtors/123/', json={
-        'interestRateTarget': 5.5,
-        'interestRateLowerLimits': [
-            {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
-            {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
-        ],
-        'balanceLowerLimits': [
-            {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
-            {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
-        ],
-        'info': {
-            'type': 'DebtorInfo',
-            'iri': 'http://example.com/',
-            'contentType': 'text/plain',
-            'sha256': 32 * 'AA',
-        }
-    })
-    assert r.status_code == 200
-
-    r = client.get('/debtors/123/')
-    assert r.status_code == 200
-    data = r.get_json()
-    assert data['interestRateTarget'] == 5.5
-    assert data['interestRateLowerLimits'] == [
-        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
-        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
-        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '9999-12-31', 'value': -50.0},
-    ]
-    assert data['balanceLowerLimits'] == [
-        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
-        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
-    ]
-    assert data['info'] == {
-        'type': 'DebtorInfo',
-        'iri': 'http://example.com/',
-        'contentType': 'text/plain',
-        'sha256': 32 * 'AA',
+    assert data['authority'] == {'type': 'AuthorityIdentity', 'uri': 'urn:example:authority'}
+    assert data['config'] == {
+        'type': 'DebtorConfig',
+        'uri': '/debtors/123/config',
+        'config': '',
+        'latestUpdateId': 1,
+        'latestUpdateAt': '1970-01-01T00:00:00+00:00',
+        'debtor': {'uri': '/debtors/123/'},
     }
+    assert data['transfersList'] == {'uri': '/debtors/123/transfers/'}
+    assert data['createTransfer'] == {'uri': '/debtors/123/transfers/'}
+    assert data['interestRate'] == 0.0
+    assert data['balance'] == 0
+    assert iso8601.parse_date(data['createdAt'])
+    assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:123'}
+    assert data['noteMaxBytes'] == 0
+    assert 'configError' not in data
+    assert 'account' not in data
 
-    r = client.patch('/debtors/123/', json={
-        'interestRateTarget': 5.0,
-        'interestRateLowerLimits': [],
-        'balanceLowerLimits': [
-            {'type': 'BalanceLowerLimit', 'enforcedUntil': '2030-12-31', 'value': -200},
-        ],
-    })
+
+def test_change_debtor_config(client, debtor):
+    r = client.get('/debtors/123/config')
     assert r.status_code == 200
     data = r.get_json()
-    assert data['interestRateTarget'] == 5.0
-    assert data['interestRateLowerLimits'] == [
-        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2050-12-31', 'value': 0.0},
-        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -10.0},
-        {'type': 'InterestRateLowerLimit', 'enforcedUntil': '9999-12-31', 'value': -50.0},
-    ]
-    assert data['balanceLowerLimits'] == [
-        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2030-12-31', 'value': -200},
-        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2050-12-31', 'value': -500},
-        {'type': 'BalanceLowerLimit', 'enforcedUntil': '2100-12-31', 'value': -1000},
-    ]
+    assert data['type'] == 'DebtorConfig'
+    assert data['uri'] == '/debtors/123/config'
+    assert data['config'] == ''
+    assert data['latestUpdateId'] == 1
+    latest_update_at = data['latestUpdateAt']
+    assert iso8601.parse_date(latest_update_at)
+    assert data['debtor'] == {'uri': '/debtors/123/'}
+
+    request = {
+        'config': 'TEST',
+        'latestUpdateId': 2
+    }
+    r = client.patch('/debtors/123/config', json=request)
+    assert r.status_code == 200
+
+    r = client.get('/debtors/123/config')
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['type'] == 'DebtorConfig'
+    assert data['uri'] == '/debtors/123/config'
+    assert data['config'] == 'TEST'
+    assert data['latestUpdateId'] == 2
+    assert iso8601.parse_date(data['latestUpdateAt'])
+    assert latest_update_at != data['latestUpdateAt']
+    assert data['debtor'] == {'uri': '/debtors/123/'}
 
     empty_request = {
-        'interestRateTarget': 5.0,
-        'interestRateLowerLimits': [],
-        'balanceLowerLimits': [],
+        'config': '',
+        'latestUpdateId': 2,
     }
-    r = client.patch('/debtors/666/', json=empty_request)
-    assert r.status_code == 403
+    r = client.patch('/debtors/666/config', json=empty_request)
+    assert r.status_code == 404
 
-    r = client.patch('/debtors/123/', json=empty_request)
-    assert r.status_code == 200
-    data = r.get_json()
-    assert data['interestRateTarget'] == 5.0
-
-    r = client.patch('/debtors/123/', json={
-        'interestRateTarget': 5.0,
-        'interestRateLowerLimits': [],
-        'balanceLowerLimits': 100 * [
-            {'type': 'BalanceLowerLimit', 'enforcedUntil': '2030-12-31', 'value': -200},
-        ],
-    })
+    r = client.patch('/debtors/123/config', json=empty_request)
     assert r.status_code == 409
+    data = r.get_json()
 
-    for _ in range(7):
-        r = client.patch('/debtors/123/', json=empty_request)
+    for _ in range(9):
+        r = client.patch('/debtors/123/config', json=request)
         assert r.status_code == 200
-    r = client.patch('/debtors/123/', json=empty_request)
+    r = client.patch('/debtors/123/config', json=request)
     assert r.status_code == 403
 
 
@@ -403,29 +374,28 @@ def test_cancel_running_transfer(client, debtor):
 
 def test_unauthorized_debtor_id(debtor, client):
     json_request_body = {
-        'type': 'Debtor',
-        'balanceLowerLimits': [],
-        'interestRateLowerLimits': [],
-        'interestRateTarget': 0.0
+        'type': 'DebtorConfig',
+        'config': '',
+        'latestUpdateId': 2,
     }
 
     r = client.get('/debtors/123/')
     assert r.status_code == 200
 
     r = client.get('/debtors/123/', headers={'X-Swpt-User-Id': 'INVALID_USER_ID'})
-    assert r.status_code == 200
-
-    r = client.patch('/debtors/123/', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors-supervisor'})
     assert r.status_code == 403
 
-    r = client.patch('/debtors/123/', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors:666'})
+    r = client.patch('/debtors/123/config', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors-supervisor'})
     assert r.status_code == 403
 
-    r = client.patch('/debtors/123/', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors:123'})
+    r = client.patch('/debtors/123/config', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors:666'})
+    assert r.status_code == 403
+
+    r = client.patch('/debtors/123/config', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors:123'})
     assert r.status_code == 200
 
     with pytest.raises(ValueError):
-        r = client.patch(
+        r = client.get(
             '/debtors/18446744073709551615/',
             json=json_request_body,
             headers={'X-Swpt-User-Id': 'debtors:18446744073709551616'},

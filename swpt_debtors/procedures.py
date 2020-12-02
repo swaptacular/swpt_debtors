@@ -1,7 +1,7 @@
 from datetime import datetime, date, timedelta, timezone
 from random import randint
 from uuid import UUID
-from typing import TypeVar, Optional, Callable, List, Tuple
+from typing import TypeVar, Optional, Callable, List, Tuple, Dict, Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import true
@@ -17,6 +17,14 @@ T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
 
 TD_SECOND = timedelta(seconds=1)
+
+
+class UpdateConflict(Exception):
+    """A conflict occurred while trying to update a resource."""
+
+
+class AlreadyUpToDate(Exception):
+    """Trying to update a resource which is already up-to-date."""
 
 
 class MisconfiguredNode(Exception):
@@ -184,6 +192,30 @@ def update_debtor_balance(debtor_id: int, balance: int) -> None:
 
     if debtor.balance != balance:
         debtor.balance = balance
+
+
+@atomic
+def update_debtor_config(
+        debtor_id: int,
+        *,
+        config: str,
+        latest_update_id: int,
+        max_actions_per_month: int = MAX_INT32) -> Debtor:
+
+    current_ts = datetime.now(tz=timezone.utc)
+    debtor = _throttle_debtor_actions(debtor_id, max_actions_per_month, current_ts)
+    try:
+        perform_update = _allow_update(debtor, 'config_latest_update_id', latest_update_id, {
+            'config': config,
+        })
+    except AlreadyUpToDate:
+        return debtor
+
+    perform_update()
+    debtor.config_latest_update_ts = current_ts
+
+    _insert_configure_account_signal(debtor, config=config)
+    return debtor
 
 
 @atomic
@@ -616,3 +648,30 @@ def _finalize_running_transfer(rt: RunningTransfer, error_code: str = None, tota
         rt.finalized_at = datetime.now(tz=timezone.utc)
         rt.error_code = error_code
         rt.total_locked_amount = total_locked_amount
+
+
+def _allow_update(obj, update_id_field_name: str, update_id: int, update: Dict[str, Any]) -> Callable[[], None]:
+    """Return a function that performs the update on `obj`.
+
+    Raises `UpdateConflict` if the update is not allowed. Raises
+    `AlreadyUpToDate` when the object is already up-to-date.
+
+    """
+
+    def has_changes():
+        return any([getattr(obj, field_name) != value for field_name, value in update.items()])
+
+    def set_values():
+        setattr(obj, update_id_field_name, update_id)
+        for field_name, value in update.items():
+            setattr(obj, field_name, value)
+        return True
+
+    latest_update_id = getattr(obj, update_id_field_name)
+    if update_id == latest_update_id and not has_changes():
+        raise AlreadyUpToDate()
+
+    if update_id != latest_update_id + 1:
+        raise UpdateConflict()
+
+    return set_values

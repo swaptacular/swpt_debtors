@@ -1,5 +1,4 @@
 import re
-from base64 import b16decode
 from enum import IntEnum
 from typing import Tuple, Optional
 from datetime import datetime, timedelta, timezone
@@ -12,7 +11,7 @@ from swpt_debtors.schemas import DebtorSchema, TransferSchema, \
     TransfersListSchema, TransferCreationRequestSchema, \
     TransfersList, TransferCancelationRequestSchema, DebtorReservationRequestSchema, \
     DebtorReservationSchema, DebtorsListSchema, ObjectReferencesPageSchema, \
-    DebtorActivationRequestSchema, DebtorDeactivationRequestSchema
+    DebtorActivationRequestSchema, DebtorDeactivationRequestSchema, DebtorConfigSchema
 from swpt_debtors.models import MIN_INT64
 from swpt_debtors import specs
 from swpt_debtors import procedures
@@ -107,6 +106,7 @@ def calc_checkup_datetime(debtor_id: int, initiated_at: datetime) -> datetime:
 
 context = {
     'Debtor': 'debtors.DebtorEndpoint',
+    'DebtorConfig': 'debtors.DebtorConfigEndpoint',
     'TransfersList': 'transfers.TransfersListEndpoint',
     'Transfer': 'transfers.TransferEndpoint',
     'calc_reservation_deadline': calc_reservation_deadline,
@@ -277,6 +277,7 @@ debtors_api = Blueprint(
     url_prefix='/debtors',
     description="View public information about debtors.",
 )
+debtors_api.before_request(ensure_debtor_permissions)
 
 
 @debtors_api.route('/.debtor')
@@ -289,7 +290,6 @@ class RedirectToDebtorEndpoint(MethodView):
     def get(self):
         """Redirect to the debtor's record."""
 
-        ensure_debtor_permissions()
         debtorId = g.debtor_id
         if debtorId is not None:
             location = url_for('debtors.DebtorEndpoint', _external=True, debtorId=debtorId)
@@ -309,35 +309,40 @@ class DebtorEndpoint(MethodView):
 
         return debtor, {'Cache-Control': 'max-age=86400'}
 
-    @debtors_api.arguments(DebtorSchema)
-    @debtors_api.response(DebtorSchema(context=context))
-    @debtors_api.doc(operationId='updateDebtor',
+
+@debtors_api.route('/<i64:debtorId>/config', parameters=[specs.DEBTOR_ID])
+class DebtorConfigEndpoint(MethodView):
+    @debtors_api.response(DebtorConfigSchema(context=context))
+    @debtors_api.doc(operationId='getDebtorConfig', security=specs.SCOPE_ACCESS_READONLY)
+    def get(self, debtorId):
+        """Return debtors's account configuration."""
+
+        return procedures.get_active_debtor(debtorId) or abort(404)
+
+    @debtors_api.arguments(DebtorConfigSchema)
+    @debtors_api.response(DebtorConfigSchema(context=context))
+    @debtors_api.doc(operationId='updateDebtorConfig',
                      security=specs.SCOPE_ACCESS_MODIFY,
                      responses={403: specs.FORBIDDEN_OPERATION,
-                                409: specs.CONFLICTING_POLICY})
-    def patch(self, debtor_update_request, debtorId):
-        """Update debtor."""
+                                409: specs.UPDATE_CONFLICT})
+    def patch(self, debtor_config, debtorId):
+        """Update debtor's account configuration."""
 
-        ensure_debtor_permissions()
-        optional_info = debtor_update_request.get('optional_info')
-        optional_sha256 = optional_info and optional_info.get('optional_sha256')
         try:
-            debtor = procedures.update_debtor(
+            config = procedures.update_debtor_config(
                 debtor_id=debtorId,
-                interest_rate_target=debtor_update_request['interest_rate_target'],
-                new_interest_rate_limits=debtor_update_request['interest_rate_lower_limits'],
-                new_balance_limits=debtor_update_request['balance_lower_limits'],
-                debtor_info_iri=optional_info and optional_info['iri'],
-                debtor_info_sha256=optional_sha256 and b16decode(optional_sha256),
-                debtor_info_content_type=optional_info and optional_info.get('optional_content_type'),
+                config=debtor_config['config'],
+                latest_update_id=debtor_config['latest_update_id'],
                 max_actions_per_month=current_app.config['APP_MAX_TRANSFERS_PER_MONTH'],
             )
-        except (procedures.DebtorDoesNotExist, procedures.TooManyManagementActions):
+        except procedures.TooManyManagementActions:
             abort(403)
-        except procedures.ConflictingPolicy as e:
-            abort(409, message=e.message)
+        except procedures.DebtorDoesNotExist:
+            abort(404)
+        except procedures.UpdateConflict:
+            abort(409, errors={'json': {'latestUpdateId': ['Incorrect value.']}})
 
-        return debtor
+        return config
 
 
 transfers_api = Blueprint(

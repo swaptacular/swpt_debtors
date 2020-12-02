@@ -5,7 +5,7 @@ from marshmallow import ValidationError
 from swpt_debtors import schemas
 from swpt_debtors.lower_limits import LowerLimit
 from swpt_debtors.models import Debtor, RunningTransfer, TRANSFER_NOTE_MAX_BYTES, TS0, \
-    SC_INSUFFICIENT_AVAILABLE_AMOUNT
+    SC_INSUFFICIENT_AVAILABLE_AMOUNT, CONFIG_MAX_BYTES
 from swpt_debtors.routes import context
 
 
@@ -45,44 +45,58 @@ def test_serialize_debtor_schema(db_session):
     assert obj['type'] == 'Debtor'
     assert iso8601.parse_date(obj['createdAt'])
     assert obj['balance'] == 0
-    assert obj['balanceLowerLimits'] == []
-    assert obj['interestRateLowerLimits'] == [
-        {'type': 'InterestRateLowerLimit', 'value': -50.0, 'enforcedUntil': '9999-12-31'},
-    ]
-    assert obj['interestRateTarget'] == 0.0
     assert obj['interestRate'] == 0.0
     assert obj['transfersList'] == {'uri': '/debtors/1/transfers/'}
-    assert 'deactivatedAt' not in obj
+    assert obj['config'] == {
+        'type': 'DebtorConfig',
+        'uri': '/debtors/1/config',
+        'config': '',
+        'latestUpdateId': 1,
+        'latestUpdateAt': '1970-01-01T00:00:00+00:00',
+        'debtor': {'uri': '/debtors/1/'},
+    }
+    assert obj['noteMaxBytes'] == 0
+    assert 'account' not in obj
+    assert 'configError' not in obj
 
-    debtor.deactivate()
+    debtor.config_error = 'TEST_ERROR'
+    debtor.account_id = '0'
     obj = s.dump(debtor)
-    assert iso8601.parse_date(obj['deactivatedAt'])
+    assert obj['configError'] == 'TEST_ERROR'
+    assert obj['account'] == {'type': 'AccountIdentity', 'uri': 'swpt:1/0'}
 
 
-def test_deserialize_debtor_schema(db_session):
-    s = schemas.DebtorSchema(context=context)
-    with pytest.raises(ValidationError):
-        data = s.load({'type': 'INVALID_TYPE'})
+def test_deserialize_debtor_config_schema(db_session):
+    s = schemas.DebtorConfigSchema(context=context)
+    with pytest.raises(ValidationError, match='Invalid type'):
+        data = s.load({'type': 'INVALID_TYPE', 'config': '', 'latestUpdateId': 1})
+    with pytest.raises(ValidationError, match='Missing data for required field.'):
+        data = s.load({'type': 'DebtorConfig', 'latestUpdateId': 1})
+    with pytest.raises(ValidationError, match='Missing data for required field.'):
+        data = s.load({'type': 'DebtorConfig', 'config': ''})
+    with pytest.raises(ValidationError, match='Must be greater than or equal to 1'):
+        data = s.load({'type': 'DebtorConfig', 'config': '', 'latestUpdateId': 0})
+    with pytest.raises(ValidationError, match='Longer than maximum length'):
+        data = s.load({'type': 'DebtorConfig', 'config': (CONFIG_MAX_BYTES + 1) * 'x', 'latestUpdateId': 1})
+    with pytest.raises(ValidationError, match='The total byte-length of the config exceeds'):
+        data = s.load({'type': 'DebtorConfig', 'config': int(CONFIG_MAX_BYTES * 0.7) * 'Щ', 'latestUpdateId': 1})
 
     data = s.load({
-        'type': 'Debtor',
-        'balanceLowerLimits': [],
-        'interestRateLowerLimits': [],
-        'interestRateTarget': 0.0
+        'config': '',
+        'latestUpdateId': 1,
     })
-    assert data['balance_lower_limits'] == []
-    assert data['interest_rate_lower_limits'] == []
-    assert data['interest_rate_target'] == 0.0
+    assert data['type'] == 'DebtorConfig'
+    assert data['config'] == ''
+    assert data['latest_update_id'] == 1
+
     data = s.load({
-        'balanceLowerLimits': [{'value': 1000, 'enforcedUntil': '2020-10-25'}],
-        'interestRateLowerLimits': [{'value': 5.6, 'enforcedUntil': '2020-10-25'}],
-        'interestRateTarget': 6.1,
+        'type': 'DebtorConfig',
+        'config': CONFIG_MAX_BYTES * 'x',
+        'latestUpdateId': 667,
     })
-    assert len(data['balance_lower_limits']) == 1
-    assert data['balance_lower_limits'][0].value == 1000
-    assert len(data['interest_rate_lower_limits']) == 1
-    assert data['interest_rate_lower_limits'][0].value == 5.6
-    assert data['interest_rate_target'] == 6.1
+    assert data['type'] == 'DebtorConfig'
+    assert data['config'] == CONFIG_MAX_BYTES * 'x'
+    assert data['latest_update_id'] == 667
 
 
 def test_deserialize_transfer_creation_request(db_session):

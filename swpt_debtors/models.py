@@ -21,6 +21,7 @@ VERY_DISTANT_DATE = date(9999, 12, 31)
 INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
 TRANSFER_NOTE_MAX_BYTES = 500
+CONFIG_MAX_BYTES = 2000
 ROOT_CREDITOR_ID = 0
 DEFAULT_CONFIG_FLAGS = 0
 
@@ -123,6 +124,12 @@ class Debtor(db.Model):
                 'removed. To be deactivated, the debtor must be activated first. Once '
                 'deactivated, a debtor stays deactivated until it is deleted.',
     )
+    config = db.Column(db.String, nullable=False, default='')
+    config_latest_update_id = db.Column(db.BigInteger, nullable=False, default=1)
+    config_latest_update_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
+    config_error = db.Column(db.String)
+    transfer_note_max_bytes = db.Column(db.Integer, nullable=False, default=0)
+    account_id = db.Column(db.String, nullable=False, default='')
 
     # Ballance Lower Limits
     bll_values = db.Column(
@@ -153,6 +160,7 @@ class Debtor(db.Model):
         'eager_defaults': True,
     }
     __table_args__ = (
+        db.CheckConstraint(config_latest_update_id > 0),
         db.CheckConstraint(and_(
             interest_rate_target >= INTEREST_RATE_FLOOR,
             interest_rate_target <= INTEREST_RATE_CEIL,

@@ -70,6 +70,11 @@ DEBTOR_EXISTS = {
     'headers': LOCATION_HEADER,
 }
 
+UPDATE_CONFLICT = {
+    'description': 'Conflicting update attempts.',
+    'content': ERROR_CONTENT,
+}
+
 CONFLICTING_DEBTOR = {
     'description': 'A debtor with the same ID already exists.',
     'content': ERROR_CONTENT,

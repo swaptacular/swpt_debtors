@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9b6a7a7fead4
+Revision ID: 575a09d43eef
 Revises: 8d09bea9c7d1
-Create Date: 2020-12-01 16:24:38.477713
+Create Date: 2020-12-02 17:35:49.913263
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '9b6a7a7fead4'
+revision = '575a09d43eef'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -85,6 +85,12 @@ def upgrade():
     sa.Column('actions_count', sa.Integer(), nullable=False),
     sa.Column('actions_count_reset_date', sa.DATE(), nullable=False),
     sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted.'),
+    sa.Column('config', sa.String(), nullable=False),
+    sa.Column('config_latest_update_id', sa.BigInteger(), nullable=False),
+    sa.Column('config_latest_update_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('config_error', sa.String(), nullable=True),
+    sa.Column('transfer_note_max_bytes', sa.Integer(), nullable=False),
+    sa.Column('account_id', sa.String(), nullable=False),
     sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` field. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `null` is the same as an empty array.'),
     sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.Column('irll_values', postgresql.ARRAY(sa.REAL(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `null` is the same as an empty array. If the array contains values bigger that 100.0, they are treated as equal to 100.0.'),
@@ -93,6 +99,7 @@ def upgrade():
     sa.CheckConstraint('actions_count >= 0'),
     sa.CheckConstraint('bll_cutoffs IS NULL OR array_ndims(bll_cutoffs) = 1'),
     sa.CheckConstraint('bll_values IS NULL OR array_ndims(bll_values) = 1'),
+    sa.CheckConstraint('config_latest_update_id > 0'),
     sa.CheckConstraint('deactivated_at IS NULL OR (status_flags & 2) != 0'),
     sa.CheckConstraint('debtor_info_sha256 IS NULL OR octet_length(debtor_info_sha256) = 32'),
     sa.CheckConstraint('interest_rate_target >= -50.0 AND interest_rate_target <= 100.0'),
