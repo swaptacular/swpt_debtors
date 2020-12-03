@@ -7,7 +7,6 @@ from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import true
 from swpt_lib.utils import Seqnum, increment_seqnum
 from swpt_debtors.extensions import db
-from swpt_debtors.lower_limits import LowerLimitSequence, TooLongLimitSequence
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
     FinalizeTransferSignal, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
     NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
@@ -65,13 +64,6 @@ class ForbiddenTransferCancellation(Exception):
 
 class TooManyManagementActions(Exception):
     """Too many management actions per month by a debtor."""
-
-
-class ConflictingPolicy(Exception):
-    """The new debtor policy conflicts with the old one."""
-
-    def __init__(self, message: str):
-        self.message = message
 
 
 @atomic
@@ -198,7 +190,7 @@ def update_debtor_balance(debtor_id: int, balance: int) -> None:
 def update_debtor_config(
         debtor_id: int,
         *,
-        config: str,
+        config_data: str,
         latest_update_id: int,
         max_actions_per_month: int = MAX_INT32) -> Debtor:
 
@@ -206,7 +198,7 @@ def update_debtor_config(
     debtor = _throttle_debtor_actions(debtor_id, max_actions_per_month, current_ts)
     try:
         perform_update = _allow_update(debtor, 'config_latest_update_id', latest_update_id, {
-            'config': config,
+            'config_data': config_data,
         })
     except AlreadyUpToDate:
         return debtor
@@ -214,46 +206,7 @@ def update_debtor_config(
     perform_update()
     debtor.config_latest_update_ts = current_ts
 
-    _insert_configure_account_signal(debtor, config=config)
-    return debtor
-
-
-@atomic
-def update_debtor(
-        debtor_id: int,
-        interest_rate_target: float,
-        new_interest_rate_limits: LowerLimitSequence,
-        new_balance_limits: LowerLimitSequence,
-        debtor_info_iri: Optional[str],
-        debtor_info_content_type: Optional[str],
-        debtor_info_sha256: Optional[bytes],
-        max_actions_per_month: int = MAX_INT32) -> Debtor:
-
-    current_ts = datetime.now(tz=timezone.utc)
-    debtor = _throttle_debtor_actions(debtor_id, max_actions_per_month, current_ts)
-    date_week_ago = (current_ts - timedelta(days=7)).date()
-
-    interest_rate_lower_limits = debtor.interest_rate_lower_limits
-    interest_rate_lower_limits = interest_rate_lower_limits.current_limits(date_week_ago)
-    try:
-        interest_rate_lower_limits.add_limits(new_interest_rate_limits)
-    except TooLongLimitSequence:
-        raise ConflictingPolicy('There are too many interest rate limits.')
-
-    balance_lower_limits = debtor.balance_lower_limits
-    balance_lower_limits = balance_lower_limits.current_limits(date_week_ago)
-    try:
-        balance_lower_limits.add_limits(new_balance_limits)
-    except TooLongLimitSequence:
-        raise ConflictingPolicy('There are too many balance limits.')
-
-    debtor.interest_rate_target = interest_rate_target
-    debtor.interest_rate_lower_limits = interest_rate_lower_limits
-    debtor.balance_lower_limits = balance_lower_limits
-    debtor.debtor_info_iri = debtor_info_iri
-    debtor.debtor_info_sha256 = debtor_info_sha256
-    debtor.debtor_info_content_type = debtor_info_content_type
-
+    _insert_configure_account_signal(debtor, config_data=config_data)
     return debtor
 
 
@@ -600,7 +553,7 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
 
 def _insert_configure_account_signal(
         debtor: Debtor,
-        config: str = '',
+        config_data: str = '',
         config_flags: int = DEFAULT_CONFIG_FLAGS) -> None:
 
     current_ts = datetime.now(tz=timezone.utc)
@@ -611,7 +564,7 @@ def _insert_configure_account_signal(
         debtor_id=debtor.debtor_id,
         ts=debtor.last_config_ts,
         seqnum=debtor.last_config_seqnum,
-        config=config,
+        config=config_data,
         config_flags=config_flags,
     ))
 

@@ -50,7 +50,7 @@ def test_serialize_debtor_schema(db_session):
     assert obj['config'] == {
         'type': 'DebtorConfig',
         'uri': '/debtors/1/config',
-        'config': '',
+        'data': '',
         'latestUpdateId': 1,
         'latestUpdateAt': '1970-01-01T00:00:00+00:00',
         'debtor': {'uri': '/debtors/1/'},
@@ -69,33 +69,33 @@ def test_serialize_debtor_schema(db_session):
 def test_deserialize_debtor_config_schema(db_session):
     s = schemas.DebtorConfigSchema(context=context)
     with pytest.raises(ValidationError, match='Invalid type'):
-        data = s.load({'type': 'INVALID_TYPE', 'config': '', 'latestUpdateId': 1})
+        data = s.load({'type': 'INVALID_TYPE', 'data': '', 'latestUpdateId': 1})
     with pytest.raises(ValidationError, match='Missing data for required field.'):
         data = s.load({'type': 'DebtorConfig', 'latestUpdateId': 1})
     with pytest.raises(ValidationError, match='Missing data for required field.'):
-        data = s.load({'type': 'DebtorConfig', 'config': ''})
+        data = s.load({'type': 'DebtorConfig', 'data': ''})
     with pytest.raises(ValidationError, match='Must be greater than or equal to 1'):
-        data = s.load({'type': 'DebtorConfig', 'config': '', 'latestUpdateId': 0})
+        data = s.load({'type': 'DebtorConfig', 'data': '', 'latestUpdateId': 0})
     with pytest.raises(ValidationError, match='Longer than maximum length'):
-        data = s.load({'type': 'DebtorConfig', 'config': (CONFIG_MAX_BYTES + 1) * 'x', 'latestUpdateId': 1})
+        data = s.load({'type': 'DebtorConfig', 'data': (CONFIG_MAX_BYTES + 1) * 'x', 'latestUpdateId': 1})
     with pytest.raises(ValidationError, match='The total byte-length of the config exceeds'):
-        data = s.load({'type': 'DebtorConfig', 'config': int(CONFIG_MAX_BYTES * 0.7) * 'Щ', 'latestUpdateId': 1})
+        data = s.load({'type': 'DebtorConfig', 'data': int(CONFIG_MAX_BYTES * 0.7) * 'Щ', 'latestUpdateId': 1})
 
     data = s.load({
-        'config': '',
+        'data': '',
         'latestUpdateId': 1,
     })
     assert data['type'] == 'DebtorConfig'
-    assert data['config'] == ''
+    assert data['config_data'] == ''
     assert data['latest_update_id'] == 1
 
     data = s.load({
         'type': 'DebtorConfig',
-        'config': CONFIG_MAX_BYTES * 'x',
+        'data': CONFIG_MAX_BYTES * 'x',
         'latestUpdateId': 667,
     })
     assert data['type'] == 'DebtorConfig'
-    assert data['config'] == CONFIG_MAX_BYTES * 'x'
+    assert data['config_data'] == CONFIG_MAX_BYTES * 'x'
     assert data['latest_update_id'] == 667
 
 

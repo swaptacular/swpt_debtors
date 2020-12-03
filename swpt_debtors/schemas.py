@@ -435,19 +435,20 @@ class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
         description="The URI of the corresponding `Debtor`.",
         example={'uri': '/debtors/2/'},
     )
-    config = fields.String(
+    config_data = fields.String(
         required=True,
         validate=validate.Length(max=CONFIG_MAX_BYTES),
-        description="The debtor's account configuration settings. Different implementations may "
-                    "use different formats for this field."
+        data_key='data',
+        description="The debtor's configuration data. Different implementations may use "
+                    "different formats for this field."
                     "\n\n"
                     "**Note:** For new debtors the initial value for this field will be an "
                     "empty string.",
         example='',
     )
 
-    @validates('config')
-    def validate_config(self, value):
+    @validates('config_data')
+    def validate_config_data(self, value):
         if len(value.encode('utf8')) > CONFIG_MAX_BYTES:
             raise ValidationError(f'The total byte-length of the config exceeds {CONFIG_MAX_BYTES} bytes.')
 
@@ -564,7 +565,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description="Debtor's account `AccountIdentity`. It uniquely and reliably identifies "
                     "the debtor's account when it participates in transfers as sender or "
                     "recipient. When this field is not present, this means that the debtor's "
-                    "account does not have an identity yet (or anymore), and can not participate "
+                    "account does not have an identity yet, and can not participate "
                     "in transfers.",
         example={'type': 'AccountIdentity', 'uri': 'swpt:2/0'},
     )

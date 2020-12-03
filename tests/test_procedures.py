@@ -260,35 +260,6 @@ def test_interest_rate_absolute_limits(db_session, debtor):
     assert debtor.interest_rate == INTEREST_RATE_CEIL
 
 
-def test_update_debtor(db_session, debtor, current_ts):
-    date_years_ago = (current_ts - timedelta(days=5000)).date()
-    with pytest.raises(p.DebtorDoesNotExist):
-        p.update_debtor(1234567890, 6.66, [], [], None, None, None)
-
-    p.update_debtor(D_ID, 6.66,
-                    [LowerLimit(0.0, date_years_ago)],
-                    [LowerLimit(-1000, date_years_ago)],
-                    None, None, None)
-    debtor = p.get_debtor(D_ID)
-    assert debtor.interest_rate_target == 6.66
-    assert len(debtor.interest_rate_lower_limits) == 2
-    assert debtor.interest_rate_lower_limits[0] == LowerLimit(0.0, date_years_ago)
-    assert debtor.interest_rate_lower_limits[1] == LowerLimit(INTEREST_RATE_FLOOR, VERY_DISTANT_DATE)
-    assert len(debtor.balance_lower_limits) == 1
-    assert debtor.balance_lower_limits[0] == LowerLimit(-1000, date_years_ago)
-
-    p.update_debtor(D_ID, 0.0, [], [], None, None, None)
-    debtor = p.get_debtor(D_ID)
-    assert debtor.interest_rate_target == 0.0
-    assert len(debtor.interest_rate_lower_limits) == 1
-    assert len(debtor.balance_lower_limits) == 0
-
-    with pytest.raises(p.ConflictingPolicy):
-        p.update_debtor(D_ID, 0.0, 11 * [LowerLimit(0.0, current_ts.date())], [], None, None, None)
-    with pytest.raises(p.ConflictingPolicy):
-        p.update_debtor(D_ID, 0.0, [], 11 * [LowerLimit(-1000, current_ts.date())], None, None, None)
-
-
 def test_running_transfers(db_session, debtor):
     recipient_uri, recipient = acc_id(D_ID, C_ID)
     Debtor.get_instance(D_ID).running_transfers_count = 1

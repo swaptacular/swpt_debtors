@@ -315,7 +315,7 @@ class DebtorConfigEndpoint(MethodView):
     @debtors_api.response(DebtorConfigSchema(context=context))
     @debtors_api.doc(operationId='getDebtorConfig', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
-        """Return debtors's account configuration."""
+        """Return debtors's configuration."""
 
         return procedures.get_active_debtor(debtorId) or abort(404)
 
@@ -326,12 +326,12 @@ class DebtorConfigEndpoint(MethodView):
                      responses={403: specs.FORBIDDEN_OPERATION,
                                 409: specs.UPDATE_CONFLICT})
     def patch(self, debtor_config, debtorId):
-        """Update debtor's account configuration."""
+        """Update debtor's configuration."""
 
         try:
             config = procedures.update_debtor_config(
                 debtor_id=debtorId,
-                config=debtor_config['config'],
+                config_data=debtor_config['config_data'],
                 latest_update_id=debtor_config['latest_update_id'],
                 max_actions_per_month=current_app.config['APP_MAX_TRANSFERS_PER_MONTH'],
             )

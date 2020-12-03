@@ -124,9 +124,9 @@ class Debtor(db.Model):
                 'removed. To be deactivated, the debtor must be activated first. Once '
                 'deactivated, a debtor stays deactivated until it is deleted.',
     )
-    config = db.Column(db.String, nullable=False, default='')
     config_latest_update_id = db.Column(db.BigInteger, nullable=False, default=1)
     config_latest_update_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
+    config_data = db.Column(db.String, nullable=False, default='')
     config_error = db.Column(db.String)
     transfer_note_max_bytes = db.Column(db.Integer, nullable=False, default=0)
     account_id = db.Column(db.String, nullable=False, default='')

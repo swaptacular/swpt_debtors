@@ -191,7 +191,7 @@ def test_get_debtor(client, debtor):
     assert data['config'] == {
         'type': 'DebtorConfig',
         'uri': '/debtors/123/config',
-        'config': '',
+        'data': '',
         'latestUpdateId': 1,
         'latestUpdateAt': '1970-01-01T00:00:00+00:00',
         'debtor': {'uri': '/debtors/123/'},
@@ -213,14 +213,14 @@ def test_change_debtor_config(client, debtor):
     data = r.get_json()
     assert data['type'] == 'DebtorConfig'
     assert data['uri'] == '/debtors/123/config'
-    assert data['config'] == ''
+    assert data['data'] == ''
     assert data['latestUpdateId'] == 1
     latest_update_at = data['latestUpdateAt']
     assert iso8601.parse_date(latest_update_at)
     assert data['debtor'] == {'uri': '/debtors/123/'}
 
     request = {
-        'config': 'TEST',
+        'data': 'TEST',
         'latestUpdateId': 2
     }
     r = client.patch('/debtors/123/config', json=request)
@@ -231,14 +231,14 @@ def test_change_debtor_config(client, debtor):
     data = r.get_json()
     assert data['type'] == 'DebtorConfig'
     assert data['uri'] == '/debtors/123/config'
-    assert data['config'] == 'TEST'
+    assert data['data'] == 'TEST'
     assert data['latestUpdateId'] == 2
     assert iso8601.parse_date(data['latestUpdateAt'])
     assert latest_update_at != data['latestUpdateAt']
     assert data['debtor'] == {'uri': '/debtors/123/'}
 
     empty_request = {
-        'config': '',
+        'data': '',
         'latestUpdateId': 2,
     }
     r = client.patch('/debtors/666/config', json=empty_request)
@@ -375,7 +375,7 @@ def test_cancel_running_transfer(client, debtor):
 def test_unauthorized_debtor_id(debtor, client):
     json_request_body = {
         'type': 'DebtorConfig',
-        'config': '',
+        'data': '',
         'latestUpdateId': 2,
     }
 
