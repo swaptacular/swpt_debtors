@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Optional
-from datetime import datetime, date, timezone, timedelta
+from datetime import datetime, timezone, timedelta
 from marshmallow import Schema, fields
 from flask import current_app
 import dramatiq
@@ -16,7 +16,9 @@ MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
 MAX_UINT64 = (1 << 64) - 1
 TS0 = datetime(1970, 1, 1, tzinfo=timezone.utc)
+DATE0 = TS0.date()
 HUGE_NEGLIGIBLE_AMOUNT = 1e30
+TRANSFER_NOTE_MAX_BYTES = 500
 INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
 TRANSFER_NOTE_MAX_BYTES = 500
@@ -93,6 +95,8 @@ class Debtor(db.Model):
     STATUS_IS_ACTIVATED_FLAG = 1 << 0
     STATUS_IS_DEACTIVATED_FLAG = 1 << 1
 
+    CONFIG_SCHEDULED_FOR_DELETION_FLAG = 1 << 0
+
     _ad_seq = db.Sequence('debtor_reservation_id_seq', metadata=db.Model.metadata)
 
     debtor_id = db.Column(db.BigInteger, nullable=False)
@@ -123,13 +127,19 @@ class Debtor(db.Model):
                 'removed. To be deactivated, the debtor must be activated first. Once '
                 'deactivated, a debtor stays deactivated until it is deleted.',
     )
+    has_server_account = db.Column(db.BOOLEAN, nullable=False, default=False)
+    account_creation_date = db.Column(db.DATE, nullable=False, default=DATE0)
+    account_last_change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
+    account_last_change_seqnum = db.Column(db.Integer, nullable=False, default=0)
+    account_last_heartbeat_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    account_id = db.Column(db.String, nullable=False, default='')
+    is_config_effectual = db.Column(db.BOOLEAN, nullable=False, default=False)
     config_latest_update_id = db.Column(db.BigInteger, nullable=False, default=1)
     config_latest_update_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
     config_flags = db.Column(db.Integer, nullable=False, default=DEFAULT_CONFIG_FLAGS)
     config_data = db.Column(db.String, nullable=False, default='')
     config_error = db.Column(db.String)
     transfer_note_max_bytes = db.Column(db.Integer, nullable=False, default=0)
-    account_id = db.Column(db.String, nullable=False, default='')
 
     __mapper_args__ = {
         'primary_key': [debtor_id],
@@ -301,10 +311,6 @@ class Account(db.Model):
                        'from the corresponding fields in the last applied `AccountChangeSignal`.',
         }
     )
-
-    @property
-    def is_overflown(self):
-        return bool(self.status_flags & Account.STATUS_OVERFLOWN_FLAG)
 
     @classmethod
     def get_interest_rate_change_min_interval(cls):

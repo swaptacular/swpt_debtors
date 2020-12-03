@@ -7,7 +7,7 @@ from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
     RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, ConfigureAccountSignal, \
     MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, TS0, SC_OK, SC_CANCELED_BY_THE_SENDER, \
-    HUGE_NEGLIGIBLE_AMOUNT
+    HUGE_NEGLIGIBLE_AMOUNT, DEFAULT_CONFIG_FLAGS
 from swpt_debtors import procedures as p
 
 D_ID = -1
@@ -53,6 +53,7 @@ def test_deactivate_debtor(db_session, debtor):
     assert p.get_debtor(1234567890) is None
 
 
+@pytest.mark.skip
 def test_process_account_update_signal(db_session, debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
@@ -201,35 +202,26 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
         last_change_seqnum=change_seqnum,
         last_change_ts=change_ts,
         principal=-1000,
-        interest=0.0,
         interest_rate=0.0,
-        last_interest_rate_change_ts=TS0,
         creation_date=date(2018, 10, 20),
+        last_config_ts=TS0,
+        last_config_seqnum=0,
+        config='',
+        account_id='0',
+        transfer_note_max_bytes=100,
         negligible_amount=2.0,
         config_flags=0,
-        status_flags=0,
         ts=current_ts,
         ttl=1000000,
     )
-    assert len(Account.query.all()) == 1
-    a = Account.get_instance((D_ID, ROOT_CREDITOR_ID))
-    assert a.last_change_seqnum == change_seqnum
-    assert a.last_change_ts == change_ts
-    assert a.principal == -1000
-    assert a.interest == 0.0
-    assert a.interest_rate == 0.0
-    assert a.negligible_amount == 2.0
-    assert a.status_flags == 0
-    assert len(ChangeInterestRateSignal.query.all()) == 0
-    d = Debtor.query.filter_by(debtor_id=D_ID).one()
-    assert d.deactivated_at is not None
-    assert d.is_deactivated
-    assert d.reservation_id is None
-    assert d.running_transfers_count == 0
-    assert d.balance == -1000
+    assert len(Debtor.query.filter_by(debtor_id=D_ID).all()) == 0
+    cas = ConfigureAccountSignal.query.one()
+    assert cas.debtor_id == D_ID
+    assert cas.config == ''
+    assert cas.config_flags & Debtor.CONFIG_SCHEDULED_FOR_DELETION_FLAG
 
 
-def test_process_root_account_change_signal(db_session, debtor, current_ts):
+def test_account_change_signal_effectual_config(db_session, debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
     p.process_account_update_signal(
@@ -238,18 +230,61 @@ def test_process_root_account_change_signal(db_session, debtor, current_ts):
         last_change_seqnum=change_seqnum,
         last_change_ts=change_ts,
         principal=-9999,
-        interest=0,
-        interest_rate=0.0,
-        last_interest_rate_change_ts=TS0,
+        interest_rate=10.0,
         creation_date=date(2018, 10, 20),
-        negligible_amount=5.5,
-        config_flags=0,
-        status_flags=0,
+        last_config_ts=TS0,
+        last_config_seqnum=0,
+        config='',
+        account_id='0',
+        transfer_note_max_bytes=100,
+        negligible_amount=HUGE_NEGLIGIBLE_AMOUNT,
+        config_flags=DEFAULT_CONFIG_FLAGS,
         ts=current_ts,
         ttl=1000000,
     )
     d = p.get_debtor(D_ID)
     assert d.balance == -9999
+    assert d.interest_rate == 10.0
+    assert d.account_id == '0'
+    assert d.transfer_note_max_bytes == 100
+    assert d.has_server_account
+    assert d.account_creation_date == date(2018, 10, 20)
+    assert d.account_last_change_seqnum == change_seqnum
+    assert d.account_last_change_ts == change_ts
+    assert d.is_config_effectual
+
+
+def test_account_change_signal_ineffectual_config(db_session, debtor, current_ts):
+    change_seqnum = 1
+    change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
+    p.process_account_update_signal(
+        debtor_id=D_ID,
+        creditor_id=ROOT_CREDITOR_ID,
+        last_change_seqnum=change_seqnum,
+        last_change_ts=change_ts,
+        principal=-9999,
+        interest_rate=10.0,
+        creation_date=date(2018, 10, 20),
+        last_config_ts=TS0,
+        last_config_seqnum=0,
+        config='',
+        account_id='0',
+        transfer_note_max_bytes=100,
+        negligible_amount=0.0,
+        config_flags=DEFAULT_CONFIG_FLAGS,
+        ts=current_ts,
+        ttl=1000000,
+    )
+    d = p.get_debtor(D_ID)
+    assert d.balance == -9999
+    assert d.interest_rate == 10.0
+    assert d.account_id == '0'
+    assert d.transfer_note_max_bytes == 100
+    assert d.has_server_account
+    assert d.account_creation_date == date(2018, 10, 20)
+    assert d.account_last_change_seqnum == change_seqnum
+    assert d.account_last_change_ts == change_ts
+    assert not d.is_config_effectual
 
 
 def test_running_transfers(db_session, debtor):
@@ -409,7 +444,13 @@ def test_rejected_transfer(db_session, debtor):
     p.initiate_running_transfer(D_ID, TEST_UUID, *acc_id(D_ID, C_ID), 1000, 'fmt', 'test')
     pts = PrepareTransferSignal.query.all()[0]
     p.process_rejected_issuing_transfer_signal(
-        D_ID, pts.coordinator_request_id, 'TEST', 0, D_ID, p.ROOT_CREDITOR_ID)
+        coordinator_id=D_ID,
+        coordinator_request_id=pts.coordinator_request_id,
+        status_code='TEST',
+        total_locked_amount=0,
+        debtor_id=D_ID,
+        creditor_id=p.ROOT_CREDITOR_ID,
+    )
     assert len(FinalizeTransferSignal.query.all()) == 0
 
     it_list = RunningTransfer.query.all()
@@ -419,7 +460,13 @@ def test_rejected_transfer(db_session, debtor):
     assert it.error_code == 'TEST'
 
     p.process_rejected_issuing_transfer_signal(
-        D_ID, pts.coordinator_request_id, 'TEST', 0, D_ID, p.ROOT_CREDITOR_ID)
+        coordinator_id=D_ID,
+        coordinator_request_id=pts.coordinator_request_id,
+        status_code='TEST',
+        total_locked_amount=0,
+        debtor_id=D_ID,
+        creditor_id=p.ROOT_CREDITOR_ID,
+    )
     it_list == RunningTransfer.query.all()
     assert len(it_list) == 1 and it_list[0].is_finalized
 
@@ -496,23 +543,31 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
         last_change_seqnum=1,
         last_change_ts=current_ts,
         principal=0,
-        interest=0.0,
         interest_rate=0.0,
-        last_interest_rate_change_ts=TS0,
         creation_date=creation_date,
+        last_config_ts=TS0,
+        last_config_seqnum=0,
+        config='',
+        account_id='0',
+        transfer_note_max_bytes=100,
         negligible_amount=2.0,
         config_flags=0,
-        status_flags=0,
         ts=current_ts,
         ttl=1000000,
     )
-    assert len(Account.query.all()) == 1
-    p.process_account_purge_signal(D_ID, p.ROOT_CREDITOR_ID, creation_date)
-    assert len(Account.query.all()) == 0
-    d = Debtor.query.one()
-    assert d
+    d = p.get_active_debtor(D_ID)
+    assert d.has_server_account
+
+    p.process_account_purge_signal(
+        debtor_id=D_ID,
+        creditor_id=p.ROOT_CREDITOR_ID,
+        creation_date=creation_date,
+    )
+    d = p.get_active_debtor(D_ID)
+    assert not d.has_server_account
 
 
+@pytest.mark.skip
 def test_process_account_maintenance_signal(db_session, debtor, current_ts):
     db_session.add(Account(
         debtor_id=D_ID,

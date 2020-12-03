@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 6ea4a5868ca3
+Revision ID: be554edb1674
 Revises: 8d09bea9c7d1
-Create Date: 2020-12-03 17:30:15.934460
+Create Date: 2020-12-03 20:40:26.018756
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '6ea4a5868ca3'
+revision = 'be554edb1674'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -85,13 +85,19 @@ def upgrade():
     sa.Column('actions_count', sa.Integer(), nullable=False),
     sa.Column('actions_count_reset_date', sa.DATE(), nullable=False),
     sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted.'),
+    sa.Column('has_server_account', sa.BOOLEAN(), nullable=False),
+    sa.Column('account_creation_date', sa.DATE(), nullable=False),
+    sa.Column('account_last_change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('account_last_change_seqnum', sa.Integer(), nullable=False),
+    sa.Column('account_last_heartbeat_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('account_id', sa.String(), nullable=False),
+    sa.Column('is_config_effectual', sa.BOOLEAN(), nullable=False),
     sa.Column('config_latest_update_id', sa.BigInteger(), nullable=False),
     sa.Column('config_latest_update_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('config_flags', sa.Integer(), nullable=False),
     sa.Column('config_data', sa.String(), nullable=False),
     sa.Column('config_error', sa.String(), nullable=True),
     sa.Column('transfer_note_max_bytes', sa.Integer(), nullable=False),
-    sa.Column('account_id', sa.String(), nullable=False),
     sa.CheckConstraint('(status_flags & 2) = 0 OR (status_flags & 1) != 0'),
     sa.CheckConstraint('actions_count >= 0'),
     sa.CheckConstraint('config_latest_update_id > 0'),
