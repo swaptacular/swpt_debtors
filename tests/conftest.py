@@ -12,7 +12,6 @@ server_name = 'example.com'
 config_dict = {
     'TESTING': True,
     'SERVER_NAME': server_name,
-    'SWPT_SERVER_NAME': server_name,
     'APP_AUTHORITY_URI': 'urn:example:authority',
     'APP_MAX_LIMITS_COUNT': 10,
     'APP_DEBTORS_PER_PAGE': 2,

@@ -5,8 +5,7 @@ from marshmallow import Schema, fields
 from flask import current_app
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import func, null, true, or_, and_
-from swpt_debtors.lower_limits import lower_limits_property
+from sqlalchemy.sql.expression import func, null, true, or_
 from swpt_debtors.extensions import db, broker, MAIN_EXCHANGE_NAME
 
 MIN_INT16 = -1 << 15
@@ -110,7 +109,7 @@ class Debtor(db.Model):
     last_config_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
     last_config_seqnum = db.Column(db.Integer, nullable=False, default=0)
     balance = db.Column(db.BigInteger, nullable=False, default=0)
-    interest_rate_target = db.Column(db.REAL, nullable=False, default=0.0)
+    interest_rate = db.Column(db.REAL, nullable=False, default=0.0)
     debtor_info_iri = db.Column(db.String)
     debtor_info_content_type = db.Column(db.String)
     debtor_info_sha256 = db.Column(db.LargeBinary)
@@ -131,40 +130,12 @@ class Debtor(db.Model):
     transfer_note_max_bytes = db.Column(db.Integer, nullable=False, default=0)
     account_id = db.Column(db.String, nullable=False, default='')
 
-    # Ballance Lower Limits
-    bll_values = db.Column(
-        pg.ARRAY(db.BigInteger, dimensions=1),
-        comment='Enforced lower limits for the `balance` field. Each element in  '
-                'this array should have a corresponding element in the `bll_cutoffs` '
-                'arrays (the cutoff dates for the limits). A `null` is the same as '
-                'an empty array.',
-    )
-    bll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1))
-
-    # Interest Rate Lower Limits
-    irll_values = db.Column(
-        pg.ARRAY(db.REAL, dimensions=1),
-        default=[INTEREST_RATE_FLOOR],
-        comment=(
-            'Enforced interest rate lower limits. Each element in this array '
-            'should have a corresponding element in the `irll_cutoffs` array '
-            '(the cutoff dates for the limits). A `null` is the same as an '
-            'empty array. If the array contains values bigger that {ceil}, '
-            'they are treated as equal to {ceil}.'
-        ).format(ceil=INTEREST_RATE_CEIL),
-    )
-    irll_cutoffs = db.Column(pg.ARRAY(db.DATE, dimensions=1), default=[VERY_DISTANT_DATE])
-
     __mapper_args__ = {
         'primary_key': [debtor_id],
         'eager_defaults': True,
     }
     __table_args__ = (
         db.CheckConstraint(config_latest_update_id > 0),
-        db.CheckConstraint(and_(
-            interest_rate_target >= INTEREST_RATE_FLOOR,
-            interest_rate_target <= INTEREST_RATE_CEIL,
-        )),
         db.CheckConstraint(or_(
             status_flags.op('&')(STATUS_IS_DEACTIVATED_FLAG) == 0,
             status_flags.op('&')(STATUS_IS_ACTIVATED_FLAG) != 0,
@@ -178,10 +149,6 @@ class Debtor(db.Model):
             func.octet_length(debtor_info_sha256) == 32
         )),
         db.CheckConstraint(actions_count >= 0),
-        db.CheckConstraint(or_(bll_values == null(), func.array_ndims(bll_values) == 1)),
-        db.CheckConstraint(or_(bll_cutoffs == null(), func.array_ndims(bll_cutoffs) == 1)),
-        db.CheckConstraint(or_(irll_values == null(), func.array_ndims(irll_values) == 1)),
-        db.CheckConstraint(or_(irll_cutoffs == null(), func.array_ndims(irll_cutoffs) == 1)),
 
         # TODO: The `status_flags` column is not be part of the
         #       primary key, but should be included in the primary key
@@ -190,40 +157,6 @@ class Debtor(db.Model):
         #       there are no index-only scans.
         db.Index('idx_debtor_pk', debtor_id, unique=True),
     )
-
-    balance_lower_limits = lower_limits_property('bll_values', 'bll_cutoffs')
-    interest_rate_lower_limits = lower_limits_property('irll_values', 'irll_cutoffs')
-
-    def calc_interest_rate(self, on_day: date) -> float:
-        # Apply debtor's enforced interest rate limits.
-        interest_rate = self.interest_rate_target
-        interest_rate = self.interest_rate_lower_limits.current_limits(on_day).apply_to_value(interest_rate)
-
-        # Apply the absolute interest rate limits.
-        if interest_rate < INTEREST_RATE_FLOOR:  # pragma: no cover
-            interest_rate = INTEREST_RATE_FLOOR
-        if interest_rate > INTEREST_RATE_CEIL:
-            interest_rate = INTEREST_RATE_CEIL
-
-        assert INTEREST_RATE_FLOOR <= interest_rate <= INTEREST_RATE_CEIL
-        return interest_rate
-
-    def calc_min_account_balance(self, on_day: date) -> int:
-        # Apply debtor's enforced balance limits.
-        min_account_balance = self.balance_lower_limits.current_limits(on_day).apply_to_value(MIN_INT64)
-
-        assert MIN_INT64 <= min_account_balance <= MAX_INT64
-        return min_account_balance
-
-    @property
-    def interest_rate(self):
-        current_ts = datetime.now(tz=timezone.utc)
-        return self.calc_interest_rate(current_ts.date())
-
-    @property
-    def min_account_balance(self):
-        current_ts = datetime.now(tz=timezone.utc)
-        return self.calc_min_account_balance(current_ts.date())
 
     @property
     def is_activated(self):
@@ -242,11 +175,6 @@ class Debtor(db.Model):
         # before doing this, we update the interest rate target to
         # ensure that the interest rate will not change once the
         # limits are removed.
-        self.interest_rate_target = self.interest_rate
-        self.bll_values = None
-        self.bll_cutoffs = None
-        self.irll_values = None
-        self.irll_cutoffs = None
         self.debtor_info_iri = None
         self.debtor_info_sha256 = None
         self.debtor_info_content_type = None

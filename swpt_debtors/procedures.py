@@ -305,7 +305,7 @@ def initiate_running_transfer(
         coordinator_request_id=new_running_transfer.coordinator_request_id,
         amount=amount,
         recipient=recipient,
-        min_account_balance=debtor.min_account_balance,
+        min_account_balance=MIN_INT64,
     ))
 
     return new_running_transfer

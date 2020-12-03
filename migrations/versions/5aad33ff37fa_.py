@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 1915c86df82e
+Revision ID: 5aad33ff37fa
 Revises: 8d09bea9c7d1
-Create Date: 2020-12-03 15:48:23.406175
+Create Date: 2020-12-03 16:25:53.258198
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '1915c86df82e'
+revision = '5aad33ff37fa'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -77,7 +77,7 @@ def upgrade():
     sa.Column('last_config_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('last_config_seqnum', sa.Integer(), nullable=False),
     sa.Column('balance', sa.BigInteger(), nullable=False),
-    sa.Column('interest_rate_target', sa.REAL(), nullable=False),
+    sa.Column('interest_rate', sa.REAL(), nullable=False),
     sa.Column('debtor_info_iri', sa.String(), nullable=True),
     sa.Column('debtor_info_content_type', sa.String(), nullable=True),
     sa.Column('debtor_info_sha256', sa.LargeBinary(), nullable=True),
@@ -91,20 +91,11 @@ def upgrade():
     sa.Column('config_error', sa.String(), nullable=True),
     sa.Column('transfer_note_max_bytes', sa.Integer(), nullable=False),
     sa.Column('account_id', sa.String(), nullable=False),
-    sa.Column('bll_values', postgresql.ARRAY(sa.BigInteger(), dimensions=1), nullable=True, comment='Enforced lower limits for the `balance` field. Each element in  this array should have a corresponding element in the `bll_cutoffs` arrays (the cutoff dates for the limits). A `null` is the same as an empty array.'),
-    sa.Column('bll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
-    sa.Column('irll_values', postgresql.ARRAY(sa.REAL(), dimensions=1), nullable=True, comment='Enforced interest rate lower limits. Each element in this array should have a corresponding element in the `irll_cutoffs` array (the cutoff dates for the limits). A `null` is the same as an empty array. If the array contains values bigger that 100.0, they are treated as equal to 100.0.'),
-    sa.Column('irll_cutoffs', postgresql.ARRAY(sa.DATE(), dimensions=1), nullable=True),
     sa.CheckConstraint('(status_flags & 2) = 0 OR (status_flags & 1) != 0'),
     sa.CheckConstraint('actions_count >= 0'),
-    sa.CheckConstraint('bll_cutoffs IS NULL OR array_ndims(bll_cutoffs) = 1'),
-    sa.CheckConstraint('bll_values IS NULL OR array_ndims(bll_values) = 1'),
     sa.CheckConstraint('config_latest_update_id > 0'),
     sa.CheckConstraint('deactivated_at IS NULL OR (status_flags & 2) != 0'),
-    sa.CheckConstraint('debtor_info_sha256 IS NULL OR octet_length(debtor_info_sha256) = 32'),
-    sa.CheckConstraint('interest_rate_target >= -50.0 AND interest_rate_target <= 100.0'),
-    sa.CheckConstraint('irll_cutoffs IS NULL OR array_ndims(irll_cutoffs) = 1'),
-    sa.CheckConstraint('irll_values IS NULL OR array_ndims(irll_values) = 1')
+    sa.CheckConstraint('debtor_info_sha256 IS NULL OR octet_length(debtor_info_sha256) = 32')
     )
     op.create_index('idx_debtor_pk', 'debtor', ['debtor_id'], unique=True)
     op.create_table('finalize_transfer_signal',

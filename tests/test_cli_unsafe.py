@@ -36,7 +36,7 @@ def test_scan_accounts(app_unsafe_session):
     past_ts = datetime(1970, 1, 1, tzinfo=timezone.utc)
     future_ts = datetime(2100, 1, 1, tzinfo=timezone.utc)
     app = app_unsafe_session
-    db.session.add(Debtor(debtor_id=111, interest_rate_target=5.55))
+    db.session.add(Debtor(debtor_id=111, interest_rate=5.55))
     db.session.add(Account(
         debtor_id=1,
         creditor_id=ROOT_CREDITOR_ID,

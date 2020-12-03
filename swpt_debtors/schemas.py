@@ -1,13 +1,11 @@
 from copy import copy
-from marshmallow import Schema, fields, validate, pre_dump, post_dump, post_load, \
-    validates, missing, ValidationError
+from marshmallow import Schema, fields, validate, pre_dump, post_dump, validates, missing, \
+    ValidationError
 from flask import url_for, current_app
 from swpt_lib.utils import i64_to_u64
 from swpt_lib.swpt_uris import make_account_uri
-from swpt_debtors.lower_limits import LowerLimit
-from swpt_debtors.models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
-    TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, CONFIG_MAX_BYTES, \
-    Debtor, RunningTransfer
+from swpt_debtors.models import MAX_INT64, TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, \
+    CONFIG_MAX_BYTES, Debtor, RunningTransfer
 
 URI_DESCRIPTION = '\
 The URI of this object. Can be a relative URI.'
@@ -314,54 +312,6 @@ class DebtorDeactivationRequestSchema(ValidateTypeMixin, Schema):
         description='The type of this object.',
         example='DebtorDeactivationRequest',
     )
-
-
-class InterestRateLowerLimitSchema(ValidateTypeMixin, Schema):
-    type = fields.String(
-        missing='InterestRateLowerLimit',
-        default='InterestRateLowerLimit',
-        description='The type of this object.',
-        example='InterestRateLowerLimit',
-    )
-    value = fields.Float(
-        required=True,
-        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
-        description='The annual interest rate (in percents) should be no less than this value.',
-    )
-    cutoff = fields.Date(
-        required=True,
-        data_key='enforcedUntil',
-        description='The limit will not be enforced after this date.',
-    )
-
-    @post_load
-    def make_lower_limit(self, data, **kwargs):
-        return LowerLimit(value=data['value'], cutoff=data['cutoff'])
-
-
-class BalanceLowerLimitSchema(ValidateTypeMixin, Schema):
-    type = fields.String(
-        missing='BalanceLowerLimit',
-        default='BalanceLowerLimit',
-        description='The type of this object.',
-        example='BalanceLowerLimit',
-    )
-    value = fields.Int(
-        required=True,
-        validate=validate.Range(min=MIN_INT64, max=MAX_INT64),
-        format='int64',
-        description='The balance should be no less than this value. Normally, '
-                    'this will be a negative number.',
-    )
-    cutoff = fields.Date(
-        required=True,
-        data_key='enforcedUntil',
-        description='The limit will not be enforced after this date.',
-    )
-
-    @post_load
-    def make_lower_limit(self, data, **kwargs):
-        return LowerLimit(value=data['value'], cutoff=data['cutoff'])
 
 
 class DebtorInfoSchema(ValidateTypeMixin, Schema):

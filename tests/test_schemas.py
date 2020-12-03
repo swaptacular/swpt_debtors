@@ -1,34 +1,11 @@
 import iso8601
 import pytest
-from datetime import date, datetime
+from datetime import datetime
 from marshmallow import ValidationError
 from swpt_debtors import schemas
-from swpt_debtors.lower_limits import LowerLimit
 from swpt_debtors.models import Debtor, RunningTransfer, TRANSFER_NOTE_MAX_BYTES, TS0, \
     SC_INSUFFICIENT_AVAILABLE_AMOUNT, CONFIG_MAX_BYTES
 from swpt_debtors.routes import context
-
-
-def test_interest_rate_lower_limit_schema():
-    s = schemas.InterestRateLowerLimitSchema()
-    data = s.load({'value': 5.6, 'enforcedUntil': '2020-10-25'})
-    assert isinstance(data, LowerLimit)
-    assert data.value == 5.6
-    assert data.cutoff == date(2020, 10, 25)
-    assert s.dump(data) == {'type': 'InterestRateLowerLimit', 'value': 5.6, 'enforcedUntil': '2020-10-25'}
-
-
-def test_balance_lower_limit_schema():
-    s = schemas.BalanceLowerLimitSchema()
-    data = s.load({'value': 1000, 'enforcedUntil': '2020-10-25'})
-    assert isinstance(data, LowerLimit)
-    assert data.value == 1000
-    assert data.cutoff == date(2020, 10, 25)
-    assert s.dump(data) == {'type': 'BalanceLowerLimit', 'value': 1000, 'enforcedUntil': '2020-10-25'}
-
-
-def test_server_name(app):
-    assert app.config['SERVER_NAME'] == app.config['SWPT_SERVER_NAME']
 
 
 def test_serialize_debtor_schema(db_session):

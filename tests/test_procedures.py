@@ -6,10 +6,8 @@ from swpt_lib.utils import i64_to_u64
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
     RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, \
-    MAX_INT64, INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, ROOT_CREDITOR_ID, TS0, \
-    SC_OK, SC_CANCELED_BY_THE_SENDER, VERY_DISTANT_DATE
+    MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, TS0, SC_OK, SC_CANCELED_BY_THE_SENDER
 from swpt_debtors import procedures as p
-from swpt_debtors.lower_limits import LowerLimit
 
 D_ID = -1
 C_ID = 1
@@ -253,13 +251,6 @@ def test_process_root_account_change_signal(db_session, debtor, current_ts):
     assert d.balance == -9999
 
 
-def test_interest_rate_absolute_limits(db_session, debtor):
-    debtor.interest_rate_target = -100.0
-    assert debtor.interest_rate == INTEREST_RATE_FLOOR
-    debtor.interest_rate_target = 1e100
-    assert debtor.interest_rate == INTEREST_RATE_CEIL
-
-
 def test_running_transfers(db_session, debtor):
     recipient_uri, recipient = acc_id(D_ID, C_ID)
     Debtor.get_instance(D_ID).running_transfers_count = 1
@@ -361,7 +352,7 @@ def test_successful_transfer(db_session, debtor):
     assert pts.coordinator_request_id is not None
     assert pts.amount == 1000
     assert pts.recipient == recipient
-    assert pts.min_account_balance == debtor.min_account_balance
+    assert pts.min_account_balance == MIN_INT64
     coordinator_request_id = pts.coordinator_request_id
 
     p.process_prepared_issuing_transfer_signal(
@@ -443,7 +434,7 @@ def test_failed_transfer(db_session, debtor):
     assert pts.coordinator_request_id is not None
     assert pts.amount == 1000
     assert pts.recipient == recipient
-    assert pts.min_account_balance == debtor.min_account_balance
+    assert pts.min_account_balance == MIN_INT64
     coordinator_request_id = pts.coordinator_request_id
 
     p.process_prepared_issuing_transfer_signal(
