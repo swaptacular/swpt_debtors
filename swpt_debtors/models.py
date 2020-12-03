@@ -16,7 +16,7 @@ MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
 MAX_UINT64 = (1 << 64) - 1
 TS0 = datetime(1970, 1, 1, tzinfo=timezone.utc)
-VERY_DISTANT_DATE = date(9999, 12, 31)
+HUGE_NEGLIGIBLE_AMOUNT = 1e30
 INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
 TRANSFER_NOTE_MAX_BYTES = 500
@@ -125,6 +125,7 @@ class Debtor(db.Model):
     )
     config_latest_update_id = db.Column(db.BigInteger, nullable=False, default=1)
     config_latest_update_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
+    config_flags = db.Column(db.Integer, nullable=False, default=DEFAULT_CONFIG_FLAGS)
     config_data = db.Column(db.String, nullable=False, default='')
     config_error = db.Column(db.String)
     transfer_note_max_bytes = db.Column(db.Integer, nullable=False, default=0)
@@ -171,13 +172,12 @@ class Debtor(db.Model):
         self.reservation_id = None
 
     def deactivate(self):
-        # NOTE: We want to remove the limits to save disk space. But
-        # before doing this, we update the interest rate target to
-        # ensure that the interest rate will not change once the
-        # limits are removed.
+        # NOTE: We remove unneeded data to save disk space.
         self.debtor_info_iri = None
         self.debtor_info_sha256 = None
         self.debtor_info_content_type = None
+        self.config_error = None
+        self.account_id = ''
 
         self.status_flags |= Debtor.STATUS_IS_DEACTIVATED_FLAG
         self.deactivated_at = datetime.now(tz=timezone.utc)
@@ -320,7 +320,7 @@ class ConfigureAccountSignal(Signal):
         creditor_id = fields.Constant(ROOT_CREDITOR_ID)
         ts = fields.DateTime()
         seqnum = fields.Integer()
-        negligible_amount = fields.Constant(0.0)
+        negligible_amount = fields.Constant(HUGE_NEGLIGIBLE_AMOUNT)
         config = fields.String()
         config_flags = fields.Integer()
 

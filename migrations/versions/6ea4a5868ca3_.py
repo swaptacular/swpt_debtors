@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 5aad33ff37fa
+Revision ID: 6ea4a5868ca3
 Revises: 8d09bea9c7d1
-Create Date: 2020-12-03 16:25:53.258198
+Create Date: 2020-12-03 17:30:15.934460
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '5aad33ff37fa'
+revision = '6ea4a5868ca3'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -87,6 +87,7 @@ def upgrade():
     sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted.'),
     sa.Column('config_latest_update_id', sa.BigInteger(), nullable=False),
     sa.Column('config_latest_update_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('config_flags', sa.Integer(), nullable=False),
     sa.Column('config_data', sa.String(), nullable=False),
     sa.Column('config_error', sa.String(), nullable=True),
     sa.Column('transfer_note_max_bytes', sa.Integer(), nullable=False),

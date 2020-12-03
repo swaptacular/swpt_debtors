@@ -4,18 +4,20 @@ from uuid import UUID
 from typing import TypeVar, Optional, Callable, List, Tuple, Dict, Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import exc
-from sqlalchemy.sql.expression import true
+from sqlalchemy.sql.expression import true, func
 from swpt_lib.utils import Seqnum, increment_seqnum
 from swpt_debtors.extensions import db
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
     FinalizeTransferSignal, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
     NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
-    DEFAULT_CONFIG_FLAGS, SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
+    DEFAULT_CONFIG_FLAGS, HUGE_NEGLIGIBLE_AMOUNT, \
+    SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
 
 TD_SECOND = timedelta(seconds=1)
+EPS = 1e-5
 
 
 class UpdateConflict(Exception):
@@ -206,7 +208,7 @@ def update_debtor_config(
     perform_update()
     debtor.config_latest_update_ts = current_ts
 
-    _insert_configure_account_signal(debtor, config_data=config_data)
+    _insert_configure_account_signal(debtor)
     return debtor
 
 
@@ -309,6 +311,38 @@ def initiate_running_transfer(
     ))
 
     return new_running_transfer
+
+
+@atomic
+def process_rejected_config_signal(
+        *,
+        debtor_id: int,
+        creditor_id: int,
+        config_ts: datetime,
+        config_seqnum: int,
+        negligible_amount: float,
+        config: str,
+        config_flags: int,
+        rejection_code: str) -> None:
+
+    if creditor_id != ROOT_CREDITOR_ID:  # pragma: no cover
+        return
+
+    debtor = Debtor.query.\
+        filter_by(
+            debtor_id=debtor_id,
+            last_config_ts=config_ts,
+            last_config_seqnum=config_seqnum,
+            config_flags=config_flags,
+            config_data=config,
+            config_error=None,
+        ).\
+        filter(func.abs(HUGE_NEGLIGIBLE_AMOUNT - negligible_amount) <= EPS * negligible_amount).\
+        with_for_update().\
+        one_or_none()
+
+    if debtor:
+        debtor.config_error = rejection_code
 
 
 @atomic
@@ -551,11 +585,7 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
         one_or_none()
 
 
-def _insert_configure_account_signal(
-        debtor: Debtor,
-        config_data: str = '',
-        config_flags: int = DEFAULT_CONFIG_FLAGS) -> None:
-
+def _insert_configure_account_signal(debtor: Debtor) -> None:
     current_ts = datetime.now(tz=timezone.utc)
     debtor.last_config_ts = max(current_ts, debtor.last_config_ts)
     debtor.last_config_seqnum = increment_seqnum(debtor.last_config_seqnum)
@@ -564,8 +594,8 @@ def _insert_configure_account_signal(
         debtor_id=debtor.debtor_id,
         ts=debtor.last_config_ts,
         seqnum=debtor.last_config_seqnum,
-        config=config_data,
-        config_flags=config_flags,
+        config=debtor.config_data,
+        config_flags=debtor.config_flags,
     ))
 
 

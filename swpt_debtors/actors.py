@@ -1,7 +1,35 @@
 import iso8601
 from swpt_debtors.extensions import broker, APP_QUEUE_NAME
 from swpt_debtors import procedures
-from swpt_debtors.models import CT_ISSUING, MAX_INT64
+from swpt_debtors.models import CT_ISSUING, MAX_INT64, CONFIG_MAX_BYTES
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_rejected_config_signal(
+        debtor_id: int,
+        creditor_id: int,
+        config_ts: str,
+        config_seqnum: int,
+        negligible_amount: float,
+        config: str,
+        config_flags: int,
+        rejection_code: str,
+        ts: str,
+        *args, **kwargs) -> None:
+
+    assert rejection_code == '' or len(rejection_code) <= 30 and rejection_code.encode('ascii')
+    assert len(config) <= CONFIG_MAX_BYTES and len(config.encode('utf8')) <= CONFIG_MAX_BYTES
+
+    procedures.process_rejected_config_signal(
+        debtor_id=debtor_id,
+        creditor_id=creditor_id,
+        config_ts=iso8601.parse_date(config_ts),
+        config_seqnum=config_seqnum,
+        negligible_amount=negligible_amount,
+        config=config,
+        config_flags=config_flags,
+        rejection_code=rejection_code,
+    )
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)

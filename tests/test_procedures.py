@@ -5,8 +5,9 @@ from datetime import datetime, date, timedelta
 from swpt_lib.utils import i64_to_u64
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
-    RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, \
-    MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, TS0, SC_OK, SC_CANCELED_BY_THE_SENDER
+    RunningTransfer, PrepareTransferSignal, FinalizeTransferSignal, ConfigureAccountSignal, \
+    MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, TS0, SC_OK, SC_CANCELED_BY_THE_SENDER, \
+    HUGE_NEGLIGIBLE_AMOUNT
 from swpt_debtors import procedures as p
 
 D_ID = -1
@@ -601,7 +602,7 @@ def test_cancel_running_transfer_failure(db_session, debtor):
         p.cancel_running_transfer(D_ID, TEST_UUID)
 
 
-def test_activate_new_creditor(db_session):
+def test_activate_new_debtor(db_session):
     with pytest.raises(p.InvalidDebtor):
         debtor = p.reserve_debtor(MAX_INT64 + 1)
 
@@ -619,6 +620,62 @@ def test_activate_new_creditor(db_session):
     debtor = p.get_active_debtor(D_ID)
     assert debtor
     assert debtor.is_activated
+    cas = ConfigureAccountSignal.query.one()
+    assert cas.debtor_id == D_ID
+    assert cas.config == ''
+    assert cas.config_flags == 0
 
     with pytest.raises(p.DebtorExists):
         p.reserve_debtor(D_ID)
+
+
+def test_update_debtor_config(debtor):
+    last_config_ts = debtor.last_config_ts
+    last_config_seqnum = debtor.last_config_seqnum
+    assert debtor.config_latest_update_ts == TS0
+
+    p.update_debtor_config(D_ID, config_data='TEST', latest_update_id=2)
+    debtor = p.get_active_debtor(D_ID)
+    assert debtor
+    assert debtor.config_data == 'TEST'
+    assert debtor.last_config_seqnum == last_config_seqnum + 1
+    assert debtor.last_config_ts >= last_config_ts
+
+    cas = ConfigureAccountSignal.query.one()
+    assert cas.debtor_id == D_ID
+    assert cas.config == 'TEST'
+    assert cas.config_flags == 0
+    assert cas.ts == debtor.last_config_ts
+    assert cas.seqnum == debtor.last_config_seqnum
+
+
+def test_process_rejected_config_signal(debtor):
+    d = p.get_active_debtor(D_ID)
+    assert d.config_error is None
+
+    params = {
+        'debtor_id': D_ID,
+        'creditor_id': ROOT_CREDITOR_ID,
+        'config_ts': debtor.last_config_ts,
+        'config_seqnum': debtor.last_config_seqnum,
+        'negligible_amount': HUGE_NEGLIGIBLE_AMOUNT,
+        'config': '',
+        'config_flags': debtor.config_flags,
+        'rejection_code': 'TEST_CODE',
+    }
+    p.process_rejected_config_signal(**{**params, 'config': 'UNEXPECTED'})
+    p.process_rejected_config_signal(**{**params, 'negligible_amount': HUGE_NEGLIGIBLE_AMOUNT * 1.0001})
+    p.process_rejected_config_signal(**{**params, 'config_flags': d.config_flags ^ 1})
+    p.process_rejected_config_signal(**{**params, 'config_seqnum': d.last_config_seqnum - 1})
+    p.process_rejected_config_signal(**{**params, 'config_seqnum': d.last_config_seqnum + 1})
+    p.process_rejected_config_signal(**{**params, 'config_ts': d.last_config_ts + timedelta(seconds=-1)})
+    p.process_rejected_config_signal(**{**params, 'config_ts': d.last_config_ts + timedelta(seconds=1)})
+    d = p.get_active_debtor(D_ID)
+    assert d.config_error is None
+
+    p.process_rejected_config_signal(**params)
+    d = p.get_active_debtor(D_ID)
+    assert d.config_error == 'TEST_CODE'
+
+    p.process_rejected_config_signal(**params)
+    assert d.config_error == 'TEST_CODE'
