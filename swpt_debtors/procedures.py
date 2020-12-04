@@ -185,6 +185,7 @@ def update_debtor_config(
         return debtor
 
     perform_update()
+
     _insert_configure_account_signal(debtor)
     return debtor
 
@@ -339,11 +340,12 @@ def process_account_purge_signal(
         one_or_none()
 
     if debtor:
-        # TODO: Ensure that the debtor is deactivated here?
-
         debtor.has_server_account = False
         debtor.balance = 0
         debtor.interest_rate = 0.0
+        debtor.transfer_note_max_bytes = 0
+        debtor.account_id = ''
+        debtor.is_config_effectual = False
 
 
 @atomic
