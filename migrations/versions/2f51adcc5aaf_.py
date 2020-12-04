@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: bd9b9c0bc93b
+Revision ID: 2f51adcc5aaf
 Revises: 8d09bea9c7d1
-Create Date: 2020-12-04 14:12:40.830986
+Create Date: 2020-12-04 15:57:20.079326
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'bd9b9c0bc93b'
+revision = '2f51adcc5aaf'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -30,36 +30,32 @@ def upgrade():
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('status_flags', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is activated, 2 - is deactivated."),
+    sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted.'),
     sa.Column('reservation_id', sa.BigInteger(), server_default=sa.text("nextval('debtor_reservation_id_seq')"), nullable=True),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.Column('last_config_ts', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.Column('last_config_seqnum', sa.Integer(), nullable=False),
     sa.Column('balance', sa.BigInteger(), nullable=False),
     sa.Column('interest_rate', sa.REAL(), nullable=False),
-    sa.Column('debtor_info_iri', sa.String(), nullable=True),
-    sa.Column('debtor_info_content_type', sa.String(), nullable=True),
-    sa.Column('debtor_info_sha256', sa.LargeBinary(), nullable=True),
+    sa.Column('transfer_note_max_bytes', sa.Integer(), nullable=False),
     sa.Column('running_transfers_count', sa.Integer(), nullable=False),
     sa.Column('actions_count', sa.Integer(), nullable=False),
     sa.Column('actions_count_reset_date', sa.DATE(), nullable=False),
-    sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted.'),
     sa.Column('has_server_account', sa.BOOLEAN(), nullable=False),
     sa.Column('account_creation_date', sa.DATE(), nullable=False),
     sa.Column('account_last_change_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('account_last_change_seqnum', sa.Integer(), nullable=False),
     sa.Column('account_last_heartbeat_ts', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('account_id', sa.String(), nullable=False),
+    sa.Column('last_config_ts', sa.TIMESTAMP(timezone=True), nullable=False),
+    sa.Column('last_config_seqnum', sa.Integer(), nullable=False),
     sa.Column('is_config_effectual', sa.BOOLEAN(), nullable=False),
-    sa.Column('config_latest_update_id', sa.BigInteger(), nullable=False),
     sa.Column('config_flags', sa.Integer(), nullable=False),
     sa.Column('config_data', sa.String(), nullable=False),
     sa.Column('config_error', sa.String(), nullable=True),
-    sa.Column('transfer_note_max_bytes', sa.Integer(), nullable=False),
+    sa.Column('config_latest_update_id', sa.BigInteger(), nullable=False),
     sa.CheckConstraint('(status_flags & 2) = 0 OR (status_flags & 1) != 0'),
     sa.CheckConstraint('actions_count >= 0'),
     sa.CheckConstraint('config_latest_update_id > 0'),
-    sa.CheckConstraint('deactivated_at IS NULL OR (status_flags & 2) != 0'),
-    sa.CheckConstraint('debtor_info_sha256 IS NULL OR octet_length(debtor_info_sha256) = 32')
+    sa.CheckConstraint('deactivated_at IS NULL OR (status_flags & 2) != 0')
     )
     op.create_index('idx_debtor_pk', 'debtor', ['debtor_id'], unique=True)
     op.create_table('finalize_transfer_signal',

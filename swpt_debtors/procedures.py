@@ -147,6 +147,7 @@ def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor:
         debtor.deactivate()
+        _insert_configure_account_signal(debtor)
         _delete_debtor_transfers(debtor)
 
 
@@ -476,10 +477,7 @@ def process_account_update_signal(
     if (current_ts - ts).total_seconds() > ttl:
         return
 
-    debtor = Debtor.query.\
-        filter_by(debtor_id=debtor_id).\
-        with_for_update().\
-        one_or_none()
+    debtor = get_debtor(debtor_id, lock=True)
     if debtor is None:
         # TODO: Should we create a new deactivated debtor here?
 

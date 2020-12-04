@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from marshmallow import Schema, fields
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import func, null, true, or_
+from sqlalchemy.sql.expression import null, true, or_
 from swpt_debtors.extensions import db, broker, MAIN_EXCHANGE_NAME
 
 MIN_INT16 = -1 << 15
@@ -107,18 +107,6 @@ class Debtor(db.Model):
                 f"{STATUS_IS_ACTIVATED_FLAG} - is activated, "
                 f"{STATUS_IS_DEACTIVATED_FLAG} - is deactivated.",
     )
-    reservation_id = db.Column(db.BigInteger, server_default=_ad_seq.next_value())
-    created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
-    last_config_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
-    last_config_seqnum = db.Column(db.Integer, nullable=False, default=0)
-    balance = db.Column(db.BigInteger, nullable=False, default=0)
-    interest_rate = db.Column(db.REAL, nullable=False, default=0.0)
-    debtor_info_iri = db.Column(db.String)
-    debtor_info_content_type = db.Column(db.String)
-    debtor_info_sha256 = db.Column(db.LargeBinary)
-    running_transfers_count = db.Column(db.Integer, nullable=False, default=0)
-    actions_count = db.Column(db.Integer, nullable=False, default=0)
-    actions_count_reset_date = db.Column(db.DATE, nullable=False, default=get_now_utc)
     deactivated_at = db.Column(
         db.TIMESTAMP(timezone=True),
         comment='The moment at which the debtor was deactivated. When a debtor gets '
@@ -126,18 +114,27 @@ class Debtor(db.Model):
                 'removed. To be deactivated, the debtor must be activated first. Once '
                 'deactivated, a debtor stays deactivated until it is deleted.',
     )
+    reservation_id = db.Column(db.BigInteger, server_default=_ad_seq.next_value())
+    created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    balance = db.Column(db.BigInteger, nullable=False, default=0)
+    interest_rate = db.Column(db.REAL, nullable=False, default=0.0)
+    transfer_note_max_bytes = db.Column(db.Integer, nullable=False, default=0)
+    running_transfers_count = db.Column(db.Integer, nullable=False, default=0)
+    actions_count = db.Column(db.Integer, nullable=False, default=0)
+    actions_count_reset_date = db.Column(db.DATE, nullable=False, default=get_now_utc)
     has_server_account = db.Column(db.BOOLEAN, nullable=False, default=False)
     account_creation_date = db.Column(db.DATE, nullable=False, default=DATE0)
     account_last_change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
     account_last_change_seqnum = db.Column(db.Integer, nullable=False, default=0)
     account_last_heartbeat_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     account_id = db.Column(db.String, nullable=False, default='')
+    last_config_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
+    last_config_seqnum = db.Column(db.Integer, nullable=False, default=0)
     is_config_effectual = db.Column(db.BOOLEAN, nullable=False, default=False)
-    config_latest_update_id = db.Column(db.BigInteger, nullable=False, default=1)
     config_flags = db.Column(db.Integer, nullable=False, default=DEFAULT_CONFIG_FLAGS)
     config_data = db.Column(db.String, nullable=False, default='')
     config_error = db.Column(db.String)
-    transfer_note_max_bytes = db.Column(db.Integer, nullable=False, default=0)
+    config_latest_update_id = db.Column(db.BigInteger, nullable=False, default=1)
 
     __mapper_args__ = {
         'primary_key': [debtor_id],
@@ -152,10 +149,6 @@ class Debtor(db.Model):
         db.CheckConstraint(or_(
             deactivated_at == null(),
             status_flags.op('&')(STATUS_IS_DEACTIVATED_FLAG) != 0,
-        )),
-        db.CheckConstraint(or_(
-            debtor_info_sha256 == null(),
-            func.octet_length(debtor_info_sha256) == 32
         )),
         db.CheckConstraint(actions_count >= 0),
 
@@ -180,15 +173,12 @@ class Debtor(db.Model):
         self.reservation_id = None
 
     def deactivate(self):
-        # NOTE: We remove unneeded data to save disk space.
-        self.debtor_info_iri = None
-        self.debtor_info_sha256 = None
-        self.debtor_info_content_type = None
-        self.config_error = None
-        self.account_id = ''
-
         self.status_flags |= Debtor.STATUS_IS_DEACTIVATED_FLAG
         self.deactivated_at = datetime.now(tz=timezone.utc)
+        self.config_flags = DEFAULT_CONFIG_FLAGS | self.CONFIG_SCHEDULED_FOR_DELETION_FLAG
+        self.config_data = ''
+        self.config_error = None
+        self.account_id = ''
 
 
 class RunningTransfer(db.Model):
