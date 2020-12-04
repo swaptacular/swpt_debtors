@@ -184,8 +184,6 @@ def update_debtor_config(
         return debtor
 
     perform_update()
-    debtor.config_latest_update_ts = current_ts
-
     _insert_configure_account_signal(debtor)
     return debtor
 

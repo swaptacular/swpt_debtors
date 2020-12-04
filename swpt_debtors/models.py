@@ -134,7 +134,6 @@ class Debtor(db.Model):
     account_id = db.Column(db.String, nullable=False, default='')
     is_config_effectual = db.Column(db.BOOLEAN, nullable=False, default=False)
     config_latest_update_id = db.Column(db.BigInteger, nullable=False, default=1)
-    config_latest_update_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
     config_flags = db.Column(db.Integer, nullable=False, default=DEFAULT_CONFIG_FLAGS)
     config_data = db.Column(db.String, nullable=False, default='')
     config_error = db.Column(db.String)

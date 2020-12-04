@@ -686,7 +686,6 @@ def test_activate_new_debtor(db_session):
 def test_update_debtor_config(debtor):
     last_config_ts = debtor.last_config_ts
     last_config_seqnum = debtor.last_config_seqnum
-    assert debtor.config_latest_update_ts == TS0
 
     p.update_debtor_config(D_ID, config_data='TEST', latest_update_id=2)
     debtor = p.get_active_debtor(D_ID)

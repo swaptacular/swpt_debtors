@@ -292,11 +292,14 @@ def test_scan_debtors(app_unsafe_session, current_ts):
         'created_at': current_ts - timedelta(days=3000),
         'deactivated_at': current_ts - timedelta(days=3000),
     })
+    Debtor.query.filter_by(debtor_id=5).update({
+        'last_config_ts': current_ts - timedelta(days=3000),
+    })
     db.session.commit()
     app = app_unsafe_session
     assert len(Debtor.query.all()) == 6
 
-    db.engine.execute('ANALYZE account')
+    db.engine.execute('ANALYZE debtor')
     runner = app.test_cli_runner()
     result = runner.invoke(args=['swpt_debtors', 'scan_debtors', '--days', '0.000001', '--quit-early'])
     assert result.exit_code == 0
@@ -304,6 +307,10 @@ def test_scan_debtors(app_unsafe_session, current_ts):
     debtors = Debtor.query.all()
     assert len(debtors) == 5
     assert sorted([d.debtor_id for d in debtors]) == [2, 3, 4, 5, 6]
+
+    config_errors = {debtor.debtor_id: debtor.config_error for debtor in sorted(debtors, key=lambda d: d.debtor_id)}
+    assert config_errors.pop(5) == 'CONFIGURATION_IS_NOT_EFFECTUAL'
+    assert all([v is None for v in config_errors.values()])
 
     Debtor.query.delete()
     ConfigureAccountSignal.query.delete()

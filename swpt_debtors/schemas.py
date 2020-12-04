@@ -388,12 +388,9 @@ class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
     config_data = fields.String(
         required=True,
         validate=validate.Length(max=CONFIG_MAX_BYTES),
-        data_key='data',
+        data_key='configData',
         description="The debtor's configuration data. Different implementations may use "
-                    "different formats for this field."
-                    "\n\n"
-                    "**Note:** For new debtors the initial value for this field will be an "
-                    "empty string.",
+                    "different formats for this field.",
         example='',
     )
 
@@ -409,7 +406,7 @@ class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
         obj.uri = url_for(self.context['DebtorConfig'], _external=False, debtorId=obj.debtor_id)
         obj.debtor = {'uri': url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)}
         obj.latest_update_id = obj.config_latest_update_id
-        obj.latest_update_ts = obj.config_latest_update_ts
+        obj.latest_update_ts = obj.last_config_ts
 
         return obj
 

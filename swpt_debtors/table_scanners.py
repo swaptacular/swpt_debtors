@@ -1,7 +1,7 @@
 from typing import NamedTuple, TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_lib.scan_table import TableScanner
-from sqlalchemy.sql.expression import tuple_
+from sqlalchemy.sql.expression import and_, or_, null, true, false
 from flask import current_app
 from swpt_debtors.extensions import db
 from swpt_debtors.models import Debtor
@@ -23,12 +23,23 @@ class DebtorScanner(TableScanner):
     """Garbage-collects inactive debtors."""
 
     table = Debtor.__table__
-    columns = [Debtor.debtor_id, Debtor.created_at, Debtor.status_flags]
-    pk = tuple_(table.c.debtor_id,)
+    columns = [
+        Debtor.debtor_id,
+        Debtor.created_at,
+        Debtor.status_flags,
+        Debtor.has_server_account,
+        Debtor.account_last_heartbeat_ts,
+        Debtor.is_config_effectual,
+        Debtor.last_config_ts,
+        Debtor.config_error,
+    ]
+    pk = table.c.debtor_id
 
     def __init__(self):
         super().__init__()
         self.inactive_interval = timedelta(days=current_app.config['APP_INACTIVE_DEBTOR_RETENTION_DAYS'])
+        self.max_heartbeat_delay = timedelta(days=current_app.config['APP_MAX_HEARTBEAT_DELAY_DAYS'])
+        self.max_config_delay = timedelta(hours=current_app.config['APP_MAX_CONFIG_DELAY_HOURS'])
 
     @property
     def blocks_per_query(self) -> int:
@@ -42,6 +53,7 @@ class DebtorScanner(TableScanner):
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
         self._delete_debtors_not_activated_for_long_time(rows, current_ts)
+        self._set_config_errors_if_necessary(rows, current_ts)
 
     def _delete_debtors_not_activated_for_long_time(self, rows, current_ts):
         c = self.table.c
@@ -65,3 +77,39 @@ class DebtorScanner(TableScanner):
 
             for debtor in to_delete:
                 db.session.delete(debtor)
+
+    def _set_config_errors_if_necessary(self, rows, current_ts):
+        c = self.table.c
+        account_last_heartbeat_ts_cutoff = current_ts - self.max_heartbeat_delay
+        last_config_ts_cutoff = current_ts - self.max_config_delay
+        status_flags_mask = Debtor.STATUS_IS_ACTIVATED_FLAG | Debtor.STATUS_IS_DEACTIVATED_FLAG
+
+        def has_unreported_config_problem(row) -> bool:
+            return (
+                (
+                    not row[c.is_config_effectual]
+                    or (
+                        row[c.has_server_account]
+                        and row[c.account_last_heartbeat_ts] < account_last_heartbeat_ts_cutoff
+                    )
+                )
+                and row[c.config_error] is None
+                and row[c.last_config_ts] < last_config_ts_cutoff
+                and row[c.status_flags] & status_flags_mask == Debtor.STATUS_IS_ACTIVATED_FLAG
+            )
+
+        pks_to_set = [row[c.debtor_id] for row in rows if has_unreported_config_problem(row)]
+        if pks_to_set:
+            Debtor.query.\
+                filter(self.pk.in_(pks_to_set)).\
+                filter(or_(
+                    Debtor.is_config_effectual == false(),
+                    and_(
+                        Debtor.has_server_account == true(),
+                        Debtor.account_last_heartbeat_ts < account_last_heartbeat_ts_cutoff,
+                    ),
+                )).\
+                filter(Debtor.config_error == null()).\
+                filter(Debtor.last_config_ts < last_config_ts_cutoff).\
+                filter(Debtor.status_flags.op('&')(status_flags_mask) == Debtor.STATUS_IS_ACTIVATED_FLAG).\
+                update({Debtor.config_error: 'CONFIGURATION_IS_NOT_EFFECTUAL'}, synchronize_session=False)
