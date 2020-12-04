@@ -1,7 +1,8 @@
 import pytest
 from uuid import UUID
 from datetime import datetime, timezone, timedelta, date
-from swpt_debtors.models import Account, Debtor, ConfigureAccountSignal, ROOT_CREDITOR_ID, TS0
+from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
+    ROOT_CREDITOR_ID, TS0
 from swpt_debtors.extensions import db
 from swpt_debtors import procedures
 
@@ -10,23 +11,17 @@ TEST_UUID = UUID('123e4567-e89b-12d3-a456-426655440000')
 
 @pytest.fixture(scope='function')
 def app_unsafe_session(app_unsafe_session):
-    from swpt_debtors.models import Debtor, CapitalizeInterestSignal, ChangeInterestRateSignal, \
-        TryToDeleteAccountSignal, RunningTransfer, PrepareTransferSignal
-
     try:
         yield app_unsafe_session
     finally:
         db.session.rollback()
         Debtor.query.delete()
-        Account.query.delete()
-        ChangeInterestRateSignal.query.delete()
-        CapitalizeInterestSignal.query.delete()
-        TryToDeleteAccountSignal.query.delete()
         RunningTransfer.query.delete()
         PrepareTransferSignal.query.delete()
         db.session.commit()
 
 
+@pytest.mark.skip
 def test_scan_accounts(app_unsafe_session):
     from swpt_debtors.models import Debtor, ChangeInterestRateSignal, \
         CapitalizeInterestSignal, TryToDeleteAccountSignal
@@ -161,6 +156,7 @@ def test_scan_accounts(app_unsafe_session):
     assert len(TryToDeleteAccountSignal.query.all()) == 1
 
 
+@pytest.mark.skip
 def test_scan_accounts_capitalize_interest(app_unsafe_session):
     from swpt_debtors.models import CapitalizeInterestSignal, ChangeInterestRateSignal, \
         TryToDeleteAccountSignal
@@ -229,6 +225,7 @@ def test_scan_accounts_capitalize_interest(app_unsafe_session):
     assert len(CapitalizeInterestSignal.query.all()) == 2
 
 
+@pytest.mark.skip
 def test_scan_accounts_deactivate_debtor(app_unsafe_session):
     from swpt_debtors.models import Debtor
 

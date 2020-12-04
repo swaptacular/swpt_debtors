@@ -1,8 +1,7 @@
 from __future__ import annotations
 from typing import Optional
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from marshmallow import Schema, fields
-from flask import current_app
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import func, null, true, or_
@@ -232,91 +231,6 @@ class RunningTransfer(db.Model):
         return bool(self.finalized_at)
 
 
-class Account(db.Model):
-    # TODO: To achieve better scalability, consider moving the `Account`
-    #       table to a separate database. This will allow for it to be
-    #       sharded independently from the debtor-related tables. If
-    #       necessary, use signals to communicate between the two.
-
-    CONFIG_SCHEDULED_FOR_DELETION_FLAG = 1 << 0
-
-    STATUS_UNREACHABLE_FLAG = 1 << 0
-    STATUS_OVERFLOWN_FLAG = 1 << 1
-    STATUS_DELETED_FLAG = 1 << 16
-    STATUS_ESTABLISHED_INTEREST_RATE_FLAG = 1 << 17
-
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    creditor_id = db.Column(db.BigInteger, primary_key=True)
-    last_change_seqnum = db.Column(db.Integer, nullable=False)
-    last_change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-    principal = db.Column(db.BigInteger, nullable=False)
-    interest = db.Column(db.FLOAT, nullable=False)
-    interest_rate = db.Column(db.REAL, nullable=False)
-    last_interest_rate_change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-    creation_date = db.Column(db.DATE, nullable=False)
-    negligible_amount = db.Column(db.REAL, nullable=False)
-    config_flags = db.Column(db.Integer, nullable=False)
-    status_flags = db.Column(db.Integer, nullable=False)
-    is_muted = db.Column(
-        db.BOOLEAN,
-        nullable=False,
-        default=False,
-        comment='Whether the account is "muted" or not. Maintenance operation requests are '
-                'not sent for muted accounts. This prevents flooding the signal bus with '
-                'maintenance signals. It is set to `true` when a maintenance operation request '
-                'is made, and set to back `false` when the matching `AccountMaintenanceSignal` '
-                'is received. Important note: Accounts that have been muted a long time ago '
-                '(this can be determined by checking the `last_maintenance_request_ts` column) '
-                'are allowed to sent maintenance operation requests. (This is to avoid accounts '
-                'staying muted forever when something went wrong with the awaited un-muting '
-                '`AccountMaintenanceSignal`.'
-    )
-    last_heartbeat_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=get_now_utc,
-        comment='The moment at which the last `AccountChangeSignal` has been processed. It is '
-                'used to detect "dead" accounts. A "dead" account is an account that have been '
-                'removed from the `swpt_accounts` service, but still exist in this table.',
-    )
-    last_interest_capitalization_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=TS0,
-        comment='The moment at which the last interest capitalization was triggered. It is '
-                'used to avoid capitalizing interest too often.',
-    )
-    last_deletion_attempt_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=TS0,
-        comment='The moment at which the last deletion attempt was made. It is used to '
-                'avoid trying to delete the account too often.',
-    )
-    last_maintenance_request_ts = db.Column(
-        db.TIMESTAMP(timezone=True),
-        nullable=False,
-        default=TS0,
-        comment='The moment at which the last account maintenance operation request was made. It '
-                'is used to avoid triggering account maintenance operations too often.',
-    )
-    __table_args__ = (
-        db.CheckConstraint((interest_rate >= INTEREST_RATE_FLOOR) & (interest_rate <= INTEREST_RATE_CEIL)),
-        db.CheckConstraint(principal > MIN_INT64),
-        db.CheckConstraint(negligible_amount >= 0.0),
-        {
-            'comment': 'Tells who owes what to whom. This table is a replica of the table with the '
-                       'same name in the `swpt_accounts` service. It is used to perform maintenance '
-                       'routines like changing interest rates. Most of the columns get their values '
-                       'from the corresponding fields in the last applied `AccountChangeSignal`.',
-        }
-    )
-
-    @classmethod
-    def get_interest_rate_change_min_interval(cls):
-        return timedelta(days=current_app.config['APP_INTEREST_RATE_CHANGE_MIN_DAYS'] + 0.01)
-
-
 class ConfigureAccountSignal(Signal):
     queue_name = 'swpt_accounts'
     actor_name = 'configure_account'
@@ -394,52 +308,3 @@ class FinalizeTransferSignal(Signal):
     __table_args__ = (
         db.CheckConstraint(committed_amount >= 0),
     )
-
-
-class CapitalizeInterestSignal(Signal):
-    queue_name = 'swpt_accounts'
-    actor_name = 'capitalize_interest'
-
-    class __marshmallow__(Schema):
-        debtor_id = fields.Integer()
-        creditor_id = fields.Integer()
-        accumulated_interest_threshold = fields.Integer()
-        request_ts = fields.DateTime()
-
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    creditor_id = db.Column(db.BigInteger, nullable=False)
-    accumulated_interest_threshold = db.Column(db.BigInteger, nullable=False)
-    request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-
-
-class TryToDeleteAccountSignal(Signal):
-    queue_name = 'swpt_accounts'
-    actor_name = 'try_to_delete_account'
-
-    class __marshmallow__(Schema):
-        debtor_id = fields.Integer()
-        creditor_id = fields.Integer()
-        request_ts = fields.DateTime()
-
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    creditor_id = db.Column(db.BigInteger, nullable=False)
-    request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)
-
-
-class ChangeInterestRateSignal(Signal):
-    queue_name = 'swpt_accounts'
-    actor_name = 'try_to_change_interest_rate'
-
-    class __marshmallow__(Schema):
-        debtor_id = fields.Integer()
-        creditor_id = fields.Integer()
-        interest_rate = fields.Float()
-        request_ts = fields.DateTime()
-
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-    signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    creditor_id = db.Column(db.BigInteger, nullable=False)
-    interest_rate = db.Column(db.REAL, nullable=False)
-    request_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False)

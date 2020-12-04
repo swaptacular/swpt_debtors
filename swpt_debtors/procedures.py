@@ -4,13 +4,12 @@ from uuid import UUID
 from typing import TypeVar, Optional, Callable, List, Tuple, Dict, Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import exc
-from sqlalchemy.sql.expression import true, func
+from sqlalchemy.sql.expression import func
 from swpt_lib.utils import Seqnum, increment_seqnum
 from swpt_debtors.extensions import db
-from swpt_debtors.models import Debtor, Account, FinalizeTransferSignal, RunningTransfer, \
-    PrepareTransferSignal, ConfigureAccountSignal, NodeConfig, MAX_INT32, MIN_INT64, MAX_INT64, \
-    ROOT_CREDITOR_ID, DEFAULT_CONFIG_FLAGS, HUGE_NEGLIGIBLE_AMOUNT, SC_UNEXPECTED_ERROR, \
-    SC_CANCELED_BY_THE_SENDER, SC_OK
+from swpt_debtors.models import Debtor, FinalizeTransferSignal, RunningTransfer, ConfigureAccountSignal, \
+    PrepareTransferSignal, NodeConfig, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
+    DEFAULT_CONFIG_FLAGS, HUGE_NEGLIGIBLE_AMOUNT, SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -524,18 +523,6 @@ def process_account_update_signal(
     debtor.balance = principal
     debtor.interest_rate = interest_rate
     debtor.transfer_note_max_bytes = transfer_note_max_bytes
-
-
-@atomic
-def process_account_maintenance_signal(debtor_id: int, creditor_id: int, request_ts: datetime) -> None:
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert MIN_INT64 <= creditor_id <= MAX_INT64
-
-    Account.query.\
-        filter_by(debtor_id=debtor_id, creditor_id=creditor_id).\
-        filter(Account.is_muted == true()).\
-        filter(Account.last_maintenance_request_ts <= request_ts + TD_SECOND).\
-        update({Account.is_muted: False}, synchronize_session=False)
 
 
 def _throttle_debtor_actions(debtor_id: int, max_actions_per_month: int, current_ts: datetime) -> Debtor:

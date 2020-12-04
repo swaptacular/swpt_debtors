@@ -7,7 +7,7 @@ from flask.cli import with_appcontext
 from swpt_debtors.models import MIN_INT64, MAX_INT64
 from swpt_debtors import procedures
 from swpt_debtors.extensions import db
-from swpt_debtors.table_scanners import AccountsScanner, DebtorScanner
+from swpt_debtors.table_scanners import DebtorScanner
 
 
 @click.group('swpt_debtors')
@@ -79,28 +79,6 @@ def configure_interval(min_id, max_id):
         sys.exit(1)
 
     procedures.configure_node(min_debtor_id=min_id, max_debtor_id=max_id)
-
-
-@swpt_debtors.command('scan_accounts')
-@with_appcontext
-@click.option('-h', '--hours', type=float, help='The number of hours.')
-@click.option('--quit-early', is_flag=True, default=False, help='Exit after some time (mainly useful during testing).')
-def scan_accounts(hours, quit_early):
-    """Start a process that executes accounts maintenance operations.
-
-    The specified number of hours determines the intended duration of
-    a single pass through the accounts table. If the number of hours
-    is not specified, the value of the environment variable
-    APP_ACCOUNTS_SCAN_HOURS is taken. If it is not set, the default
-    number of hours is 24.
-
-    """
-
-    click.echo('Scanning accounts...')
-    hours = hours or current_app.config['APP_ACCOUNTS_SCAN_HOURS']
-    assert hours > 0.0
-    scanner = AccountsScanner(hours)
-    scanner.run(db.engine, timedelta(hours=hours), quit_early=quit_early)
 
 
 @swpt_debtors.command('scan_debtors')

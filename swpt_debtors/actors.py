@@ -85,6 +85,20 @@ def on_account_update_signal(
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+def on_account_purge_signal(
+        debtor_id: int,
+        creditor_id: int,
+        creation_date: str,
+        *args, **kwargs) -> None:
+
+    procedures.process_account_purge_signal(
+        debtor_id=debtor_id,
+        creditor_id=creditor_id,
+        creation_date=iso8601.parse_date(creation_date).date(),
+    )
+
+
+@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_prepared_issuing_transfer_signal(
         debtor_id: int,
         creditor_id: int,
@@ -164,32 +178,4 @@ def on_finalized_issuing_transfer_signal(
         committed_amount=committed_amount,
         status_code=status_code,
         total_locked_amount=total_locked_amount,
-    )
-
-
-@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
-def on_account_purge_signal(
-        debtor_id: int,
-        creditor_id: int,
-        creation_date: str,
-        *args, **kwargs) -> None:
-
-    procedures.process_account_purge_signal(
-        debtor_id=debtor_id,
-        creditor_id=creditor_id,
-        creation_date=iso8601.parse_date(creation_date).date(),
-    )
-
-
-@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
-def on_account_maintenance_signal(
-        debtor_id: int,
-        creditor_id: int,
-        request_ts: str,
-        *args, **kwargs) -> None:
-
-    procedures.process_account_maintenance_signal(
-        debtor_id=debtor_id,
-        creditor_id=creditor_id,
-        request_ts=iso8601.parse_date(request_ts),
     )
