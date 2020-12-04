@@ -314,56 +314,6 @@ class DebtorDeactivationRequestSchema(ValidateTypeMixin, Schema):
     )
 
 
-class DebtorInfoSchema(ValidateTypeMixin, Schema):
-    type = fields.String(
-        missing='DebtorInfo',
-        default='DebtorInfo',
-        description='The type of this object.',
-        example='DebtorInfo',
-    )
-    iri = fields.String(
-        required=True,
-        validate=validate.Length(max=200),
-        format='iri',
-        description='A link (Internationalized Resource Identifier) referring to a document '
-                    'containing information about the debtor.',
-        example='https://example.com/1/',
-    )
-    optional_content_type = fields.String(
-        data_key='contentType',
-        validate=validate.Length(max=100),
-        description='Optional MIME type of the document that the `iri` field refers to.',
-        example='text/html',
-    )
-    optional_sha256 = fields.String(
-        validate=validate.Regexp('^[0-9A-F]{64}$'),
-        data_key='sha256',
-        description='Optional SHA-256 cryptographic hash (Base16 encoded) of the content of '
-                    'the document that the `iri` field refers to.',
-        example='E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855',
-    )
-
-    @validates('optional_content_type')
-    def validate_optional_content_type(self, value):
-        assert len(value) <= 100
-        if not value.isascii():
-            raise ValidationError('Includes non-ASCII characters.')
-
-    @post_dump
-    def assert_required_fields(self, obj, many):
-        assert 'iri' in obj
-        return obj
-
-
-class DebtorCreationOptionsSchema(ValidateTypeMixin, Schema):
-    type = fields.String(
-        missing='DebtorCreationOptions',
-        default='DebtorCreationOptions',
-        description='The type of this object.',
-        example='DebtorCreationOptions',
-    )
-
-
 class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
     uri = fields.String(
         required=True,
@@ -419,9 +369,10 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description=URI_DESCRIPTION,
         example='/debtors/1/',
     )
-    type = fields.String(
-        missing='Debtor',
-        default='Debtor',
+    type = fields.Function(
+        lambda obj: 'Debtor',
+        required=True,
+        type='string',
         description='The type of this object.',
         example='Debtor',
     )
@@ -441,7 +392,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description="The debtor's `DebtorIdentity`.",
         example={'type': 'DebtorIdentity', 'uri': 'swpt:2'},
     )
-    debtor_config = fields.Nested(
+    config = fields.Nested(
         DebtorConfigSchema,
         required=True,
         dump_only=True,
@@ -524,7 +475,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         obj.uri = url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)
         obj.authority = {'uri': current_app.config['APP_AUTHORITY_URI']}
         obj.identity = {'uri': f'swpt:{i64_to_u64(obj.debtor_id)}'}
-        obj.debtor_config = obj
+        obj.config = obj
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
         obj.create_transfer = obj.transfers_list
 
