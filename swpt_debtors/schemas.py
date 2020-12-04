@@ -430,7 +430,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         required=True,
         dump_only=True,
         data_key='authority',
-        description="The accounting authority that manages this debtor.",
+        description="The accounting authority that manages this debtor (`AuthorityIdentity`).",
         example={'type': 'AuthorityIdentity', 'uri': 'urn:example:authority'},
     )
     identity = fields.Nested(
@@ -438,7 +438,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         required=True,
         dump_only=True,
         data_key='identity',
-        description="Debtor's `DebtorIdentity`.",
+        description="The debtor's `DebtorIdentity`.",
         example={'type': 'DebtorIdentity', 'uri': 'swpt:2'},
     )
     debtor_config = fields.Nested(
@@ -503,15 +503,15 @@ class DebtorSchema(ValidateTypeMixin, Schema):
                     '`DebtorConfig` settings can not be applied, or are not effectual anymore. '
                     'Usually this means that there has been a network communication problem, or a '
                     'system configuration problem. The value alludes to the cause of the problem.',
-        example='CONFIG_IS_INEFFECTUAL',
+        example='CONFIGURATION_IS_NOT_EFFECTUAL',
     )
     optional_account = fields.Nested(
         AccountIdentitySchema,
         dump_only=True,
         data_key='account',
-        description="Debtor's account `AccountIdentity`. It uniquely and reliably identifies "
-                    "the debtor's account when it participates in transfers as sender or "
-                    "recipient. When this field is not present, this means that the debtor's "
+        description="The `AccountIdentity` of the debtor's account. It uniquely and reliably "
+                    "identifies the debtor's account when it participates in transfers as sender "
+                    "or recipient. When this field is not present, this means that the debtor's "
                     "account does not have an identity yet, and can not participate "
                     "in transfers.",
         example={'type': 'AccountIdentity', 'uri': 'swpt:2/0'},
