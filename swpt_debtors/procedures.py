@@ -14,6 +14,7 @@ from swpt_debtors.models import Debtor, FinalizeTransferSignal, RunningTransfer,
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
 
+STATUS_FLAGS_MASK = Debtor.STATUS_IS_ACTIVATED_FLAG | Debtor.STATUS_IS_DEACTIVATED_FLAG
 TD_SECOND = timedelta(seconds=1)
 EPS = 1e-5
 
@@ -152,8 +153,10 @@ def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
 
 
 @atomic
-def get_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
+def get_debtor(debtor_id: int, *, lock: bool = False, active: bool = False) -> Optional[Debtor]:
     query = Debtor.query.filter_by(debtor_id=debtor_id)
+    if active:
+        query = query.filter(Debtor.status_flags.op('&')(STATUS_FLAGS_MASK) == Debtor.STATUS_IS_ACTIVATED_FLAG)
     if lock:
         query = query.with_for_update()
 
@@ -162,9 +165,7 @@ def get_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
 
 @atomic
 def get_active_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
-    debtor = get_debtor(debtor_id, lock=lock)
-    if debtor and debtor.is_activated and not debtor.is_deactivated:
-        return debtor
+    return get_debtor(debtor_id, lock=lock, active=True)
 
 
 @atomic
@@ -479,10 +480,8 @@ def process_account_update_signal(
     if (current_ts - ts).total_seconds() > ttl:
         return
 
-    debtor = get_debtor(debtor_id, lock=True)
+    debtor = get_active_debtor(debtor_id, lock=True)
     if debtor is None:
-        # TODO: Should we create a new deactivated debtor here?
-
         _discard_orphaned_account(debtor_id, config_flags, negligible_amount)
         return
 
