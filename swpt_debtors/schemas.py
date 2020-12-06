@@ -333,7 +333,7 @@ class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
         required=True,
         dump_only=True,
         description="The URI of the corresponding `Debtor`.",
-        example={'uri': '/debtors/2/'},
+        example={'uri': '/debtors/1/'},
     )
     config_data = fields.String(
         required=True,
@@ -390,7 +390,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         dump_only=True,
         data_key='identity',
         description="The debtor's `DebtorIdentity`.",
-        example={'type': 'DebtorIdentity', 'uri': 'swpt:2'},
+        example={'type': 'DebtorIdentity', 'uri': 'swpt:1'},
     )
     config = fields.Nested(
         DebtorConfigSchema,
@@ -406,7 +406,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         data_key='transfersList',
         description="The URI of the debtor's list of pending credit-issuing transfers "
                     "(`TransfersList`).",
-        example={'uri': '/debtors/2/transfers/'},
+        example={'uri': '/debtors/1/transfers/'},
     )
     create_transfer = fields.Nested(
         ObjectReferenceSchema,
@@ -415,7 +415,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         data_key='createTransfer',
         description='A URI to which the debtor can POST `TransferCreationRequest`s to '
                     'create new credit-issuing transfers.',
-        example={'uri': '/debtors/2/transfers/'},
+        example={'uri': '/debtors/1/transfers/'},
     )
     created_at = fields.DateTime(
         required=True,
@@ -465,7 +465,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
                     "or recipient. When this field is not present, this means that the debtor's "
                     "account does not have an identity yet, and can not participate "
                     "in transfers.",
-        example={'type': 'AccountIdentity', 'uri': 'swpt:2/0'},
+        example={'type': 'AccountIdentity', 'uri': 'swpt:1/0'},
     )
 
     @pre_dump
@@ -602,7 +602,7 @@ class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
         required=True,
         data_key='recipient',
         description="The recipient's `AccountIdentity` information.",
-        example={'type': 'AccountIdentity', 'uri': 'swpt:2/1111'}
+        example={'type': 'AccountIdentity', 'uri': 'swpt:1/2222'}
     )
     amount = fields.Integer(
         required=True,
@@ -656,7 +656,7 @@ class TransferSchema(TransferCreationRequestSchema):
         dump_only=True,
         data_key='transfersList',
         description="The URI of creditor's `TransfersList`.",
-        example={'uri': '/debtors/2/transfers/'},
+        example={'uri': '/debtors/1/transfers/'},
     )
     transfer_note_format = fields.String(
         required=True,

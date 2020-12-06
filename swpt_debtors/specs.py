@@ -177,7 +177,7 @@ DEBTOR_LINKS_EXAMPLE = {
     'uri': '/debtors/2/enumerate',
     'type': 'ObjectReferencesPage',
     'items': [
-        {'uri': '/debtors/2/'},
+        {'uri': '/debtors/1/'},
         {'uri': '/debtors/5/'},
         {'uri': '/debtors/11/'},
     ],
