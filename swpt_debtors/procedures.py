@@ -299,7 +299,7 @@ def process_rejected_config_signal(
         config_ts: datetime,
         config_seqnum: int,
         negligible_amount: float,
-        config: str,
+        config_data: str,
         config_flags: int,
         rejection_code: str) -> None:
 
@@ -312,7 +312,7 @@ def process_rejected_config_signal(
             last_config_ts=config_ts,
             last_config_seqnum=config_seqnum,
             config_flags=config_flags,
-            config_data=config,
+            config_data=config_data,
             config_error=None,
         ).\
         filter(func.abs(HUGE_NEGLIGIBLE_AMOUNT - negligible_amount) <= EPS * negligible_amount).\
@@ -465,7 +465,7 @@ def process_account_update_signal(
         last_config_ts: datetime,
         last_config_seqnum: int,
         negligible_amount: float,
-        config: str,
+        config_data: str,
         config_flags: int,
         account_id: str,
         transfer_note_max_bytes: int,
@@ -505,7 +505,7 @@ def process_account_update_signal(
         last_config_ts == debtor.last_config_ts
         and last_config_seqnum == debtor.last_config_seqnum
         and config_flags == debtor.config_flags
-        and config == debtor.config_data
+        and config_data == debtor.config_data
         and abs(HUGE_NEGLIGIBLE_AMOUNT - negligible_amount) <= EPS * negligible_amount
     )
 
@@ -554,7 +554,7 @@ def _insert_configure_account_signal(debtor: Debtor) -> None:
         debtor_id=debtor.debtor_id,
         ts=debtor.last_config_ts,
         seqnum=debtor.last_config_seqnum,
-        config=debtor.config_data,
+        config_data=debtor.config_data,
         config_flags=debtor.config_flags,
     ))
 
@@ -631,6 +631,6 @@ def _discard_orphaned_account(debtor_id: int, config_flags: int, negligible_amou
                 debtor_id=debtor_id,
                 ts=datetime.now(tz=timezone.utc),
                 seqnum=0,
-                config='',
+                config_data='',
                 config_flags=DEFAULT_CONFIG_FLAGS | scheduled_for_deletion_flag,
             ))

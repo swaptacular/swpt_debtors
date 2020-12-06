@@ -2,7 +2,7 @@ import iso8601
 from swpt_debtors.extensions import broker, APP_QUEUE_NAME
 from swpt_debtors import procedures
 from swpt_debtors.models import CT_ISSUING, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, \
-    CONFIG_MAX_BYTES, TRANSFER_NOTE_MAX_BYTES
+    CONFIG_DATA_MAX_BYTES, TRANSFER_NOTE_MAX_BYTES
 
 
 @broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
@@ -12,14 +12,14 @@ def on_rejected_config_signal(
         config_ts: str,
         config_seqnum: int,
         negligible_amount: float,
-        config: str,
+        config_data: str,
         config_flags: int,
         rejection_code: str,
         ts: str,
         *args, **kwargs) -> None:
 
     assert rejection_code == '' or len(rejection_code) <= 30 and rejection_code.encode('ascii')
-    assert len(config) <= CONFIG_MAX_BYTES and len(config.encode('utf8')) <= CONFIG_MAX_BYTES
+    assert len(config_data) <= CONFIG_DATA_MAX_BYTES and len(config_data.encode('utf8')) <= CONFIG_DATA_MAX_BYTES
 
     procedures.process_rejected_config_signal(
         debtor_id=debtor_id,
@@ -27,7 +27,7 @@ def on_rejected_config_signal(
         config_ts=iso8601.parse_date(config_ts),
         config_seqnum=config_seqnum,
         negligible_amount=negligible_amount,
-        config=config,
+        config_data=config_data,
         config_flags=config_flags,
         rejection_code=rejection_code,
     )
@@ -45,7 +45,7 @@ def on_account_update_signal(
         last_config_ts: str,
         last_config_seqnum: int,
         negligible_amount: float,
-        config: str,
+        config_data: str,
         config_flags: int,
         account_id: str,
         transfer_note_max_bytes: int,
@@ -61,7 +61,7 @@ def on_account_update_signal(
     assert MIN_INT32 <= config_flags <= MAX_INT32
     assert ttl > 0
     assert 0 <= transfer_note_max_bytes <= TRANSFER_NOTE_MAX_BYTES
-    assert len(config) <= CONFIG_MAX_BYTES and len(config.encode('utf8')) <= CONFIG_MAX_BYTES
+    assert len(config_data) <= CONFIG_DATA_MAX_BYTES and len(config_data.encode('utf8')) <= CONFIG_DATA_MAX_BYTES
     assert account_id == '' or len(account_id) <= 100 and account_id.encode('ascii')
 
     procedures.process_account_update_signal(
@@ -75,7 +75,7 @@ def on_account_update_signal(
         last_config_ts=iso8601.parse_date(last_config_ts),
         last_config_seqnum=last_config_seqnum,
         negligible_amount=negligible_amount,
-        config=config,
+        config_data=config_data,
         config_flags=config_flags,
         account_id=account_id,
         transfer_note_max_bytes=transfer_note_max_bytes,

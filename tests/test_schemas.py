@@ -4,7 +4,7 @@ from datetime import datetime
 from marshmallow import ValidationError
 from swpt_debtors import schemas
 from swpt_debtors.models import Debtor, RunningTransfer, TRANSFER_NOTE_MAX_BYTES, TS0, \
-    SC_INSUFFICIENT_AVAILABLE_AMOUNT, CONFIG_MAX_BYTES
+    SC_INSUFFICIENT_AVAILABLE_AMOUNT, CONFIG_DATA_MAX_BYTES
 from swpt_debtors.routes import context
 
 
@@ -54,9 +54,17 @@ def test_deserialize_debtor_config_schema(db_session):
     with pytest.raises(ValidationError, match='Must be greater than or equal to 1'):
         data = s.load({'type': 'DebtorConfig', 'configData': '', 'latestUpdateId': 0})
     with pytest.raises(ValidationError, match='Longer than maximum length'):
-        data = s.load({'type': 'DebtorConfig', 'configData': (CONFIG_MAX_BYTES + 1) * 'x', 'latestUpdateId': 1})
+        data = s.load({
+            'type': 'DebtorConfig',
+            'configData': (CONFIG_DATA_MAX_BYTES + 1) * 'x',
+            'latestUpdateId': 1,
+        })
     with pytest.raises(ValidationError, match='The total byte-length of the config exceeds'):
-        data = s.load({'type': 'DebtorConfig', 'configData': int(CONFIG_MAX_BYTES * 0.7) * 'Щ', 'latestUpdateId': 1})
+        data = s.load({
+            'type': 'DebtorConfig',
+            'configData': int(CONFIG_DATA_MAX_BYTES * 0.7) * 'Щ',
+            'latestUpdateId': 1,
+        })
 
     data = s.load({
         'configData': '',
@@ -68,11 +76,11 @@ def test_deserialize_debtor_config_schema(db_session):
 
     data = s.load({
         'type': 'DebtorConfig',
-        'configData': CONFIG_MAX_BYTES * 'x',
+        'configData': CONFIG_DATA_MAX_BYTES * 'x',
         'latestUpdateId': 667,
     })
     assert data['type'] == 'DebtorConfig'
-    assert data['config_data'] == CONFIG_MAX_BYTES * 'x'
+    assert data['config_data'] == CONFIG_DATA_MAX_BYTES * 'x'
     assert data['latest_update_id'] == 667
 
 

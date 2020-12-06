@@ -20,7 +20,7 @@ HUGE_NEGLIGIBLE_AMOUNT = 1e30
 TRANSFER_NOTE_MAX_BYTES = 500
 INTEREST_RATE_FLOOR = -50.0
 INTEREST_RATE_CEIL = 100.0
-CONFIG_MAX_BYTES = 2000
+CONFIG_DATA_MAX_BYTES = 2000
 ROOT_CREDITOR_ID = 0
 DEFAULT_CONFIG_FLAGS = 0
 
@@ -229,13 +229,13 @@ class ConfigureAccountSignal(Signal):
         ts = fields.DateTime()
         seqnum = fields.Integer()
         negligible_amount = fields.Constant(HUGE_NEGLIGIBLE_AMOUNT)
-        config = fields.String()
+        config_data = fields.String()
         config_flags = fields.Integer()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     ts = db.Column(db.TIMESTAMP(timezone=True), primary_key=True)
     seqnum = db.Column(db.Integer, primary_key=True)
-    config = db.Column(db.String, nullable=False)
+    config_data = db.Column(db.String, nullable=False)
     config_flags = db.Column(db.Integer, nullable=False)
 
 

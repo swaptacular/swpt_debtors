@@ -66,7 +66,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
         creation_date=date(2018, 10, 20),
         last_config_ts=TS0,
         last_config_seqnum=0,
-        config='',
+        config_data='',
         account_id='0',
         transfer_note_max_bytes=100,
         negligible_amount=2.0,
@@ -77,7 +77,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert len(Debtor.query.filter_by(debtor_id=D_ID).all()) == 0
     cas = ConfigureAccountSignal.query.one()
     assert cas.debtor_id == D_ID
-    assert cas.config == ''
+    assert cas.config_data == ''
     assert cas.config_flags & Debtor.CONFIG_SCHEDULED_FOR_DELETION_FLAG
 
 
@@ -95,7 +95,7 @@ def test_process_account_update_signal_old_ts(debtor, current_ts):
         creation_date=date(2018, 10, 20),
         last_config_ts=TS0,
         last_config_seqnum=0,
-        config='',
+        config_data='',
         account_id='0',
         transfer_note_max_bytes=100,
         negligible_amount=HUGE_NEGLIGIBLE_AMOUNT,
@@ -117,7 +117,7 @@ def test_process_account_update_signal_old_ts(debtor, current_ts):
         creation_date=DATE0,
         last_config_ts=TS0,
         last_config_seqnum=0,
-        config='',
+        config_data='',
         account_id='0',
         transfer_note_max_bytes=100,
         negligible_amount=HUGE_NEGLIGIBLE_AMOUNT,
@@ -143,7 +143,7 @@ def test_account_change_signal_effectual_config(db_session, debtor, current_ts):
         creation_date=date(2018, 10, 20),
         last_config_ts=TS0,
         last_config_seqnum=0,
-        config='',
+        config_data='',
         account_id='0',
         transfer_note_max_bytes=100,
         negligible_amount=HUGE_NEGLIGIBLE_AMOUNT,
@@ -177,7 +177,7 @@ def test_account_change_signal_ineffectual_config(db_session, debtor, current_ts
         creation_date=date(2018, 10, 20),
         last_config_ts=TS0,
         last_config_seqnum=0,
-        config='',
+        config_data='',
         account_id='0',
         transfer_note_max_bytes=100,
         negligible_amount=0.0,
@@ -455,7 +455,7 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
         creation_date=creation_date,
         last_config_ts=TS0,
         last_config_seqnum=0,
-        config='',
+        config_data='',
         account_id='0',
         transfer_note_max_bytes=100,
         negligible_amount=2.0,
@@ -556,7 +556,7 @@ def test_activate_new_debtor(db_session):
     assert debtor.is_activated
     cas = ConfigureAccountSignal.query.one()
     assert cas.debtor_id == D_ID
-    assert cas.config == ''
+    assert cas.config_data == ''
     assert cas.config_flags == 0
 
     with pytest.raises(p.DebtorExists):
@@ -576,7 +576,7 @@ def test_update_debtor_config(debtor):
 
     cas = ConfigureAccountSignal.query.one()
     assert cas.debtor_id == D_ID
-    assert cas.config == 'TEST'
+    assert cas.config_data == 'TEST'
     assert cas.config_flags == 0
     assert cas.ts == debtor.last_config_ts
     assert cas.seqnum == debtor.last_config_seqnum
@@ -592,11 +592,11 @@ def test_process_rejected_config_signal(debtor):
         'config_ts': debtor.last_config_ts,
         'config_seqnum': debtor.last_config_seqnum,
         'negligible_amount': HUGE_NEGLIGIBLE_AMOUNT,
-        'config': '',
+        'config_data': '',
         'config_flags': debtor.config_flags,
         'rejection_code': 'TEST_CODE',
     }
-    p.process_rejected_config_signal(**{**params, 'config': 'UNEXPECTED'})
+    p.process_rejected_config_signal(**{**params, 'config_data': 'UNEXPECTED'})
     p.process_rejected_config_signal(**{**params, 'negligible_amount': HUGE_NEGLIGIBLE_AMOUNT * 1.0001})
     p.process_rejected_config_signal(**{**params, 'config_flags': d.config_flags ^ 1})
     p.process_rejected_config_signal(**{**params, 'config_seqnum': d.last_config_seqnum - 1})

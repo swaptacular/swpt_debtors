@@ -5,7 +5,7 @@ from flask import url_for, current_app
 from swpt_lib.utils import i64_to_u64
 from swpt_lib.swpt_uris import make_account_uri
 from swpt_debtors.models import MAX_INT64, TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, \
-    CONFIG_MAX_BYTES, Debtor, RunningTransfer
+    CONFIG_DATA_MAX_BYTES, Debtor, RunningTransfer
 
 URI_DESCRIPTION = '\
 The URI of this object. Can be a relative URI.'
@@ -337,7 +337,7 @@ class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
     )
     config_data = fields.String(
         required=True,
-        validate=validate.Length(max=CONFIG_MAX_BYTES),
+        validate=validate.Length(max=CONFIG_DATA_MAX_BYTES),
         data_key='configData',
         description="The debtor's configuration data. Different implementations may use "
                     "different formats for this field.",
@@ -346,8 +346,8 @@ class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
 
     @validates('config_data')
     def validate_config_data(self, value):
-        if len(value.encode('utf8')) > CONFIG_MAX_BYTES:
-            raise ValidationError(f'The total byte-length of the config exceeds {CONFIG_MAX_BYTES} bytes.')
+        if len(value.encode('utf8')) > CONFIG_DATA_MAX_BYTES:
+            raise ValidationError(f'The total byte-length of the config exceeds {CONFIG_DATA_MAX_BYTES} bytes.')
 
     @pre_dump
     def process_debtor_instance(self, obj, many):
