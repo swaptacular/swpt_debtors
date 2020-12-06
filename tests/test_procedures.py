@@ -298,7 +298,6 @@ def test_successful_transfer(db_session, debtor):
     assert pts.coordinator_request_id is not None
     assert pts.amount == 1000
     assert pts.recipient == recipient
-    assert pts.min_account_balance == MIN_INT64
     coordinator_request_id = pts.coordinator_request_id
 
     p.process_prepared_issuing_transfer_signal(
@@ -392,7 +391,6 @@ def test_failed_transfer(db_session, debtor):
     assert pts.coordinator_request_id is not None
     assert pts.amount == 1000
     assert pts.recipient == recipient
-    assert pts.min_account_balance == MIN_INT64
     coordinator_request_id = pts.coordinator_request_id
 
     p.process_prepared_issuing_transfer_signal(

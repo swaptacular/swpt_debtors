@@ -254,14 +254,12 @@ class PrepareTransferSignal(Signal):
         recipient = fields.String()
         inserted_at = fields.DateTime(data_key='ts')
         max_commit_delay = fields.Constant(MAX_INT32)
-        min_account_balance = fields.Integer()
         min_interest_rate = fields.Constant(-100.0)
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
     amount = db.Column(db.BigInteger, nullable=False)
     recipient = db.Column(db.String, nullable=False)
-    min_account_balance = db.Column(db.BigInteger, nullable=False)
     __table_args__ = (
         db.CheckConstraint(amount >= 0),
     )
