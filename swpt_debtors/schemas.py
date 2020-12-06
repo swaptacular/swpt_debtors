@@ -264,13 +264,13 @@ class DebtorReservationSchema(ValidateTypeMixin, Schema):
         example=12345,
     )
     debtor_id = fields.Function(
-        lambda obj: i64_to_u64(obj.debtor_id),
+        lambda obj: str(i64_to_u64(obj.debtor_id)),
         required=True,
         data_key='debtorId',
-        type='integer',
-        format='int64',
+        type='string',
+        pattern='^[0-9A-Za-z_=-]{1,64}$',
         description='The reserved debtor ID.',
-        example=1,
+        example='1',
     )
     valid_until = fields.Method(
         'get_valid_until_string',

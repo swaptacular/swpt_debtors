@@ -6,10 +6,8 @@ DEBTOR_ID = {
     'required': True,
     'description': "The debtor's ID",
     'schema': {
-        'type': 'integer',
-        'format': 'uint64',
-        'minimum': 0,
-        'maximum': (1 << 64) - 1,
+        'type': 'string',
+        'pattern': '^[0-9A-Za-z_=-]{1,64}$',
     },
 }
 

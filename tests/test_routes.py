@@ -47,7 +47,7 @@ def test_auto_genereate_debtor_id(client):
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'DebtorReservation'
-    assert isinstance(data['debtorId'], int)
+    assert isinstance(data['debtorId'], str)
     assert isinstance(data['reservationId'], int)
     assert iso8601.parse_date(data['validUntil'])
     assert iso8601.parse_date(data['createdAt'])
@@ -67,7 +67,7 @@ def test_create_debtor(client):
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'DebtorReservation'
-    assert data['debtorId'] == 2
+    assert data['debtorId'] == '2'
     assert isinstance(data['reservationId'], int)
     assert iso8601.parse_date(data['validUntil'])
     assert iso8601.parse_date(data['createdAt'])
