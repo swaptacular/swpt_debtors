@@ -286,11 +286,11 @@ def test_scan_debtors(app_unsafe_session, current_ts):
     procedures.deactivate_debtor(6)
     Debtor.query.filter_by(debtor_id=3).update({
         'created_at': current_ts - timedelta(days=3000),
-        'deactivated_at': current_ts - timedelta(days=3000),
+        'deactivation_date': (current_ts - timedelta(days=3000)).date(),
     })
     Debtor.query.filter_by(debtor_id=4).update({
         'created_at': current_ts - timedelta(days=3000),
-        'deactivated_at': current_ts - timedelta(days=3000),
+        'deactivation_date': (current_ts - timedelta(days=300)).date(),
     })
     Debtor.query.filter_by(debtor_id=5).update({
         'last_config_ts': current_ts - timedelta(days=3000),
@@ -305,8 +305,8 @@ def test_scan_debtors(app_unsafe_session, current_ts):
     assert result.exit_code == 0
 
     debtors = Debtor.query.all()
-    assert len(debtors) == 5
-    assert sorted([d.debtor_id for d in debtors]) == [2, 3, 4, 5, 6]
+    assert len(debtors) == 4
+    assert sorted([d.debtor_id for d in debtors]) == [2, 4, 5, 6]
 
     config_errors = {debtor.debtor_id: debtor.config_error for debtor in sorted(debtors, key=lambda d: d.debtor_id)}
     assert config_errors.pop(5) == 'CONFIGURATION_IS_NOT_EFFECTUAL'

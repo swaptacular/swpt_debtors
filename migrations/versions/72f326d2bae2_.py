@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 72b940f74ba6
+Revision ID: 72f326d2bae2
 Revises: 8d09bea9c7d1
-Create Date: 2020-12-06 17:09:49.209405
+Create Date: 2020-12-06 18:32:43.125786
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '72b940f74ba6'
+revision = '72f326d2bae2'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -30,7 +30,7 @@ def upgrade():
     op.create_table('debtor',
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
     sa.Column('status_flags', sa.SmallInteger(), nullable=False, comment="Debtor's status bits: 1 - is activated, 2 - is deactivated."),
-    sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='The moment at which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted.'),
+    sa.Column('deactivation_date', sa.DATE(), nullable=True, comment='The date on which the debtor was deactivated. When a debtor gets deactivated, all its belonging objects (transfers, etc.) are removed. To be deactivated, the debtor must be activated first. Once deactivated, a debtor stays deactivated until it is deleted. A `NULL` value for this column means either that the debtor has not been deactivated yet, or that the deactivation date is unknown.'),
     sa.Column('reservation_id', sa.BigInteger(), server_default=sa.text("nextval('debtor_reservation_id_seq')"), nullable=True),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('balance', sa.BigInteger(), nullable=False),
@@ -55,7 +55,7 @@ def upgrade():
     sa.CheckConstraint('(status_flags & 2) = 0 OR (status_flags & 1) != 0'),
     sa.CheckConstraint('actions_count >= 0'),
     sa.CheckConstraint('config_latest_update_id > 0'),
-    sa.CheckConstraint('deactivated_at IS NULL OR (status_flags & 2) != 0')
+    sa.CheckConstraint('deactivation_date IS NULL OR (status_flags & 2) != 0')
     )
     op.create_index('idx_debtor_pk', 'debtor', ['debtor_id'], unique=True)
     op.create_table('finalize_transfer_signal',

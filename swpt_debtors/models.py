@@ -106,12 +106,14 @@ class Debtor(db.Model):
                 f"{STATUS_IS_ACTIVATED_FLAG} - is activated, "
                 f"{STATUS_IS_DEACTIVATED_FLAG} - is deactivated.",
     )
-    deactivated_at = db.Column(
-        db.TIMESTAMP(timezone=True),
-        comment='The moment at which the debtor was deactivated. When a debtor gets '
+    deactivation_date = db.Column(
+        db.DATE,
+        comment='The date on which the debtor was deactivated. When a debtor gets '
                 'deactivated, all its belonging objects (transfers, etc.) are '
                 'removed. To be deactivated, the debtor must be activated first. Once '
-                'deactivated, a debtor stays deactivated until it is deleted.',
+                'deactivated, a debtor stays deactivated until it is deleted. A '
+                '`NULL` value for this column means either that the debtor has not '
+                'been deactivated yet, or that the deactivation date is unknown.',
     )
     reservation_id = db.Column(db.BigInteger, server_default=_ad_seq.next_value())
     created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
@@ -146,7 +148,7 @@ class Debtor(db.Model):
             status_flags.op('&')(STATUS_IS_ACTIVATED_FLAG) != 0,
         )),
         db.CheckConstraint(or_(
-            deactivated_at == null(),
+            deactivation_date == null(),
             status_flags.op('&')(STATUS_IS_DEACTIVATED_FLAG) != 0,
         )),
         db.CheckConstraint(actions_count >= 0),
@@ -173,11 +175,11 @@ class Debtor(db.Model):
 
     def deactivate(self):
         self.status_flags |= Debtor.STATUS_IS_DEACTIVATED_FLAG
-        self.deactivated_at = datetime.now(tz=timezone.utc)
+        self.deactivation_date = datetime.now(tz=timezone.utc).date()
+        self.is_config_effectual = True
         self.config_flags = DEFAULT_CONFIG_FLAGS | self.CONFIG_SCHEDULED_FOR_DELETION_FLAG
         self.config_data = ''
         self.config_error = None
-        self.account_id = ''
 
 
 class RunningTransfer(db.Model):

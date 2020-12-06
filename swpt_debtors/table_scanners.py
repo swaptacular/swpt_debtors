@@ -32,6 +32,7 @@ class DebtorScanner(TableScanner):
         Debtor.is_config_effectual,
         Debtor.last_config_ts,
         Debtor.config_error,
+        Debtor.deactivation_date,
     ]
     pk = table.c.debtor_id
 
@@ -40,6 +41,7 @@ class DebtorScanner(TableScanner):
         self.inactive_interval = timedelta(days=current_app.config['APP_INACTIVE_DEBTOR_RETENTION_DAYS'])
         self.max_heartbeat_delay = timedelta(days=current_app.config['APP_MAX_HEARTBEAT_DELAY_DAYS'])
         self.max_config_delay = timedelta(hours=current_app.config['APP_MAX_CONFIG_DELAY_HOURS'])
+        self.deactivated_interval = timedelta(days=current_app.config['APP_DEACTIVATED_DEBTOR_RETENTION_DAYS'])
 
     @property
     def blocks_per_query(self) -> int:
@@ -53,6 +55,7 @@ class DebtorScanner(TableScanner):
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
         self._delete_debtors_not_activated_for_long_time(rows, current_ts)
+        self._delete_dead_debtors(rows, current_ts)
         self._set_config_errors_if_necessary(rows, current_ts)
 
     def _delete_debtors_not_activated_for_long_time(self, rows, current_ts):
@@ -113,3 +116,34 @@ class DebtorScanner(TableScanner):
                 filter(Debtor.last_config_ts < last_config_ts_cutoff).\
                 filter(Debtor.status_flags.op('&')(status_flags_mask) == Debtor.STATUS_IS_ACTIVATED_FLAG).\
                 update({Debtor.config_error: 'CONFIGURATION_IS_NOT_EFFECTUAL'}, synchronize_session=False)
+
+    def _delete_dead_debtors(self, rows, current_ts):
+        c = self.table.c
+        deactivated_flag = Debtor.STATUS_IS_DEACTIVATED_FLAG
+        deactivated_cutoff_date = (current_ts - self.deactivated_interval).date()
+
+        def is_dead_debtor(row) -> bool:
+            return (
+                row[c.status_flags] & deactivated_flag != 0
+                and not row[c.has_server_account]
+                and (
+                    row[c.deactivation_date] is None
+                    or row[c.deactivation_date] < deactivated_cutoff_date
+                )
+            )
+
+        ids_to_delete = [row[c.debtor_id] for row in rows if is_dead_debtor(row)]
+        if ids_to_delete:
+            to_delete = Debtor.query.\
+                filter(Debtor.debtor_id.in_(ids_to_delete)).\
+                filter(Debtor.status_flags.op('&')(deactivated_flag) != 0).\
+                filter(Debtor.has_server_account == false()).\
+                filter(or_(
+                    Debtor.deactivation_date == null(),
+                    Debtor.deactivation_date < deactivated_cutoff_date),
+                ).\
+                with_for_update(skip_locked=True).\
+                all()
+
+            for debtor in to_delete:
+                db.session.delete(debtor)

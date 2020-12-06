@@ -40,12 +40,12 @@ def test_deactivate_debtor(db_session, debtor):
     debtor = p.get_debtor(D_ID)
     assert debtor.is_activated
     assert debtor.is_deactivated
-    assert debtor.deactivated_at is not None
+    assert debtor.deactivation_date is not None
 
     p.deactivate_debtor(D_ID)
     debtor = p.get_debtor(D_ID)
     assert debtor.is_deactivated
-    assert debtor.deactivated_at is not None
+    assert debtor.deactivation_date is not None
 
     p.deactivate_debtor(1234567890)
     assert p.get_debtor(1234567890) is None

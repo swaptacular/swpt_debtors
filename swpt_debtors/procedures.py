@@ -97,7 +97,7 @@ def get_debtor_ids(start_from: int, count: int = 1) -> Tuple[List[int], Optional
     query = db.session.\
         query(Debtor.debtor_id).\
         filter(Debtor.debtor_id >= start_from).\
-        filter(Debtor.status_flags.op('&')(Debtor.STATUS_IS_ACTIVATED_FLAG) != 0).\
+        filter(Debtor.status_flags.op('&')(STATUS_FLAGS_MASK) == Debtor.STATUS_IS_ACTIVATED_FLAG).\
         order_by(Debtor.debtor_id).\
         limit(count)
     debtor_ids = [t[0] for t in query.all()]
