@@ -4,11 +4,11 @@ from datetime import datetime, date, timedelta
 from swpt_lib.utils import i64_to_u64
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, \
-    FinalizeTransferSignal, ConfigureAccountSignal, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
+    FinalizeTransferSignal, ConfigureAccountSignal, MAX_INT64, ROOT_CREDITOR_ID, \
     TS0, DATE0, SC_OK, SC_CANCELED_BY_THE_SENDER, HUGE_NEGLIGIBLE_AMOUNT, DEFAULT_CONFIG_FLAGS
 from swpt_debtors import procedures as p
 
-D_ID = -1
+D_ID = 4294967296
 C_ID = 1
 TEST_UUID = UUID('123e4567-e89b-12d3-a456-426655440000')
 TEST_UUID2 = UUID('123e4567-e89b-12d3-a456-426655440001')

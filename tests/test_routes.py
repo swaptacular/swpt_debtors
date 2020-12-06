@@ -54,114 +54,112 @@ def test_auto_genereate_debtor_id(client):
 
 
 def test_create_debtor(client):
-    r = client.get('/debtors/2/')
+    r = client.get('/debtors/4294967296/')
     assert r.status_code == 403
 
-    r = client.post('/debtors/2/reserve', headers={'X-Swpt-User-Id': 'INVALID_USER_ID'}, json={})
+    r = client.post('/debtors/4294967296/reserve', headers={'X-Swpt-User-Id': 'INVALID_USER_ID'}, json={})
     assert r.status_code == 403
 
-    r = client.post('/debtors/2/reserve', headers={'X-Swpt-User-Id': 'debtors:2'}, json={})
+    r = client.post('/debtors/2/reserve', headers={'X-Swpt-User-Id': 'debtors:4294967296'}, json={})
     assert r.status_code == 403
 
-    r = client.post('/debtors/2/reserve', json={})
+    r = client.post('/debtors/4294967296/reserve', json={})
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'DebtorReservation'
-    assert data['debtorId'] == '2'
+    assert data['debtorId'] == '4294967296'
     assert isinstance(data['reservationId'], int)
     assert iso8601.parse_date(data['validUntil'])
     assert iso8601.parse_date(data['createdAt'])
     reservation_id = data['reservationId']
 
-    r = client.post('/debtors/2/reserve', json={})
+    r = client.post('/debtors/4294967296/reserve', json={})
     assert r.status_code == 409
 
-    r = client.get('/debtors/2/')
+    r = client.get('/debtors/4294967296/')
     assert r.status_code == 403
 
-    r = client.post('/debtors/2/activate', json={
+    r = client.post('/debtors/4294967296/activate', json={
         'reservationId': 123,
     })
     assert r.status_code == 422
     assert 'reservationId' in r.get_json()['errors']['json']
 
-    r = client.post('/debtors/2/activate', json={
+    r = client.post('/debtors/4294967296/activate', json={
         'reservationId': reservation_id,
     })
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'Debtor'
-    assert data['uri'] == '/debtors/2/'
+    assert data['uri'] == '/debtors/4294967296/'
     assert data['authority'] == {'type': 'AuthorityIdentity', 'uri': 'urn:example:authority'}
-    assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:2'}
-    assert data['transfersList'] == {'uri': '/debtors/2/transfers/'}
-    assert data['createTransfer'] == {'uri': '/debtors/2/transfers/'}
+    assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:4294967296'}
+    assert data['transfersList'] == {'uri': '/debtors/4294967296/transfers/'}
+    assert data['createTransfer'] == {'uri': '/debtors/4294967296/transfers/'}
     assert iso8601.parse_date(data['createdAt'])
 
-    r = client.post('/debtors/2/activate', json={
+    r = client.post('/debtors/4294967296/activate', json={
         'reservationId': reservation_id,
     })
     assert r.status_code == 200
 
-    r = client.post('/debtors/3/activate', json={
+    r = client.post('/debtors/8589934591/activate', json={
         'reservationId': 123,
     })
     assert r.status_code == 422
     assert 'reservationId' in r.get_json()['errors']['json']
 
-    r = client.post('/debtors/3/activate', json={})
+    r = client.post('/debtors/8589934591/activate', json={})
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'Debtor'
-    assert data['uri'] == '/debtors/3/'
+    assert data['uri'] == '/debtors/8589934591/'
     assert data['balance'] == 0
     assert iso8601.parse_date(data['createdAt'])
     assert 'info' not in data
 
-    r = client.post('/debtors/3/activate', json={})
+    r = client.post('/debtors/8589934591/activate', json={})
     assert r.status_code == 409
 
-    r = client.get('/debtors/2/')
+    r = client.get('/debtors/4294967296/')
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'Debtor'
-    assert data['uri'] == '/debtors/2/'
+    assert data['uri'] == '/debtors/4294967296/'
     assert data['balance'] == 0
     assert iso8601.parse_date(data['createdAt'])
 
-    r = client.get('/debtors/3/')
+    r = client.get('/debtors/8589934591/')
     assert r.status_code == 200
     assert 'max-age' in r.headers['Cache-Control']
 
-    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'debtors:3'}, json={})
+    r = client.post('/debtors/8589934591/deactivate', headers={'X-Swpt-User-Id': 'debtors:8589934591'}, json={})
     assert r.status_code == 403
 
-    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'debtors-supervisor'}, json={})
+    r = client.post('/debtors/8589934591/deactivate', headers={'X-Swpt-User-Id': 'debtors-supervisor'}, json={})
     assert r.status_code == 403
 
-    r = client.post('/debtors/3/deactivate', headers={'X-Swpt-User-Id': 'debtors-superuser'}, json={})
+    r = client.post('/debtors/8589934591/deactivate', headers={'X-Swpt-User-Id': 'debtors-superuser'}, json={})
     assert r.status_code == 204
 
-    r = client.post('/debtors/3/deactivate', json={})
+    r = client.post('/debtors/8589934591/deactivate', json={})
     assert r.status_code == 204
 
-    r = client.get('/debtors/3/')
+    r = client.get('/debtors/8589934591/')
     assert r.status_code == 403
 
-    r = client.post('/debtors/3/deactivate', json={})
+    r = client.post('/debtors/8589934591/deactivate', json={})
     assert r.status_code == 204
 
 
 def test_get_debtors_list(client):
-    r = client.post('/debtors/1/reserve', json={})
+    r = client.post('/debtors/4294967296/reserve', json={})
     assert r.status_code == 200
-    r = client.post('/debtors/2/activate', json={})
+    r = client.post('/debtors/4294967297/activate', json={})
     assert r.status_code == 200
-    r = client.post('/debtors/3/activate', json={})
+    r = client.post('/debtors/4294967298/activate', json={})
     assert r.status_code == 200
-    r = client.post('/debtors/9223372036854775808/activate', json={})
-    assert r.status_code == 200
-    r = client.post('/debtors/18446744073709551615/activate', json={})
+    r = client.post('/debtors/8589934591/activate', json={})
     assert r.status_code == 200
 
     r = client.get('/debtors/.list')
@@ -174,10 +172,9 @@ def test_get_debtors_list(client):
 
     entries = _get_all_pages(client, data['first'], page_type='ObjectReferencesPage')
     assert entries == [
-        {'uri': '/debtors/9223372036854775808/'},
-        {'uri': '/debtors/18446744073709551615/'},
-        {'uri': '/debtors/2/'},
-        {'uri': '/debtors/3/'},
+        {'uri': '/debtors/4294967297/'},
+        {'uri': '/debtors/4294967298/'},
+        {'uri': '/debtors/8589934591/'},
     ]
 
 
