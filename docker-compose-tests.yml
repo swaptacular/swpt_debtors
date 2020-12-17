@@ -8,6 +8,8 @@ services:
       - 'POSTGRES_DB=$POSTGRES_DB'
       - 'POSTGRES_USER=$POSTGRES_USER'
       - 'POSTGRES_PASSWORD=$POSTGRES_PASSWORD'
+    volumes:
+      - ./docker/pg/create-users.sql:/docker-entrypoint-initdb.d/create-users.sql
     ports:
       - $POSTGRES_LOCAL_PORT:5432
 
@@ -24,7 +26,7 @@ services:
       - 'PORT=8080'
       - 'PYTHONDONTWRITEBYTECODE=1'
       - 'PYTHONBREAKPOINT=web_pdb.set_trace'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@tests-pg:5432/${POSTGRES_DB}'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors:swpt_debtors@tests-pg:5432/${POSTGRES_DB}'
     ports:
       - $PORT:8080
     command: develop-run-flask
@@ -42,7 +44,7 @@ services:
     env_file: .env
     environment:
       - 'PYTHONDONTWRITEBYTECODE=1'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@tests-pg:5432/${POSTGRES_DB}'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors:swpt_debtors@tests-pg:5432/${POSTGRES_DB}'
     command: configure
     depends_on:
       - tests-pg
