@@ -34,7 +34,7 @@ services:
     ports:
       - $DEBTORS_PORT:$DEBTORS_PORT
     environment:
-      - 'USER_FACING_HOST=$DEBTORS_HOST'
+      - 'USER_FACING_HOSTNAME=$DEBTORS_HOSTNAME'
       - 'USER_FACING_PORT=$DEBTORS_PORT'
       - 'HYDRA_URL=http://hydra:4444'
       - 'LOGIN_URL=http://login:8080'
@@ -61,9 +61,9 @@ services:
       - 'SERVE_PUBLIC_CORS_ALLOWED_HEADERS=Authorization,Content-Type,X-Requested-With'
       - 'SERVE_PUBLIC_CORS_MAX_AGE=86400'
       - 'SERVE_ADMIN_PORT=4445'
-      - 'URLS_SELF_ISSUER=https://$DEBTORS_HOST:$DEBTORS_PORT'
-      - 'URLS_LOGIN=https://$DEBTORS_HOST:$DEBTORS_PORT/login'
-      - 'URLS_CONSENT=https://$DEBTORS_HOST:$DEBTORS_PORT/consent'
+      - 'URLS_SELF_ISSUER=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT'
+      - 'URLS_LOGIN=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/login'
+      - 'URLS_CONSENT=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/consent'
       - 'LOG_LEVEL=warn'
       - 'LOG_FORMAT=json'
       - 'LOG_LEAK_SENSITIVE_VALUES=false'
@@ -181,11 +181,11 @@ services:
       target: swagger-ui-image
     environment:
       - 'BASE_URL=/swagger-ui'
-      - 'API_ROOT=https://$DEBTORS_HOST:$DEBTORS_PORT/'
-      - 'OAUTH2_AUTHORIZATION_URL=https://$DEBTORS_HOST:$DEBTORS_PORT/oauth2/auth'
-      - 'OAUTH2_TOKEN_URL=https://$DEBTORS_HOST:$DEBTORS_PORT/oauth2/token'
-      - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOST:$DEBTORS_PORT/oauth2/token'
-      - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOST:$DEBTORS_PORT/swagger-ui/oauth2-redirect.html'
+      - 'API_ROOT=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/'
+      - 'OAUTH2_AUTHORIZATION_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/auth'
+      - 'OAUTH2_TOKEN_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/token'
+      - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/token'
+      - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/swagger-ui/oauth2-redirect.html'
     depends_on:
       - hydra
       - resource-server

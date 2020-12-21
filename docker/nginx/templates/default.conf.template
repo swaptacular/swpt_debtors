@@ -1,6 +1,6 @@
 server {
     listen ${USER_FACING_PORT} ssl;
-    server_name ${USER_FACING_HOST};
+    server_name ${USER_FACING_HOSTNAME};
     location /oauth2/ {
         proxy_pass ${HYDRA_URL}/oauth2/;
         proxy_set_header Host $host;
