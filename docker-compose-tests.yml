@@ -14,6 +14,22 @@ services:
       - $POSTGRES_LOCAL_PORT:5432
 
 
+  tests-config:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app-image
+    volumes:
+      - './swpt_debtors:/usr/src/app/swpt_debtors'
+    env_file: .env
+    environment:
+      - 'PYTHONDONTWRITEBYTECODE=1'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors:swpt_debtors@tests-pg:5432/${POSTGRES_DB}'
+    command: configure
+    depends_on:
+      - tests-pg
+
+
   tests-web:
     build:
       context: .
@@ -32,19 +48,3 @@ services:
     command: develop-run-flask
     depends_on:
       - tests-config
-
-
-  tests-config:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: app-image
-    volumes:
-      - './swpt_debtors:/usr/src/app/swpt_debtors'
-    env_file: .env
-    environment:
-      - 'PYTHONDONTWRITEBYTECODE=1'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors:swpt_debtors@tests-pg:5432/${POSTGRES_DB}'
-    command: configure
-    depends_on:
-      - tests-pg
