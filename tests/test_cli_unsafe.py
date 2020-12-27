@@ -267,7 +267,6 @@ def _create_new_debtor(debtor_id: int, activate: bool = False):
         procedures.activate_debtor(debtor_id, debtor.reservation_id)
 
 
-@pytest.mark.unsafe
 def test_scan_debtors(app_unsafe_session, current_ts):
     Debtor.query.delete()
     ConfigureAccountSignal.query.delete()
