@@ -55,7 +55,6 @@ class Configuration(metaclass=MetaEnvReader):
     SQLALCHEMY_MAX_OVERFLOW: int = None
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
-    DRAMATIQ_BROKER_CLASS = 'RabbitmqBroker'
     DRAMATIQ_BROKER_URL = 'amqp://guest:guest@localhost:5672'
     API_TITLE = 'Debtors API'
     API_VERSION = 'v1'
