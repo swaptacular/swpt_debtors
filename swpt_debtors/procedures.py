@@ -1,23 +1,30 @@
 from datetime import datetime, date, timedelta, timezone
 from random import randint
 from uuid import UUID
-from typing import TypeVar, Optional, Callable, List, Tuple
-from flask import current_app
+from typing import TypeVar, Optional, Callable, List, Tuple, Dict, Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import exc
-from sqlalchemy.sql.expression import true
-from swpt_lib.utils import Seqnum
+from sqlalchemy.sql.expression import func
+from swpt_lib.utils import Seqnum, increment_seqnum
 from swpt_debtors.extensions import db
-from swpt_debtors.lower_limits import LowerLimitSequence, TooLongLimitSequence
-from swpt_debtors.models import Debtor, Account, ChangeInterestRateSignal, \
-    FinalizeTransferSignal, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
-    NodeConfig, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
-    SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
+from swpt_debtors.models import Debtor, FinalizeTransferSignal, RunningTransfer, ConfigureAccountSignal, \
+    PrepareTransferSignal, NodeConfig, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
+    DEFAULT_CONFIG_FLAGS, HUGE_NEGLIGIBLE_AMOUNT, SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
 
+STATUS_FLAGS_MASK = Debtor.STATUS_IS_ACTIVATED_FLAG | Debtor.STATUS_IS_DEACTIVATED_FLAG
 TD_SECOND = timedelta(seconds=1)
+EPS = 1e-5
+
+
+class UpdateConflict(Exception):
+    """A conflict occurred while trying to update a resource."""
+
+
+class AlreadyUpToDate(Exception):
+    """Trying to update a resource which is already up-to-date."""
 
 
 class MisconfiguredNode(Exception):
@@ -60,13 +67,6 @@ class TooManyManagementActions(Exception):
     """Too many management actions per month by a debtor."""
 
 
-class ConflictingPolicy(Exception):
-    """The new debtor policy conflicts with the old one."""
-
-    def __init__(self, message: str):
-        self.message = message
-
-
 @atomic
 def configure_node(min_debtor_id: int, max_debtor_id: int) -> None:
     assert MIN_INT64 <= min_debtor_id <= MAX_INT64
@@ -97,7 +97,7 @@ def get_debtor_ids(start_from: int, count: int = 1) -> Tuple[List[int], Optional
     query = db.session.\
         query(Debtor.debtor_id).\
         filter(Debtor.debtor_id >= start_from).\
-        filter(Debtor.status_flags.op('&')(Debtor.STATUS_IS_ACTIVATED_FLAG) != 0).\
+        filter(Debtor.status_flags.op('&')(STATUS_FLAGS_MASK) == Debtor.STATUS_IS_ACTIVATED_FLAG).\
         order_by(Debtor.debtor_id).\
         limit(count)
     debtor_ids = [t[0] for t in query.all()]
@@ -138,7 +138,7 @@ def activate_debtor(debtor_id: int, reservation_id: int) -> Debtor:
         if reservation_id != debtor.reservation_id or debtor.is_deactivated:
             raise InvalidReservationId()
         debtor.activate()
-        _insert_configure_account_signal(debtor_id)
+        _insert_configure_account_signal(debtor)
 
     return debtor
 
@@ -148,12 +148,15 @@ def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor:
         debtor.deactivate()
+        _insert_configure_account_signal(debtor)
         _delete_debtor_transfers(debtor)
 
 
 @atomic
-def get_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
+def get_debtor(debtor_id: int, *, lock: bool = False, active: bool = False) -> Optional[Debtor]:
     query = Debtor.query.filter_by(debtor_id=debtor_id)
+    if active:
+        query = query.filter(Debtor.status_flags.op('&')(STATUS_FLAGS_MASK) == Debtor.STATUS_IS_ACTIVATED_FLAG)
     if lock:
         query = query.with_for_update()
 
@@ -162,66 +165,29 @@ def get_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
 
 @atomic
 def get_active_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
-    debtor = get_debtor(debtor_id, lock=lock)
-    if debtor and debtor.is_activated and not debtor.is_deactivated:
-        return debtor
+    return get_debtor(debtor_id, lock=lock, active=True)
 
 
 @atomic
-def update_debtor_balance(debtor_id: int, balance: int) -> None:
-    debtor = get_debtor(debtor_id, lock=True)
-    if debtor is None:
-        if not _is_correct_debtor_id(debtor_id):  # pragma: no cover
-            return
-
-        # Normally, this should never happen. If it does happen,
-        # though, we create a new deactivated debtor, not allowing the
-        # debtor ID to be used.
-        debtor = Debtor(debtor_id=debtor_id)
-        with db.retry_on_integrity_error():
-            db.session.add(debtor)
-        debtor.activate()
-        debtor.deactivate()
-
-    if debtor.balance != balance:
-        debtor.balance = balance
-
-
-@atomic
-def update_debtor(
+def update_debtor_config(
         debtor_id: int,
-        interest_rate_target: float,
-        new_interest_rate_limits: LowerLimitSequence,
-        new_balance_limits: LowerLimitSequence,
-        debtor_info_iri: Optional[str],
-        debtor_info_content_type: Optional[str],
-        debtor_info_sha256: Optional[bytes]) -> Debtor:
+        *,
+        config_data: str,
+        latest_update_id: int,
+        max_actions_per_month: int = MAX_INT32) -> Debtor:
 
     current_ts = datetime.now(tz=timezone.utc)
-    debtor = _throttle_debtor_actions(debtor_id, current_ts)
-    date_week_ago = (current_ts - timedelta(days=7)).date()
-
-    interest_rate_lower_limits = debtor.interest_rate_lower_limits
-    interest_rate_lower_limits = interest_rate_lower_limits.current_limits(date_week_ago)
+    debtor = _throttle_debtor_actions(debtor_id, max_actions_per_month, current_ts)
     try:
-        interest_rate_lower_limits.add_limits(new_interest_rate_limits)
-    except TooLongLimitSequence:
-        raise ConflictingPolicy('There are too many interest rate limits.')
+        perform_update = _allow_update(debtor, 'config_latest_update_id', latest_update_id, {
+            'config_data': config_data,
+        })
+    except AlreadyUpToDate:
+        return debtor
 
-    balance_lower_limits = debtor.balance_lower_limits
-    balance_lower_limits = balance_lower_limits.current_limits(date_week_ago)
-    try:
-        balance_lower_limits.add_limits(new_balance_limits)
-    except TooLongLimitSequence:
-        raise ConflictingPolicy('There are too many balance limits.')
+    perform_update()
 
-    debtor.interest_rate_target = interest_rate_target
-    debtor.interest_rate_lower_limits = interest_rate_lower_limits
-    debtor.balance_lower_limits = balance_lower_limits
-    debtor.debtor_info_iri = debtor_info_iri
-    debtor.debtor_info_sha256 = debtor_info_sha256
-    debtor.debtor_info_content_type = debtor_info_content_type
-
+    _insert_configure_account_signal(debtor)
     return debtor
 
 
@@ -284,7 +250,8 @@ def initiate_running_transfer(
         recipient: str,
         amount: int,
         transfer_note_format: str,
-        transfer_note: str) -> RunningTransfer:
+        transfer_note: str,
+        max_actions_per_month: int = MAX_INT32) -> RunningTransfer:
 
     current_ts = datetime.now(tz=timezone.utc)
     transfer_data = {
@@ -301,9 +268,9 @@ def initiate_running_transfer(
             raise TransfersConflict()
         raise TransferExists()
 
-    debtor = _throttle_debtor_actions(debtor_id, current_ts)
+    debtor = _throttle_debtor_actions(debtor_id, max_actions_per_month, current_ts)
     debtor.running_transfers_count += 1
-    if debtor.running_transfers_count > current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
+    if debtor.running_transfers_count > max_actions_per_month:
         raise TransfersConflict()
 
     new_running_transfer = RunningTransfer(
@@ -319,21 +286,71 @@ def initiate_running_transfer(
         coordinator_request_id=new_running_transfer.coordinator_request_id,
         amount=amount,
         recipient=recipient,
-        min_account_balance=debtor.min_account_balance,
     ))
 
     return new_running_transfer
 
 
 @atomic
-def process_account_purge_signal(debtor_id: int, creditor_id: int, creation_date: date) -> None:
-    account = Account.lock_instance((debtor_id, creditor_id))
-    if account and account.creation_date == creation_date:
-        db.session.delete(account)
+def process_rejected_config_signal(
+        *,
+        debtor_id: int,
+        creditor_id: int,
+        config_ts: datetime,
+        config_seqnum: int,
+        negligible_amount: float,
+        config_data: str,
+        config_flags: int,
+        rejection_code: str) -> None:
+
+    if creditor_id != ROOT_CREDITOR_ID:  # pragma: no cover
+        return
+
+    debtor = Debtor.query.\
+        filter_by(
+            debtor_id=debtor_id,
+            last_config_ts=config_ts,
+            last_config_seqnum=config_seqnum,
+            config_flags=config_flags,
+            config_data=config_data,
+            config_error=None,
+        ).\
+        filter(func.abs(HUGE_NEGLIGIBLE_AMOUNT - negligible_amount) <= EPS * negligible_amount).\
+        with_for_update().\
+        one_or_none()
+
+    if debtor:
+        debtor.config_error = rejection_code
+
+
+@atomic
+def process_account_purge_signal(
+        *,
+        debtor_id: int,
+        creditor_id: int,
+        creation_date: date) -> None:
+
+    debtor = Debtor.query.\
+        filter_by(
+            debtor_id=debtor_id,
+            has_server_account=True,
+        ).\
+        filter(Debtor.account_creation_date <= creation_date).\
+        with_for_update().\
+        one_or_none()
+
+    if debtor:
+        debtor.has_server_account = False
+        debtor.balance = 0
+        debtor.interest_rate = 0.0
+        debtor.transfer_note_max_bytes = 0
+        debtor.account_id = ''
+        debtor.is_config_effectual = False
 
 
 @atomic
 def process_rejected_issuing_transfer_signal(
+        *,
         coordinator_id: int,
         coordinator_request_id: int,
         status_code: str,
@@ -351,6 +368,7 @@ def process_rejected_issuing_transfer_signal(
 
 @atomic
 def process_prepared_issuing_transfer_signal(
+        *,
         debtor_id: int,
         creditor_id: int,
         transfer_id: int,
@@ -404,12 +422,12 @@ def process_prepared_issuing_transfer_signal(
 
 @atomic
 def process_finalized_issuing_transfer_signal(
+        *,
         debtor_id: int,
         creditor_id: int,
         transfer_id: int,
         coordinator_id: int,
         coordinator_request_id: int,
-        recipient: str,
         committed_amount: int,
         status_code: str,
         total_locked_amount: int) -> None:
@@ -425,9 +443,9 @@ def process_finalized_issuing_transfer_signal(
     if the_signal_matches_the_transfer:
         assert rt is not None
 
-        if status_code == SC_OK and committed_amount == rt.amount and recipient == rt.recipient:
+        if status_code == SC_OK and committed_amount == rt.amount:
             _finalize_running_transfer(rt)
-        elif status_code != SC_OK and committed_amount == 0 and recipient == rt.recipient:
+        elif status_code != SC_OK and committed_amount == 0:
             _finalize_running_transfer(rt, error_code=status_code, total_locked_amount=total_locked_amount)
         else:  # pragma: no cover
             _finalize_running_transfer(rt, error_code=SC_UNEXPECTED_ERROR)
@@ -435,113 +453,74 @@ def process_finalized_issuing_transfer_signal(
 
 @atomic
 def process_account_update_signal(
+        *,
         debtor_id: int,
         creditor_id: int,
+        creation_date: date,
         last_change_ts: datetime,
         last_change_seqnum: int,
         principal: int,
-        interest: float,
         interest_rate: float,
-        last_interest_rate_change_ts: datetime,
-        creation_date: date,
+        last_config_ts: datetime,
+        last_config_seqnum: int,
         negligible_amount: float,
+        config_data: str,
         config_flags: int,
-        status_flags: int,
+        account_id: str,
+        transfer_note_max_bytes: int,
         ts: datetime,
         ttl: int) -> None:
 
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert MIN_INT64 <= creditor_id <= MAX_INT64
-    assert MIN_INT32 <= last_change_seqnum <= MAX_INT32
-    assert -MAX_INT64 <= principal <= MAX_INT64
-    assert -100 < interest_rate <= 100.0
-    assert negligible_amount >= 0.0
-    assert MIN_INT32 <= config_flags <= MAX_INT32
-    assert MIN_INT32 <= status_flags <= MAX_INT32
-    assert ttl > 0
+    if creditor_id != ROOT_CREDITOR_ID:  # pragma: no cover
+        return
 
     current_ts = datetime.now(tz=timezone.utc)
-    ts = min(ts, current_ts)
     if (current_ts - ts).total_seconds() > ttl:
         return
 
-    account = Account.lock_instance((debtor_id, creditor_id))
-    if account:
-        if ts > account.last_heartbeat_ts:
-            account.last_heartbeat_ts = ts
-        prev_event = (account.creation_date, account.last_change_ts, Seqnum(account.last_change_seqnum))
-        this_event = (creation_date, last_change_ts, Seqnum(last_change_seqnum))
-        if this_event <= prev_event:
-            return
-        account.last_change_seqnum = last_change_seqnum
-        account.last_change_ts = last_change_ts
-        account.principal = principal
-        account.interest = interest
-        account.interest_rate = interest_rate
-        account.last_interest_rate_change_ts = last_interest_rate_change_ts
-        account.creation_date = creation_date
-        account.negligible_amount = negligible_amount
-        account.config_flags = config_flags
-        account.status_flags = status_flags
-    else:
-        account = Account(
-            debtor_id=debtor_id,
-            creditor_id=creditor_id,
-            last_change_seqnum=last_change_seqnum,
-            last_change_ts=last_change_ts,
-            principal=principal,
-            interest=interest,
-            interest_rate=interest_rate,
-            last_interest_rate_change_ts=last_interest_rate_change_ts,
-            creation_date=creation_date,
-            negligible_amount=negligible_amount,
-            config_flags=config_flags,
-            status_flags=status_flags,
-            last_heartbeat_ts=ts,
-        )
-        with db.retry_on_integrity_error():
-            db.session.add(account)
+    debtor = get_active_debtor(debtor_id, lock=True)
+    if debtor is None:
+        _discard_orphaned_account(debtor_id, config_flags, negligible_amount)
+        return
 
-    if account.creditor_id == ROOT_CREDITOR_ID:
-        balance = MIN_INT64 if account.is_overflown else account.principal
-        update_debtor_balance(debtor_id, balance)
-    elif not account.status_flags & Account.STATUS_ESTABLISHED_INTEREST_RATE_FLAG:
-        cutoff_ts = current_ts - Account.get_interest_rate_change_min_interval()
-        debtor = Debtor.get_instance(debtor_id)
-        if debtor and account.last_interest_rate_change_ts < cutoff_ts:
-            account.is_muted = True
-            account.last_maintenance_request_ts = current_ts
-            insert_change_interest_rate_signal(debtor_id, creditor_id, debtor.interest_rate, current_ts)
+    if ts > debtor.account_last_heartbeat_ts:
+        debtor.account_last_heartbeat_ts = min(ts, current_ts)
+
+    prev_event = (
+        debtor.account_creation_date,
+        debtor.account_last_change_ts,
+        Seqnum(debtor.account_last_change_seqnum),
+    )
+    this_event = (
+        creation_date,
+        last_change_ts,
+        Seqnum(last_change_seqnum),
+    )
+    if this_event <= prev_event:
+        return
+
+    assert creation_date >= debtor.account_creation_date
+    is_config_effectual = (
+        last_config_ts == debtor.last_config_ts
+        and last_config_seqnum == debtor.last_config_seqnum
+        and config_flags == debtor.config_flags
+        and config_data == debtor.config_data
+        and abs(HUGE_NEGLIGIBLE_AMOUNT - negligible_amount) <= EPS * negligible_amount
+    )
+
+    debtor.is_config_effectual = is_config_effectual
+    debtor.config_error = None if is_config_effectual else debtor.config_error
+    debtor.has_server_account = True
+    debtor.account_creation_date = creation_date
+    debtor.account_last_change_ts = last_change_ts
+    debtor.account_last_change_seqnum = last_change_seqnum
+    debtor.account_id = account_id
+    debtor.balance = principal
+    debtor.interest_rate = interest_rate
+    debtor.transfer_note_max_bytes = transfer_note_max_bytes
 
 
-@atomic
-def process_account_maintenance_signal(debtor_id: int, creditor_id: int, request_ts: datetime) -> None:
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert MIN_INT64 <= creditor_id <= MAX_INT64
-
-    Account.query.\
-        filter_by(debtor_id=debtor_id, creditor_id=creditor_id).\
-        filter(Account.is_muted == true()).\
-        filter(Account.last_maintenance_request_ts <= request_ts + TD_SECOND).\
-        update({Account.is_muted: False}, synchronize_session=False)
-
-
-@atomic
-def insert_change_interest_rate_signal(
-        debtor_id: int,
-        creditor_id: int,
-        interest_rate: float,
-        request_ts: datetime) -> None:
-
-    db.session.add(ChangeInterestRateSignal(
-        debtor_id=debtor_id,
-        creditor_id=creditor_id,
-        interest_rate=interest_rate,
-        request_ts=request_ts,
-    ))
-
-
-def _throttle_debtor_actions(debtor_id: int, current_ts: datetime) -> Debtor:
+def _throttle_debtor_actions(debtor_id: int, max_actions_per_month: int, current_ts: datetime) -> Debtor:
     debtor = get_active_debtor(debtor_id, lock=True)
     if debtor is None:
         raise DebtorDoesNotExist()
@@ -552,7 +531,7 @@ def _throttle_debtor_actions(debtor_id: int, current_ts: datetime) -> Debtor:
         debtor.actions_count = 0
         debtor.actions_count_reset_date = current_date
 
-    if debtor.actions_count >= current_app.config['APP_MAX_TRANSFERS_PER_MONTH']:
+    if debtor.actions_count >= max_actions_per_month:
         raise TooManyManagementActions()
 
     debtor.actions_count += 1
@@ -565,9 +544,17 @@ def _find_running_transfer(coordinator_id: int, coordinator_request_id: int) -> 
         one_or_none()
 
 
-def _insert_configure_account_signal(debtor_id: int) -> None:
+def _insert_configure_account_signal(debtor: Debtor) -> None:
+    current_ts = datetime.now(tz=timezone.utc)
+    debtor.last_config_ts = max(current_ts, debtor.last_config_ts)
+    debtor.last_config_seqnum = increment_seqnum(debtor.last_config_seqnum)
+
     db.session.add(ConfigureAccountSignal(
-        debtor_id=debtor_id,
+        debtor_id=debtor.debtor_id,
+        ts=debtor.last_config_ts,
+        seqnum=debtor.last_config_seqnum,
+        config_data=debtor.config_data,
+        config_flags=debtor.config_flags,
     ))
 
 
@@ -603,3 +590,46 @@ def _finalize_running_transfer(rt: RunningTransfer, error_code: str = None, tota
         rt.finalized_at = datetime.now(tz=timezone.utc)
         rt.error_code = error_code
         rt.total_locked_amount = total_locked_amount
+
+
+def _allow_update(obj, update_id_field_name: str, update_id: int, update: Dict[str, Any]) -> Callable[[], None]:
+    """Return a function that performs the update on `obj`.
+
+    Raises `UpdateConflict` if the update is not allowed. Raises
+    `AlreadyUpToDate` when the object is already up-to-date.
+
+    """
+
+    def has_changes():
+        return any([getattr(obj, field_name) != value for field_name, value in update.items()])
+
+    def set_values():
+        setattr(obj, update_id_field_name, update_id)
+        for field_name, value in update.items():
+            setattr(obj, field_name, value)
+        return True
+
+    latest_update_id = getattr(obj, update_id_field_name)
+    if update_id == latest_update_id and not has_changes():
+        raise AlreadyUpToDate()
+
+    if update_id != latest_update_id + 1:
+        raise UpdateConflict()
+
+    return set_values
+
+
+def _discard_orphaned_account(debtor_id: int, config_flags: int, negligible_amount: float) -> None:
+    if _is_correct_debtor_id(debtor_id):
+        scheduled_for_deletion_flag = Debtor.CONFIG_SCHEDULED_FOR_DELETION_FLAG
+        safely_huge_amount = (1 - EPS) * HUGE_NEGLIGIBLE_AMOUNT
+        is_already_discarded = config_flags & scheduled_for_deletion_flag and negligible_amount >= safely_huge_amount
+
+        if not is_already_discarded:
+            db.session.add(ConfigureAccountSignal(
+                debtor_id=debtor_id,
+                ts=datetime.now(tz=timezone.utc),
+                seqnum=0,
+                config_data='',
+                config_flags=DEFAULT_CONFIG_FLAGS | scheduled_for_deletion_flag,
+            ))

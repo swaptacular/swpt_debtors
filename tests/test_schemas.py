@@ -1,34 +1,11 @@
 import iso8601
 import pytest
-from datetime import date, datetime
+from datetime import datetime
 from marshmallow import ValidationError
 from swpt_debtors import schemas
-from swpt_debtors.lower_limits import LowerLimit
-from swpt_debtors.models import Debtor, RunningTransfer, TRANSFER_NOTE_MAX_BYTES, BEGINNING_OF_TIME, \
-    SC_INSUFFICIENT_AVAILABLE_AMOUNT
+from swpt_debtors.models import Debtor, RunningTransfer, TRANSFER_NOTE_MAX_BYTES, TS0, \
+    SC_INSUFFICIENT_AVAILABLE_AMOUNT, CONFIG_DATA_MAX_BYTES
 from swpt_debtors.routes import context
-
-
-def test_interest_rate_lower_limit_schema():
-    s = schemas.InterestRateLowerLimitSchema()
-    data = s.load({'value': 5.6, 'enforcedUntil': '2020-10-25'})
-    assert isinstance(data, LowerLimit)
-    assert data.value == 5.6
-    assert data.cutoff == date(2020, 10, 25)
-    assert s.dump(data) == {'type': 'InterestRateLowerLimit', 'value': 5.6, 'enforcedUntil': '2020-10-25'}
-
-
-def test_balance_lower_limit_schema():
-    s = schemas.BalanceLowerLimitSchema()
-    data = s.load({'value': 1000, 'enforcedUntil': '2020-10-25'})
-    assert isinstance(data, LowerLimit)
-    assert data.value == 1000
-    assert data.cutoff == date(2020, 10, 25)
-    assert s.dump(data) == {'type': 'BalanceLowerLimit', 'value': 1000, 'enforcedUntil': '2020-10-25'}
-
-
-def test_server_name(app):
-    assert app.config['SERVER_NAME'] == app.config['SWPT_SERVER_NAME']
 
 
 def test_serialize_debtor_schema(db_session):
@@ -45,44 +22,66 @@ def test_serialize_debtor_schema(db_session):
     assert obj['type'] == 'Debtor'
     assert iso8601.parse_date(obj['createdAt'])
     assert obj['balance'] == 0
-    assert obj['balanceLowerLimits'] == []
-    assert obj['interestRateLowerLimits'] == [
-        {'type': 'InterestRateLowerLimit', 'value': -50.0, 'enforcedUntil': '9999-12-31'},
-    ]
-    assert obj['interestRateTarget'] == 0.0
     assert obj['interestRate'] == 0.0
     assert obj['transfersList'] == {'uri': '/debtors/1/transfers/'}
-    assert 'deactivatedAt' not in obj
+    assert obj['config'] == {
+        'type': 'DebtorConfig',
+        'uri': '/debtors/1/config',
+        'configData': '',
+        'latestUpdateId': 1,
+        'latestUpdateAt': '1970-01-01T00:00:00+00:00',
+        'debtor': {'uri': '/debtors/1/'},
+    }
+    assert obj['noteMaxBytes'] == 0
+    assert 'account' not in obj
+    assert 'configError' not in obj
 
-    debtor.deactivate()
+    debtor.config_error = 'TEST_ERROR'
+    debtor.account_id = '0'
     obj = s.dump(debtor)
-    assert iso8601.parse_date(obj['deactivatedAt'])
+    assert obj['configError'] == 'TEST_ERROR'
+    assert obj['account'] == {'type': 'AccountIdentity', 'uri': 'swpt:1/0'}
 
 
-def test_deserialize_debtor_schema(db_session):
-    s = schemas.DebtorSchema(context=context)
-    with pytest.raises(ValidationError):
-        data = s.load({'type': 'INVALID_TYPE'})
+def test_deserialize_debtor_config_schema(db_session):
+    s = schemas.DebtorConfigSchema(context=context)
+    with pytest.raises(ValidationError, match='Invalid type'):
+        data = s.load({'type': 'INVALID_TYPE', 'configData': '', 'latestUpdateId': 1})
+    with pytest.raises(ValidationError, match='Missing data for required field.'):
+        data = s.load({'type': 'DebtorConfig', 'latestUpdateId': 1})
+    with pytest.raises(ValidationError, match='Missing data for required field.'):
+        data = s.load({'type': 'DebtorConfig', 'configData': ''})
+    with pytest.raises(ValidationError, match='Must be greater than or equal to 1'):
+        data = s.load({'type': 'DebtorConfig', 'configData': '', 'latestUpdateId': 0})
+    with pytest.raises(ValidationError, match='Longer than maximum length'):
+        data = s.load({
+            'type': 'DebtorConfig',
+            'configData': (CONFIG_DATA_MAX_BYTES + 1) * 'x',
+            'latestUpdateId': 1,
+        })
+    with pytest.raises(ValidationError, match='The total byte-length of the config exceeds'):
+        data = s.load({
+            'type': 'DebtorConfig',
+            'configData': int(CONFIG_DATA_MAX_BYTES * 0.7) * 'Щ',
+            'latestUpdateId': 1,
+        })
 
     data = s.load({
-        'type': 'Debtor',
-        'balanceLowerLimits': [],
-        'interestRateLowerLimits': [],
-        'interestRateTarget': 0.0
+        'configData': '',
+        'latestUpdateId': 1,
     })
-    assert data['balance_lower_limits'] == []
-    assert data['interest_rate_lower_limits'] == []
-    assert data['interest_rate_target'] == 0.0
+    assert data['type'] == 'DebtorConfig'
+    assert data['config_data'] == ''
+    assert data['latest_update_id'] == 1
+
     data = s.load({
-        'balanceLowerLimits': [{'value': 1000, 'enforcedUntil': '2020-10-25'}],
-        'interestRateLowerLimits': [{'value': 5.6, 'enforcedUntil': '2020-10-25'}],
-        'interestRateTarget': 6.1,
+        'type': 'DebtorConfig',
+        'configData': CONFIG_DATA_MAX_BYTES * 'x',
+        'latestUpdateId': 667,
     })
-    assert len(data['balance_lower_limits']) == 1
-    assert data['balance_lower_limits'][0].value == 1000
-    assert len(data['interest_rate_lower_limits']) == 1
-    assert data['interest_rate_lower_limits'][0].value == 5.6
-    assert data['interest_rate_target'] == 6.1
+    assert data['type'] == 'DebtorConfig'
+    assert data['config_data'] == CONFIG_DATA_MAX_BYTES * 'x'
+    assert data['latest_update_id'] == 667
 
 
 def test_deserialize_transfer_creation_request(db_session):
@@ -107,7 +106,7 @@ def test_serialize_transfer(app):
         'amount': 1000,
         'transfer_note_format': 'json',
         'transfer_note': '{"note": "test"}',
-        'initiated_at': BEGINNING_OF_TIME,
+        'initiated_at': TS0,
         'finalized_at': datetime(2020, 1, 4),
         'error_code': SC_INSUFFICIENT_AVAILABLE_AMOUNT,
         'total_locked_amount': 5,
@@ -170,63 +169,3 @@ def test_serialize_transfer(app):
         "noteFormat": "json",
         "note": '{"note": "test"}',
     }
-
-
-def test_serialize_debtor_info(app):
-    dis = schemas.DebtorInfoSchema()
-    data = dis.dump({
-        'iri': 'abc',
-        'optional_content_type': 50 * 'x',
-        'optional_sha256': 32 * 'AA',
-    })
-    assert data == {
-        "type": "DebtorInfo",
-        "iri": "abc",
-        "contentType": 50 * 'x',
-        "sha256": 32 * 'AA',
-    }
-
-    data = dis.dump({
-        'iri': 'abc',
-    })
-    assert data == {
-        "type": "DebtorInfo",
-        "iri": "abc",
-    }
-
-
-def test_deserialize_debtor_info(app):
-    dis = schemas.DebtorInfoSchema()
-
-    assert dis.load({'iri': ''}) == {
-        'type': 'DebtorInfo',
-        'iri': '',
-    }
-
-    data = {
-        'type': 'DebtorInfo',
-        'iri': 'abc',
-        'contentType': 50 * 'x',
-        'sha256': 32 * 'AA',
-    }
-
-    assert dis.load(data) == {
-        'type': 'DebtorInfo',
-        'iri': 'abc',
-        'optional_content_type': 50 * 'x',
-        'optional_sha256': 32 * 'AA',
-    }
-
-    with pytest.raises(ValidationError, match='Includes non-ASCII characters'):
-        dis.load({
-            'type': 'DebtorInfo',
-            'contentType': 100 * 'Щ',
-            'sha256': 32 * 'AA',
-        })
-    with pytest.raises(ValidationError, match='Longer than maximum length'):
-        dis.load({
-            'type': 'DebtorInfo',
-            'iri': 'abc',
-            'contentType': 101 * 'Щ',
-            'sha256': 32 * 'AA',
-        })

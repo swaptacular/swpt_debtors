@@ -12,10 +12,9 @@ server_name = 'example.com'
 config_dict = {
     'TESTING': True,
     'SERVER_NAME': server_name,
-    'SWPT_SERVER_NAME': server_name,
     'APP_AUTHORITY_URI': 'urn:example:authority',
-    'APP_MAX_LIMITS_COUNT': 10,
     'APP_DEBTORS_PER_PAGE': 2,
+    'APP_DEACTIVATED_DEBTOR_RETENTION_DAYS': 365.0,
     'APP_TRANSFERS_FINALIZATION_AVG_SECONDS': 10.0,
     'APP_MAX_TRANSFERS_PER_MONTH': 10,
     'APP_SUPERUSER_SUBJECT_REGEX': '^debtors-superuser$',

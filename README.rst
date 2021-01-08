@@ -20,11 +20,16 @@ How to run it
 
      $ cp env.development .env
 
-4. To run the unit tests, use this command::
+4. To create a minimal *docker-compose.yml* file for development, use
+   this command::
 
-     $ docker-compose run tests-server test
+     $ cp docker-compose-tests.yml docker-compose.yml
 
-5. To run the minimal set of services needed for development, use this
+5. To run the unit tests, use this command::
+
+     $ docker-compose run tests-config test
+
+6. To run the minimal set of services needed for development, use this
    command::
 
      $ docker-compose up --build -d
@@ -41,8 +46,23 @@ How to setup a development environment
 
      $ poetry install
 
-4. You can use ``flask run`` to run a local Web server, or ``dramatiq
-   tasks:broker`` to spawn local task workers.
+4. You can use ``flask run -p 5000`` to run a local web server,
+   ``dramatiq --watch . tasks:broker`` to spawn local task workers,
+   and ``pytest --cov=swpt_debtors --cov-report=html`` to run the
+   tests and generate a test coverage report.
+
+
+How to run all services (production-like)
+-----------------------------------------
+
+1. To create a production-like *docker-compose.yml* file, use this
+   command::
+
+     $ cp docker-compose-all.yml docker-compose.yml
+
+2. To start the containers, use this command::
+
+     $ docker-compose up --build -d
 
 
 .. _Docker: https://docs.docker.com/

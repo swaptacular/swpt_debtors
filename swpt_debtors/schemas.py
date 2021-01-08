@@ -1,12 +1,11 @@
 from copy import copy
-from base64 import b16encode
-from marshmallow import Schema, fields, validate, pre_dump, post_dump, post_load, \
-    validates, missing, ValidationError
+from marshmallow import Schema, fields, validate, pre_dump, post_dump, validates, missing, \
+    ValidationError
 from flask import url_for, current_app
 from swpt_lib.utils import i64_to_u64
-from swpt_debtors.lower_limits import LowerLimit
-from swpt_debtors.models import INTEREST_RATE_FLOOR, INTEREST_RATE_CEIL, MIN_INT64, MAX_INT64, \
-    TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, Debtor, RunningTransfer
+from swpt_lib.swpt_uris import make_account_uri
+from swpt_debtors.models import MAX_INT64, TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, \
+    CONFIG_DATA_MAX_BYTES, Debtor, RunningTransfer
 
 URI_DESCRIPTION = '\
 The URI of this object. Can be a relative URI.'
@@ -40,6 +39,30 @@ class TransfersList:
     def __init__(self, debtor_id, items):
         self.debtor_id = debtor_id
         self.items = items
+
+
+class MutableResourceSchema(Schema):
+    latest_update_id = fields.Integer(
+        required=True,
+        validate=validate.Range(min=1, max=MAX_INT64),
+        data_key='latestUpdateId',
+        format='int64',
+        description='The sequential number of the latest update in the object. This will always '
+                    'be a positive number, which starts from `1` and gets incremented with each '
+                    'change in the object.'
+                    '\n\n'
+                    '**Note:** When the object is changed by the client, the value of this field '
+                    'must be incremented by the client. The server will use the value of the '
+                    'field to detect conflicts which can occur when two clients try to update '
+                    'the object simultaneously.',
+        example=123,
+    )
+    latest_update_ts = fields.DateTime(
+        required=True,
+        dump_only=True,
+        data_key='latestUpdateAt',
+        description='The moment of the latest update on this object.',
+    )
 
 
 class ObjectReferenceSchema(Schema):
@@ -241,13 +264,13 @@ class DebtorReservationSchema(ValidateTypeMixin, Schema):
         example=12345,
     )
     debtor_id = fields.Function(
-        lambda obj: i64_to_u64(obj.debtor_id),
+        lambda obj: str(i64_to_u64(obj.debtor_id)),
         required=True,
         data_key='debtorId',
-        type='integer',
-        format='int64',
+        type='string',
+        pattern='^[0-9A-Za-z_=-]{1,64}$',
         description='The reserved debtor ID.',
-        example=1,
+        example='1',
     )
     valid_until = fields.Method(
         'get_valid_until_string',
@@ -291,102 +314,51 @@ class DebtorDeactivationRequestSchema(ValidateTypeMixin, Schema):
     )
 
 
-class InterestRateLowerLimitSchema(ValidateTypeMixin, Schema):
+class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
+    uri = fields.String(
+        required=True,
+        dump_only=True,
+        format='uri-reference',
+        description=URI_DESCRIPTION,
+        example='/debtors/1/config',
+    )
     type = fields.String(
-        missing='InterestRateLowerLimit',
-        default='InterestRateLowerLimit',
+        missing='DebtorConfig',
+        default='DebtorConfig',
         description='The type of this object.',
-        example='InterestRateLowerLimit',
+        example='DebtorConfig',
     )
-    value = fields.Float(
+    debtor = fields.Nested(
+        ObjectReferenceSchema,
         required=True,
-        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
-        description='The annual interest rate (in percents) should be no less than this value.',
+        dump_only=True,
+        description="The URI of the corresponding `Debtor`.",
+        example={'uri': '/debtors/1/'},
     )
-    cutoff = fields.Date(
+    config_data = fields.String(
         required=True,
-        data_key='enforcedUntil',
-        description='The limit will not be enforced after this date.',
+        validate=validate.Length(max=CONFIG_DATA_MAX_BYTES),
+        data_key='configData',
+        description="The debtor's configuration data. Different implementations may use "
+                    "different formats for this field.",
+        example='',
     )
 
-    @post_load
-    def make_lower_limit(self, data, **kwargs):
-        return LowerLimit(value=data['value'], cutoff=data['cutoff'])
+    @validates('config_data')
+    def validate_config_data(self, value):
+        if len(value.encode('utf8')) > CONFIG_DATA_MAX_BYTES:
+            raise ValidationError(f'The total byte-length of the config exceeds {CONFIG_DATA_MAX_BYTES} bytes.')
 
+    @pre_dump
+    def process_debtor_instance(self, obj, many):
+        assert isinstance(obj, Debtor)
+        obj = copy(obj)
+        obj.uri = url_for(self.context['DebtorConfig'], _external=False, debtorId=obj.debtor_id)
+        obj.debtor = {'uri': url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)}
+        obj.latest_update_id = obj.config_latest_update_id
+        obj.latest_update_ts = obj.last_config_ts
 
-class BalanceLowerLimitSchema(ValidateTypeMixin, Schema):
-    type = fields.String(
-        missing='BalanceLowerLimit',
-        default='BalanceLowerLimit',
-        description='The type of this object.',
-        example='BalanceLowerLimit',
-    )
-    value = fields.Int(
-        required=True,
-        validate=validate.Range(min=MIN_INT64, max=MAX_INT64),
-        format='int64',
-        description='The balance should be no less than this value. Normally, '
-                    'this will be a negative number.',
-    )
-    cutoff = fields.Date(
-        required=True,
-        data_key='enforcedUntil',
-        description='The limit will not be enforced after this date.',
-    )
-
-    @post_load
-    def make_lower_limit(self, data, **kwargs):
-        return LowerLimit(value=data['value'], cutoff=data['cutoff'])
-
-
-class DebtorInfoSchema(ValidateTypeMixin, Schema):
-    type = fields.String(
-        missing='DebtorInfo',
-        default='DebtorInfo',
-        description='The type of this object.',
-        example='DebtorInfo',
-    )
-    iri = fields.String(
-        required=True,
-        validate=validate.Length(max=200),
-        format='iri',
-        description='A link (Internationalized Resource Identifier) referring to a document '
-                    'containing information about the debtor.',
-        example='https://example.com/1/',
-    )
-    optional_content_type = fields.String(
-        data_key='contentType',
-        validate=validate.Length(max=100),
-        description='Optional MIME type of the document that the `iri` field refers to.',
-        example='text/html',
-    )
-    optional_sha256 = fields.String(
-        validate=validate.Regexp('^[0-9A-F]{64}$'),
-        data_key='sha256',
-        description='Optional SHA-256 cryptographic hash (Base16 encoded) of the content of '
-                    'the document that the `iri` field refers to.',
-        example='E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855',
-    )
-
-    @validates('optional_content_type')
-    def validate_optional_content_type(self, value):
-        assert len(value) <= 100
-        if not value.isascii():
-            raise ValidationError('Includes non-ASCII characters.')
-
-    @post_dump
-    def assert_required_fields(self, obj, many):
-        assert 'iri' in obj
         return obj
-
-
-class DebtorCreationOptionsSchema(ValidateTypeMixin, Schema):
-    type = fields.String(
-        missing='DebtorCreationOptions',
-        default='DebtorCreationOptions',
-        description='The type of this object.',
-        example='DebtorCreationOptions',
-    )
 
 
 class DebtorSchema(ValidateTypeMixin, Schema):
@@ -397,9 +369,10 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description=URI_DESCRIPTION,
         example='/debtors/1/',
     )
-    type = fields.String(
-        missing='Debtor',
-        default='Debtor',
+    type = fields.Function(
+        lambda obj: 'Debtor',
+        required=True,
+        type='string',
         description='The type of this object.',
         example='Debtor',
     )
@@ -408,7 +381,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         required=True,
         dump_only=True,
         data_key='authority',
-        description="The accounting authority that manages this debtor.",
+        description="The accounting authority that manages this debtor (`AuthorityIdentity`).",
         example={'type': 'AuthorityIdentity', 'uri': 'urn:example:authority'},
     )
     identity = fields.Nested(
@@ -416,8 +389,15 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         required=True,
         dump_only=True,
         data_key='identity',
-        description="Debtor's `DebtorIdentity`.",
-        example={'type': 'DebtorIdentity', 'uri': 'swpt:2'},
+        description="The debtor's `DebtorIdentity`.",
+        example={'type': 'DebtorIdentity', 'uri': 'swpt:1'},
+    )
+    config = fields.Nested(
+        DebtorConfigSchema,
+        required=True,
+        dump_only=True,
+        data_key='config',
+        description="Debtor's `DebtorConfig` settings.",
     )
     transfers_list = fields.Nested(
         ObjectReferenceSchema,
@@ -426,7 +406,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         data_key='transfersList',
         description="The URI of the debtor's list of pending credit-issuing transfers "
                     "(`TransfersList`).",
-        example={'uri': '/debtors/2/transfers/'},
+        example={'uri': '/debtors/1/transfers/'},
     )
     create_transfer = fields.Nested(
         ObjectReferenceSchema,
@@ -435,7 +415,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         data_key='createTransfer',
         description='A URI to which the debtor can POST `TransferCreationRequest`s to '
                     'create new credit-issuing transfers.',
-        example={'uri': '/debtors/2/transfers/'},
+        example={'uri': '/debtors/1/transfers/'},
     )
     created_at = fields.DateTime(
         required=True,
@@ -447,30 +427,10 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         required=True,
         dump_only=True,
         format="int64",
-        description=Debtor.balance.comment,
+        description="The total issued amount with a negative sign. Normally, it will be a "
+                    "negative number or a zero. A positive value, although theoretically "
+                    "possible, should be very rare.",
         example=-1000000,
-    )
-    balance_lower_limits = fields.Nested(
-        BalanceLowerLimitSchema(many=True),
-        missing=[],
-        data_key='balanceLowerLimits',
-        description=f'Enforced lower limits for the `balance` field.\n\n{ESTABLISHED_LIMITS_NOTE}',
-    )
-    interest_rate_lower_limits = fields.Nested(
-        InterestRateLowerLimitSchema(many=True),
-        missing=[],
-        data_key='interestRateLowerLimits',
-        description=f'Enforced lower limits for the `interestRate` field.\n\n{ESTABLISHED_LIMITS_NOTE}',
-    )
-    interest_rate_target = fields.Float(
-        validate=validate.Range(min=INTEREST_RATE_FLOOR, max=INTEREST_RATE_CEIL),
-        required=True,
-        data_key='interestRateTarget',
-        description='The annual rate (in percents) at which the debtor wants the interest '
-                    'to accumulate on creditors\' accounts. The actual current interest rate may '
-                    'be different if interest rate limits are being enforced. When the debtor is '
-                    'created, the initial value for this field will be `0`.',
-        example=0,
     )
     interest_rate = fields.Float(
         required=True,
@@ -479,16 +439,33 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description="The current annual interest rate (in percents) at which "
                     "interest accumulates on creditors' accounts.",
     )
-    optional_deactivated_at = fields.DateTime(
+    transfer_note_max_bytes = fields.Integer(
+        required=True,
         dump_only=True,
-        data_key='deactivatedAt',
-        description="The moment at which the debtor was deactivated. If this field is not present, "
-                    "this means that the debtor has not been deactivated yet.",
+        data_key='noteMaxBytes',
+        description='The maximal number of bytes that transfer notes are allowed to contain when '
+                    'UTF-8 encoded. This will be a non-negative number.',
+        example=500,
     )
-    optional_info = fields.Nested(
-        DebtorInfoSchema,
-        data_key='info',
-        description='Optional link to additional information about the debtor.',
+    optional_config_error = fields.String(
+        dump_only=True,
+        data_key='configError',
+        description='When this field is present, this means that for some reason, the current '
+                    '`DebtorConfig` settings can not be applied, or are not effectual anymore. '
+                    'Usually this means that there has been a network communication problem, or a '
+                    'system configuration problem. The value alludes to the cause of the problem.',
+        example='CONFIGURATION_IS_NOT_EFFECTUAL',
+    )
+    optional_account = fields.Nested(
+        AccountIdentitySchema,
+        dump_only=True,
+        data_key='account',
+        description="The `AccountIdentity` of the debtor's account. It uniquely and reliably "
+                    "identifies the debtor's account when it participates in transfers as sender "
+                    "or recipient. When this field is not present, this means that the debtor's "
+                    "account does not have an identity yet, and can not participate "
+                    "in transfers.",
+        example={'type': 'AccountIdentity', 'uri': 'swpt:1/0'},
     )
 
     @pre_dump
@@ -498,19 +475,17 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         obj.uri = url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)
         obj.authority = {'uri': current_app.config['APP_AUTHORITY_URI']}
         obj.identity = {'uri': f'swpt:{i64_to_u64(obj.debtor_id)}'}
+        obj.config = obj
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
         obj.create_transfer = obj.transfers_list
 
-        if obj.deactivated_at is not None:
-            obj.optional_deactivated_at = obj.deactivated_at
+        if obj.config_error is not None:
+            obj.optional_config_error = obj.config_error
 
-        if obj.debtor_info_iri is not None:
-            debtor_info = {'iri': obj.debtor_info_iri}
-            if obj.debtor_info_content_type is not None:
-                debtor_info['optional_content_type'] = obj.debtor_info_content_type
-            if obj.debtor_info_sha256 is not None:
-                debtor_info['optional_sha256'] = b16encode(obj.debtor_info_sha256).decode()
-            obj.optional_info = debtor_info
+        try:
+            obj.optional_account = {'uri': make_account_uri(obj.debtor_id, obj.account_id)}
+        except ValueError:
+            pass
 
         return obj
 
@@ -627,7 +602,7 @@ class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
         required=True,
         data_key='recipient',
         description="The recipient's `AccountIdentity` information.",
-        example={'type': 'AccountIdentity', 'uri': 'swpt:2/1111'}
+        example={'type': 'AccountIdentity', 'uri': 'swpt:1/2222'}
     )
     amount = fields.Integer(
         required=True,
@@ -681,7 +656,7 @@ class TransferSchema(TransferCreationRequestSchema):
         dump_only=True,
         data_key='transfersList',
         description="The URI of creditor's `TransfersList`.",
-        example={'uri': '/debtors/2/transfers/'},
+        example={'uri': '/debtors/1/transfers/'},
     )
     transfer_note_format = fields.String(
         required=True,

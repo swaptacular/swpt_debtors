@@ -1,0 +1,3 @@
+[submodule "submodules/swpt_login"]
+	path = submodules/swpt_login
+	url = https://github.com/epandurski/swpt_login.git

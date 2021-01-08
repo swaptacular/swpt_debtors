@@ -53,8 +53,6 @@ case $1 in
         ;;
     develop-run-tasks)
         shift
-        perform_db_upgrade
-        setup_rabbitmq_bindings
         flask signalbus flush -w 0
         exec dramatiq --processes ${DRAMATIQ_PROCESSES-4} --threads ${DRAMATIQ_THREADS-8} "$@"
         ;;
@@ -84,10 +82,6 @@ case $1 in
     tasks)
         shift
         exec dramatiq --processes ${DRAMATIQ_PROCESSES-4} --threads ${DRAMATIQ_THREADS-8} "$@"
-        ;;
-    tasks-gevent)
-        shift
-        exec dramatiq-gevent --processes ${DRAMATIQ_PROCESSES-4} --threads ${DRAMATIQ_THREADS-8} "$@"
         ;;
     *)
         exec "$@"

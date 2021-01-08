@@ -6,10 +6,8 @@ DEBTOR_ID = {
     'required': True,
     'description': "The debtor's ID",
     'schema': {
-        'type': 'integer',
-        'format': 'uint64',
-        'minimum': 0,
-        'maximum': (1 << 64) - 1,
+        'type': 'string',
+        'pattern': '^[0-9A-Za-z_=-]{1,64}$',
     },
 }
 
@@ -68,6 +66,11 @@ DEBTOR_DOES_NOT_EXIST = {
 DEBTOR_EXISTS = {
     "description": "The debtor has been found.",
     'headers': LOCATION_HEADER,
+}
+
+UPDATE_CONFLICT = {
+    'description': 'Conflicting update attempts.',
+    'content': ERROR_CONTENT,
 }
 
 CONFLICTING_DEBTOR = {
@@ -174,7 +177,7 @@ DEBTOR_LINKS_EXAMPLE = {
     'uri': '/debtors/2/enumerate',
     'type': 'ObjectReferencesPage',
     'items': [
-        {'uri': '/debtors/2/'},
+        {'uri': '/debtors/1/'},
         {'uri': '/debtors/5/'},
         {'uri': '/debtors/11/'},
     ],
