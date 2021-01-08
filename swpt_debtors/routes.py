@@ -299,15 +299,11 @@ class RedirectToDebtorEndpoint(MethodView):
 @debtors_api.route('/<i64:debtorId>/', parameters=[specs.DEBTOR_ID])
 class DebtorEndpoint(MethodView):
     @debtors_api.response(DebtorSchema(context=context))
-    @debtors_api.doc(operationId='getDebtor')
+    @debtors_api.doc(operationId='getDebtor', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
         """Return debtor."""
 
-        debtor = procedures.get_active_debtor(debtorId)
-        if not debtor:
-            abort(403)
-
-        return debtor, {'Cache-Control': 'max-age=86400'}
+        return procedures.get_active_debtor(debtorId) or abort(403)
 
 
 @debtors_api.route('/<i64:debtorId>/config', parameters=[specs.DEBTOR_ID])

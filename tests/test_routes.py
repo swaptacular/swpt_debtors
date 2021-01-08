@@ -131,7 +131,6 @@ def test_create_debtor(client):
 
     r = client.get('/debtors/8589934591/')
     assert r.status_code == 200
-    assert 'max-age' in r.headers['Cache-Control']
 
     r = client.post('/debtors/8589934591/deactivate', headers={'X-Swpt-User-Id': 'debtors:8589934591'}, json={})
     assert r.status_code == 403
