@@ -1,11 +1,11 @@
 import iso8601
-from swpt_debtors.extensions import broker, APP_QUEUE_NAME
+from swpt_debtors.extensions import protocol_broker, APP_QUEUE_NAME
 from swpt_debtors import procedures
 from swpt_debtors.models import CT_ISSUING, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, \
     CONFIG_DATA_MAX_BYTES, TRANSFER_NOTE_MAX_BYTES
 
 
-@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+@protocol_broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_rejected_config_signal(
         debtor_id: int,
         creditor_id: int,
@@ -33,7 +33,7 @@ def on_rejected_config_signal(
     )
 
 
-@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+@protocol_broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_account_update_signal(
         debtor_id: int,
         creditor_id: int,
@@ -84,7 +84,7 @@ def on_account_update_signal(
     )
 
 
-@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+@protocol_broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_account_purge_signal(
         debtor_id: int,
         creditor_id: int,
@@ -98,7 +98,7 @@ def on_account_purge_signal(
     )
 
 
-@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+@protocol_broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_prepared_issuing_transfer_signal(
         debtor_id: int,
         creditor_id: int,
@@ -123,7 +123,7 @@ def on_prepared_issuing_transfer_signal(
     )
 
 
-@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+@protocol_broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_rejected_issuing_transfer_signal(
         coordinator_type: str,
         coordinator_id: int,
@@ -148,7 +148,7 @@ def on_rejected_issuing_transfer_signal(
     )
 
 
-@broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
+@protocol_broker.actor(queue_name=APP_QUEUE_NAME, event_subscription=True)
 def on_finalized_issuing_transfer_signal(
         debtor_id: int,
         creditor_id: int,

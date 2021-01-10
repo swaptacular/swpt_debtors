@@ -150,9 +150,9 @@ services:
       - 'GUNICORN_LOGLEVEL=warning'
       - 'GUNICORN_WORKERS=2'
       - 'GUNICORN_THREADS=1'
-      - 'DRAMATIQ_BROKER_URL=amqp://guest:guest@localhost:5672'
-      - 'DRAMATIQ_PROCESSES=4'
-      - 'DRAMATIQ_THREADS=8'
+      - 'PROTOCOL_BROKER_URL=amqp://guest:guest@localhost:5672'
+      - 'PROTOCOL_PROCESSES=4'
+      - 'PROTOCOL_THREADS=8'
     depends_on:
       - pg
 
@@ -164,7 +164,7 @@ services:
       target: app-image
     environment:
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors:swpt_debtors@pg:5432/${POSTGRES_DB}'
-      - 'DRAMATIQ_BROKER_URL=amqp://guest:guest@localhost:5672'
+      - 'PROTOCOL_BROKER_URL=amqp://guest:guest@localhost:5672'
       - 'MIN_DEBTOR_ID=4294967296'
       - 'MAX_DEBTOR_ID=8589934591'
     command: configure

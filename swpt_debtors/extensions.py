@@ -30,6 +30,6 @@ class EventSubscriptionMiddleware(Middleware):
 
 db = CustomAlchemy()
 migrate = Migrate()
-broker = RabbitmqBroker(confirm_delivery=True)
-broker.add_middleware(EventSubscriptionMiddleware())
+protocol_broker = RabbitmqBroker(config_prefix='PROTOCOL_BROKER', confirm_delivery=True)
+protocol_broker.add_middleware(EventSubscriptionMiddleware())
 api = Api()

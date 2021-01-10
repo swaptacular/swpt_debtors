@@ -51,10 +51,10 @@ case $1 in
         shift
         exec flask run --host=0.0.0.0 --port $PORT --without-threads "$@"
         ;;
-    develop-run-tasks)
+    develop-run-protocol)
         shift
         flask signalbus flush -w 0
-        exec dramatiq --processes ${DRAMATIQ_PROCESSES-4} --threads ${DRAMATIQ_THREADS-8} "$@"
+        exec dramatiq --processes ${PROTOCOL_PROCESSES-4} --threads ${PROTOCOL_THREADS-8} "$@"
         ;;
     test)
         perform_db_upgrade
@@ -79,9 +79,8 @@ case $1 in
                  > "$APP_ROOT_DIR/oathkeeper/rules.json"
         exec oathkeeper serve --config="$APP_ROOT_DIR/oathkeeper/config.yaml"
         ;;
-    tasks)
-        shift
-        exec dramatiq --processes ${DRAMATIQ_PROCESSES-4} --threads ${DRAMATIQ_THREADS-8} "$@"
+    protocol)
+        exec dramatiq --processes ${PROTOCOL_PROCESSES-4} --threads ${PROTOCOL_THREADS-8} tasks:protocol_broker
         ;;
     *)
         exec "$@"
