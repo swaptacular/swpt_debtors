@@ -1,4 +1,3 @@
-import iso8601
 import pytest
 from datetime import datetime
 from marshmallow import ValidationError
@@ -20,7 +19,7 @@ def test_serialize_debtor_schema(db_session):
     obj = s.dump(debtor)
     assert obj['uri'] == '/debtors/1/'
     assert obj['type'] == 'Debtor'
-    assert iso8601.parse_date(obj['createdAt'])
+    assert datetime.fromisoformat(obj['createdAt'])
     assert obj['balance'] == 0
     assert obj['interestRate'] == 0.0
     assert obj['transfersList'] == {'uri': '/debtors/1/transfers/'}
@@ -157,7 +156,7 @@ def test_serialize_transfer(app):
 
     it.finalized_at = None
     data = ts.dump(it)
-    assert iso8601.parse_date(data.pop('checkupAt'))
+    assert datetime.fromisoformat(data.pop('checkupAt'))
     assert data == {
         "type": "Transfer",
         "uri": "/debtors/18446744073709551615/transfers/123e4567-e89b-12d3-a456-426655440000",

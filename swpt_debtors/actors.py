@@ -1,4 +1,4 @@
-import iso8601
+from datetime import datetime, date
 from swpt_debtors.extensions import protocol_broker, APP_QUEUE_NAME
 from swpt_debtors import procedures
 from swpt_debtors.models import CT_ISSUING, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, \
@@ -24,7 +24,7 @@ def on_rejected_config_signal(
     procedures.process_rejected_config_signal(
         debtor_id=debtor_id,
         creditor_id=creditor_id,
-        config_ts=iso8601.parse_date(config_ts),
+        config_ts=datetime.fromisoformat(config_ts),
         config_seqnum=config_seqnum,
         negligible_amount=negligible_amount,
         config_data=config_data,
@@ -67,19 +67,19 @@ def on_account_update_signal(
     procedures.process_account_update_signal(
         debtor_id=debtor_id,
         creditor_id=creditor_id,
-        creation_date=iso8601.parse_date(creation_date).date(),
-        last_change_ts=iso8601.parse_date(last_change_ts),
+        creation_date=date.fromisoformat(creation_date),
+        last_change_ts=datetime.fromisoformat(last_change_ts),
         last_change_seqnum=last_change_seqnum,
         principal=principal,
         interest_rate=interest_rate,
-        last_config_ts=iso8601.parse_date(last_config_ts),
+        last_config_ts=datetime.fromisoformat(last_config_ts),
         last_config_seqnum=last_config_seqnum,
         negligible_amount=negligible_amount,
         config_data=config_data,
         config_flags=config_flags,
         account_id=account_id,
         transfer_note_max_bytes=transfer_note_max_bytes,
-        ts=iso8601.parse_date(ts),
+        ts=datetime.fromisoformat(ts),
         ttl=ttl,
     )
 
@@ -94,7 +94,7 @@ def on_account_purge_signal(
     procedures.process_account_purge_signal(
         debtor_id=debtor_id,
         creditor_id=creditor_id,
-        creation_date=iso8601.parse_date(creation_date).date(),
+        creation_date=date.fromisoformat(creation_date),
     )
 
 

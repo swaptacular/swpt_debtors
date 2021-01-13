@@ -1,6 +1,6 @@
+from datetime import datetime
 from urllib.parse import urljoin, urlparse
 import pytest
-import iso8601
 from swpt_debtors import procedures as p
 from swpt_debtors import models as m
 
@@ -49,8 +49,8 @@ def test_auto_genereate_debtor_id(client):
     assert data['type'] == 'DebtorReservation'
     assert isinstance(data['debtorId'], str)
     assert isinstance(data['reservationId'], int)
-    assert iso8601.parse_date(data['validUntil'])
-    assert iso8601.parse_date(data['createdAt'])
+    assert datetime.fromisoformat(data['validUntil'])
+    assert datetime.fromisoformat(data['createdAt'])
 
 
 def test_create_debtor(client):
@@ -69,8 +69,8 @@ def test_create_debtor(client):
     assert data['type'] == 'DebtorReservation'
     assert data['debtorId'] == '4294967296'
     assert isinstance(data['reservationId'], int)
-    assert iso8601.parse_date(data['validUntil'])
-    assert iso8601.parse_date(data['createdAt'])
+    assert datetime.fromisoformat(data['validUntil'])
+    assert datetime.fromisoformat(data['createdAt'])
     reservation_id = data['reservationId']
 
     r = client.post('/debtors/4294967296/reserve', json={})
@@ -96,7 +96,7 @@ def test_create_debtor(client):
     assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:4294967296'}
     assert data['transfersList'] == {'uri': '/debtors/4294967296/transfers/'}
     assert data['createTransfer'] == {'uri': '/debtors/4294967296/transfers/'}
-    assert iso8601.parse_date(data['createdAt'])
+    assert datetime.fromisoformat(data['createdAt'])
 
     r = client.post('/debtors/4294967296/activate', json={
         'reservationId': reservation_id,
@@ -115,7 +115,7 @@ def test_create_debtor(client):
     assert data['type'] == 'Debtor'
     assert data['uri'] == '/debtors/8589934591/'
     assert data['balance'] == 0
-    assert iso8601.parse_date(data['createdAt'])
+    assert datetime.fromisoformat(data['createdAt'])
     assert 'info' not in data
 
     r = client.post('/debtors/8589934591/activate', json={})
@@ -127,7 +127,7 @@ def test_create_debtor(client):
     assert data['type'] == 'Debtor'
     assert data['uri'] == '/debtors/4294967296/'
     assert data['balance'] == 0
-    assert iso8601.parse_date(data['createdAt'])
+    assert datetime.fromisoformat(data['createdAt'])
 
     r = client.get('/debtors/8589934591/')
     assert r.status_code == 200
@@ -196,7 +196,7 @@ def test_get_debtor(client, debtor):
     assert data['createTransfer'] == {'uri': '/debtors/123/transfers/'}
     assert data['interestRate'] == 0.0
     assert data['balance'] == 0
-    assert iso8601.parse_date(data['createdAt'])
+    assert datetime.fromisoformat(data['createdAt'])
     assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:123'}
     assert data['noteMaxBytes'] == 0
     assert 'configError' not in data
@@ -212,7 +212,7 @@ def test_change_debtor_config(client, debtor):
     assert data['configData'] == ''
     assert data['latestUpdateId'] == 1
     latest_update_at = data['latestUpdateAt']
-    assert iso8601.parse_date(latest_update_at)
+    assert datetime.fromisoformat(latest_update_at)
     assert data['debtor'] == {'uri': '/debtors/123/'}
 
     request = {
@@ -229,7 +229,7 @@ def test_change_debtor_config(client, debtor):
     assert data['uri'] == '/debtors/123/config'
     assert data['configData'] == 'TEST'
     assert data['latestUpdateId'] == 2
-    assert iso8601.parse_date(data['latestUpdateAt'])
+    assert datetime.fromisoformat(data['latestUpdateAt'])
     assert latest_update_at != data['latestUpdateAt']
     assert data['debtor'] == {'uri': '/debtors/123/'}
 
@@ -274,7 +274,7 @@ def test_initiate_running_transfer(client, debtor):
     assert r.status_code == 201
     data = r.get_json()
     assert data['amount'] == 1000
-    assert iso8601.parse_date(data['initiatedAt'])
+    assert datetime.fromisoformat(data['initiatedAt'])
     assert 'result' not in data
     assert data['recipient'] == {'type': 'AccountIdentity', 'uri': 'swpt:123/1111'}
     assert data['type'] == 'Transfer'
