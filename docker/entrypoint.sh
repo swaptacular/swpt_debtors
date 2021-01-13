@@ -54,7 +54,7 @@ case $1 in
     develop-run-protocol)
         shift
         flask signalbus flush -w 0
-        exec dramatiq --processes ${PROTOCOL_PROCESSES-4} --threads ${PROTOCOL_THREADS-8} "$@"
+        exec dramatiq --processes ${PROTOCOL_PROCESSES-1} --threads ${PROTOCOL_THREADS-3} "$@"
         ;;
     test)
         perform_db_upgrade
@@ -80,7 +80,7 @@ case $1 in
         exec oathkeeper serve --config="$APP_ROOT_DIR/oathkeeper/config.yaml"
         ;;
     protocol)
-        exec dramatiq --processes ${PROTOCOL_PROCESSES-4} --threads ${PROTOCOL_THREADS-8} tasks:protocol_broker
+        exec dramatiq --processes ${PROTOCOL_PROCESSES-1} --threads ${PROTOCOL_THREADS-3} tasks:protocol_broker
         ;;
     *)
         exec "$@"

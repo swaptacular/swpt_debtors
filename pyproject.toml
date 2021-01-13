@@ -7,15 +7,13 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-pudb = "*"
-web-pdb = "*"
 gunicorn = "*"
 python-json-logger = "^0.1.11"
 flask-migrate = "^2.4"
 flask_signalbus = "^0.5.4"
 flask_melodramatiq = "^0.3.4"
 psycopg2-binary = "^2.8"
-dramatiq = {git = "https://github.com/epandurski/dramatiq.git", extras = ["rabbitmq", "watch"], branch = "set-queue-name-if-missing"}
+dramatiq = {git = "https://github.com/epandurski/dramatiq.git", extras = ["rabbitmq"], branch = "set-queue-name-if-missing"}
 pytest = "^4.0"
 pytest-mock = "^1.10"
 iso8601 = "^0.1.12"
@@ -23,6 +21,8 @@ flask-smorest = "^0.25.0"
 swpt_lib = {git = "https://github.com/epandurski/swpt_lib.git"}
 
 [tool.poetry.dev-dependencies]
+pudb = "*"
+web-pdb = "*"
 python-dotenv = ">=0.10.1"
 flake8 = "^3.7"
 pytest-pudb = "^0.7.0"

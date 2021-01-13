@@ -108,8 +108,8 @@ services:
       - 'MAIL_PORT=1025'
       - 'MAIL_DEFAULT_SENDER=Swaptacular <no-reply@example.com>'
       - 'GUNICORN_LOGLEVEL=warning'
-      - 'GUNICORN_WORKERS=2'
-      - 'GUNICORN_THREADS=1'
+      - 'GUNICORN_WORKERS=1'
+      - 'GUNICORN_THREADS=3'
       - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
       - 'SUPERVISOR_CLIENT_SECRET=debtors-supervisor'
       - 'API_AUTH2_TOKEN_URL=http://hydra:4444/oauth2/token'
@@ -148,11 +148,11 @@ services:
       - 'OAUTH2_INTROSPECT_URL=http://hydra:4445/oauth2/introspect'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors:swpt_debtors@pg:5432/${POSTGRES_DB}'
       - 'GUNICORN_LOGLEVEL=warning'
-      - 'GUNICORN_WORKERS=2'
-      - 'GUNICORN_THREADS=1'
+      - 'GUNICORN_WORKERS=1'
+      - 'GUNICORN_THREADS=3'
       - 'PROTOCOL_BROKER_URL=amqp://guest:guest@localhost:5672'
-      - 'PROTOCOL_PROCESSES=4'
-      - 'PROTOCOL_THREADS=8'
+      - 'PROTOCOL_PROCESSES=1'
+      - 'PROTOCOL_THREADS=3'
     depends_on:
       - pg
 

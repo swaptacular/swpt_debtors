@@ -47,9 +47,9 @@ How to setup a development environment
      $ poetry install
 
 4. You can use ``flask run -p 5000`` to run a local web server,
-   ``dramatiq --watch . tasks:protocol_broker`` to spawn local task
-   workers, and ``pytest --cov=swpt_debtors --cov-report=html`` to run
-   the tests and generate a test coverage report.
+   ``dramatiq tasks:protocol_broker`` to spawn local task workers, and
+   ``pytest --cov=swpt_debtors --cov-report=html`` to run the tests
+   and generate a test coverage report.
 
 
 How to run all services (production-like)
