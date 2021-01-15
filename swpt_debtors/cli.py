@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 import sys
 import click
@@ -28,9 +29,10 @@ def subscribe(queue_name):  # pragma: no cover
     from .extensions import protocol_broker, MAIN_EXCHANGE_NAME
     from . import actors  # noqa
 
+    logger = logging.getLogger(__name__)
     channel = protocol_broker.channel
     channel.exchange_declare(MAIN_EXCHANGE_NAME)
-    click.echo(f'Declared "{MAIN_EXCHANGE_NAME}" direct exchange.')
+    logger.info(f'Declared "{MAIN_EXCHANGE_NAME}" direct exchange.')
 
     if environ.get('APP_USE_LOAD_BALANCING_EXCHANGE', '') not in ['', 'False']:
         bind = channel.exchange_bind
@@ -39,17 +41,17 @@ def subscribe(queue_name):  # pragma: no cover
         bind = channel.queue_bind
         unbind = channel.queue_unbind
     bind(queue_name, MAIN_EXCHANGE_NAME, queue_name)
-    click.echo(f'Subscribed "{queue_name}" to "{MAIN_EXCHANGE_NAME}.{queue_name}".')
+    logger.info(f'Subscribed "{queue_name}" to "{MAIN_EXCHANGE_NAME}.{queue_name}".')
 
     for actor in [protocol_broker.get_actor(actor_name) for actor_name in protocol_broker.get_declared_actors()]:
         if 'event_subscription' in actor.options:
             routing_key = f'events.{actor.actor_name}'
             if actor.options['event_subscription']:
                 bind(queue_name, MAIN_EXCHANGE_NAME, routing_key)
-                click.echo(f'Subscribed "{queue_name}" to "{MAIN_EXCHANGE_NAME}.{routing_key}".')
+                logger.info(f'Subscribed "{queue_name}" to "{MAIN_EXCHANGE_NAME}.{routing_key}".')
             else:
                 unbind(queue_name, MAIN_EXCHANGE_NAME, routing_key)
-                click.echo(f'Unsubscribed "{queue_name}" from "{MAIN_EXCHANGE_NAME}.{routing_key}".')
+                logger.info(f'Unsubscribed "{queue_name}" from "{MAIN_EXCHANGE_NAME}.{routing_key}".')
 
 
 @swpt_debtors.command('configure_interval')
@@ -96,7 +98,8 @@ def scan_debtors(days, quit_early):
 
     """
 
-    click.echo('Scanning debtors...')
+    logger = logging.getLogger(__name__)
+    logger.info('Started debtors scanner.')
     days = days or current_app.config['APP_DEBTORS_SCAN_DAYS']
     assert days > 0.0
     scanner = DebtorScanner()
