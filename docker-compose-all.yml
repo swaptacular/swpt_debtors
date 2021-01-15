@@ -93,6 +93,7 @@ services:
       clients import --fail-after 3m /etc/hydra-config/debtors-supervisor.json /etc/hydra-config/swagger-ui.json
     depends_on:
       - hydra
+    restart: on-failure
 
 
   login:
@@ -101,7 +102,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - 'PORT=8080'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_login:swpt_login@pg/${POSTGRES_DB}'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
       - 'REDIS_URL=redis://redis:6379/0'
       - 'HYDRA_ADMIN_URL=http://hydra:4445'
       - 'MAIL_SERVER=mail'
@@ -131,7 +132,7 @@ services:
       context: ./submodules/swpt_login
       dockerfile: Dockerfile
     environment:
-      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_login:swpt_login@pg/${POSTGRES_DB}'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
     command: configure
     depends_on:
       - pg
