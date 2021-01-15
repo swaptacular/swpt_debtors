@@ -11,6 +11,7 @@ services:
     volumes:
       - pg-data-volume:/var/lib/postgresql/data
       - ./docker/pg/create-users.sql:/docker-entrypoint-initdb.d/create-users.sql
+    command: -c log_min_messages=FATAL
 
 
   redis:
@@ -34,6 +35,7 @@ services:
     ports:
       - $DEBTORS_PORT:$DEBTORS_PORT
     environment:
+      - 'NGINX_ENTRYPOINT_QUIET_LOGS=1'
       - 'USER_FACING_HOSTNAME=$DEBTORS_HOSTNAME'
       - 'USER_FACING_PORT=$DEBTORS_PORT'
       - 'HYDRA_URL=http://hydra:4444'
@@ -65,7 +67,7 @@ services:
       - 'URLS_LOGIN=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/login'
       - 'URLS_CONSENT=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/consent'
       - 'LOG_LEVEL=warn'
-      - 'LOG_FORMAT=json'
+      - 'LOG_FORMAT=text'
       - 'LOG_LEAK_SENSITIVE_VALUES=false'
       - 'OAUTH2_EXPOSE_INTERNAL_ERRORS=true'
       - 'SQA_OPT_OUT=true'

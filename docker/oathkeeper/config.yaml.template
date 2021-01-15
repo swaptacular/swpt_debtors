@@ -4,6 +4,9 @@ serve:
   api:
     port: 4456
 
+log:
+  level: error
+
 access_rules:
   matching_strategy: regexp
   repositories:
@@ -30,11 +33,11 @@ authenticators:
     config:
       introspection_url: $OAUTH2_INTROSPECT_URL
       scope_strategy: hierarchic
+      cache:
+        enabled: true
+        ttl: 1800s
       # introspection_request_headers:
       #   x-forwarded-proto: https
-      # cache:
-      #   enabled: true
-      #   ttl: 60s
 
 authorizers:
   allow:
