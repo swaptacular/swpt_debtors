@@ -22,7 +22,7 @@ perform_db_upgrade() {
     echo -n 'Running database schema upgrade ...'
     while [[ $retry_after -lt $time_limit ]]; do
         if flask db upgrade 2>$error_file; then
-            perform_initializations
+            perform_db_initialization
             echo ' done.'
             return 0
         fi
@@ -39,10 +39,10 @@ setup_rabbitmq_bindings() {
     return 0
 }
 
-# This function is intended to perform additional one-time
-# initializations. Make sure that it is idempotent.
+# This function is intended to perform additional one-time database
+# initialization. Make sure that it is idempotent.
 # (https://en.wikipedia.org/wiki/Idempotence)
-perform_initializations() {
+perform_db_initialization() {
     flask swpt_debtors configure_interval -- $MIN_DEBTOR_ID $MAX_DEBTOR_ID
 }
 
