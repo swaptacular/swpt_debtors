@@ -54,7 +54,8 @@ WORKDIR /usr/src/app
 
 COPY docker/entrypoint.sh \
      docker/gunicorn.conf.py \
-     docker/supervisord.conf \
+     docker/supervisord-webserver.conf \
+     docker/supervisord-all.conf \
      docker/trigger_supervisor_process.py \
      wsgi.py \
      tasks.py \
