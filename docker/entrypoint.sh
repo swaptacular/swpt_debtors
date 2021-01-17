@@ -81,7 +81,7 @@ case $1 in
     scan_debtors | configure_interval)
         exec flask swpt_debtors "$@"
         ;;
-    supervisord)
+    all)
         configure_web_server
         exec supervisord -c "$APP_ROOT_DIR/supervisord-all.conf"
         ;;
