@@ -29,6 +29,7 @@ class EventSubscriptionMiddleware(Middleware):
 
 
 db = CustomAlchemy()
+db.signalbus.autoflush = False
 migrate = Migrate()
 protocol_broker = RabbitmqBroker(config_prefix='PROTOCOL_BROKER', confirm_delivery=True)
 protocol_broker.add_middleware(EventSubscriptionMiddleware())
