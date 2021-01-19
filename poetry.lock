@@ -3,12 +3,12 @@ category = "main"
 description = "A database migration tool for SQLAlchemy."
 name = "alembic"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.4.3"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
+version = "1.5.1"
 
 [package.dependencies]
 Mako = "*"
-SQLAlchemy = ">=1.1.0"
+SQLAlchemy = ">=1.3.0"
 python-dateutil = "*"
 python-editor = ">=0.3"
 
@@ -110,8 +110,8 @@ optional = true
 version = ">=1.0,<2.0"
 
 [package.extras]
-all = ["watchdog (>=0.8,<0.9)", "pylibmc (>=1.5,<2.0)", "watchdog_gevent (0.1)", "redis (>=2.0,<4.0)", "pika (>=1.0,<2.0)"]
-dev = ["watchdog (>=0.8,<0.9)", "pylibmc (>=1.5,<2.0)", "watchdog_gevent (0.1)", "redis (>=2.0,<4.0)", "pika (>=1.0,<2.0)", "alabaster", "sphinx (<1.8)", "sphinxcontrib-napoleon", "flake8", "flake8-bugbear", "flake8-quotes", "isort", "bumpversion", "hiredis", "twine", "wheel", "pytest (<4)", "pytest-benchmark", "pytest-cov", "tox"]
+all = ["pika (>=1.0,<2.0)", "pylibmc (>=1.5,<2.0)", "watchdog_gevent (0.1)", "redis (>=2.0,<4.0)", "watchdog (>=0.8,<0.9)"]
+dev = ["pika (>=1.0,<2.0)", "pylibmc (>=1.5,<2.0)", "watchdog_gevent (0.1)", "redis (>=2.0,<4.0)", "watchdog (>=0.8,<0.9)", "alabaster", "sphinx (<1.8)", "sphinxcontrib-napoleon", "flake8", "flake8-bugbear", "flake8-quotes", "isort", "bumpversion", "hiredis", "twine", "wheel", "pytest (<4)", "pytest-benchmark", "pytest-cov", "tox"]
 memcached = ["pylibmc (>=1.5,<2.0)"]
 rabbitmq = ["pika (>=1.0,<2.0)"]
 redis = ["redis (>=2.0,<4.0)"]
@@ -175,7 +175,7 @@ description = "SQLAlchemy database migrations for Flask applications using Alemb
 name = "flask-migrate"
 optional = false
 python-versions = "*"
-version = "2.5.3"
+version = "2.6.0"
 
 [package.dependencies]
 Flask = ">=0.9"
@@ -188,7 +188,7 @@ description = "A Flask-SQLAlchemy extension for atomically sending messages (sig
 name = "flask-signalbus"
 optional = false
 python-versions = "*"
-version = "0.5.4"
+version = "0.5.6"
 
 [package.dependencies]
 Flask-SQLAlchemy = ">=1.0"
@@ -200,13 +200,13 @@ description = "Flask/Marshmallow-based REST API framework"
 name = "flask-smorest"
 optional = false
 python-versions = ">=3.6"
-version = "0.25.1"
+version = "0.27.0"
 
 [package.dependencies]
 apispec = ">=4.0.0,<5"
 flask = ">=1.1.0,<2"
-marshmallow = ">=3.0.0,<4"
-webargs = ">=6.0.0,<7"
+marshmallow = ">=3.10.0,<4"
+webargs = ">=7.0.0,<8"
 werkzeug = ">=0.15,<2"
 
 [[package]]
@@ -286,7 +286,7 @@ description = "A super-fast templating language that borrows the  best ideas fro
 name = "mako"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.1.3"
+version = "1.1.4"
 
 [package.dependencies]
 MarkupSafe = ">=0.9.2"
@@ -524,10 +524,10 @@ description = "Pytest plugin for measuring coverage."
 name = "pytest-cov"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-version = "2.10.1"
+version = "2.11.0"
 
 [package.dependencies]
-coverage = ">=4.4"
+coverage = ">=5.2.1"
 pytest = ">=4.6"
 
 [package.extras]
@@ -653,7 +653,7 @@ flask = "^1.1"
 sqlalchemy = "^1.3"
 
 [package.source]
-reference = "ffeee15b3fd78179f10834956672efcfac04e667"
+reference = "156c6b0b5134944ca3ff857ddf22445be39b7483"
 type = "git"
 url = "https://github.com/epandurski/swpt_lib.git"
 [[package]]
@@ -702,21 +702,21 @@ bottle = "0.12.15"
 
 [[package]]
 category = "main"
-description = "Declarative parsing and validation of HTTP request objects, with built-in support for popular web frameworks, including Flask, Django, Bottle, Tornado, Pyramid, webapp2, Falcon, and aiohttp."
+description = "Declarative parsing and validation of HTTP request objects, with built-in support for popular web frameworks, including Flask, Django, Bottle, Tornado, Pyramid, Falcon, and aiohttp."
 name = "webargs"
 optional = false
-python-versions = ">=3.5"
-version = "6.1.1"
+python-versions = ">=3.6"
+version = "7.0.1"
 
 [package.dependencies]
-marshmallow = ">=2.15.2"
+marshmallow = ">=3.0.0"
 
 [package.extras]
-dev = ["pytest", "webtest (2.0.35)", "webtest-aiohttp (2.0.0)", "pytest-aiohttp (>=0.3.0)", "Flask (>=0.12.2)", "Django (>=1.11.16)", "bottle (>=0.12.13)", "tornado (>=4.5.2)", "pyramid (>=1.9.1)", "webapp2 (>=3.0.0b1)", "falcon (>=2.0.0)", "aiohttp (>=3.0.0)", "mypy (0.782)", "flake8 (3.8.3)", "flake8-bugbear (20.1.4)", "pre-commit (>=2.4,<3.0)", "tox", "mock"]
-docs = ["Sphinx (3.2.1)", "sphinx-issues (1.2.0)", "sphinx-typlog-theme (0.8.0)", "Flask (>=0.12.2)", "Django (>=1.11.16)", "bottle (>=0.12.13)", "tornado (>=4.5.2)", "pyramid (>=1.9.1)", "webapp2 (>=3.0.0b1)", "falcon (>=2.0.0)", "aiohttp (>=3.0.0)"]
-frameworks = ["Flask (>=0.12.2)", "Django (>=1.11.16)", "bottle (>=0.12.13)", "tornado (>=4.5.2)", "pyramid (>=1.9.1)", "webapp2 (>=3.0.0b1)", "falcon (>=2.0.0)", "aiohttp (>=3.0.0)"]
-lint = ["mypy (0.782)", "flake8 (3.8.3)", "flake8-bugbear (20.1.4)", "pre-commit (>=2.4,<3.0)"]
-tests = ["pytest", "webtest (2.0.35)", "webtest-aiohttp (2.0.0)", "pytest-aiohttp (>=0.3.0)", "Flask (>=0.12.2)", "Django (>=1.11.16)", "bottle (>=0.12.13)", "tornado (>=4.5.2)", "pyramid (>=1.9.1)", "webapp2 (>=3.0.0b1)", "falcon (>=2.0.0)", "aiohttp (>=3.0.0)", "mock"]
+dev = ["pytest", "webtest (2.0.35)", "webtest-aiohttp (2.0.0)", "pytest-aiohttp (>=0.3.0)", "Flask (>=0.12.5)", "Django (>=2.2.0)", "bottle (>=0.12.13)", "tornado (>=4.5.2)", "pyramid (>=1.9.1)", "falcon (>=2.0.0)", "aiohttp (>=3.0.8)", "mypy (0.790)", "flake8 (3.8.4)", "flake8-bugbear (20.11.1)", "pre-commit (>=2.4,<3.0)", "tox"]
+docs = ["Sphinx (3.3.1)", "sphinx-issues (1.2.0)", "sphinx-typlog-theme (0.8.0)", "Flask (>=0.12.5)", "Django (>=2.2.0)", "bottle (>=0.12.13)", "tornado (>=4.5.2)", "pyramid (>=1.9.1)", "falcon (>=2.0.0)", "aiohttp (>=3.0.8)"]
+frameworks = ["Flask (>=0.12.5)", "Django (>=2.2.0)", "bottle (>=0.12.13)", "tornado (>=4.5.2)", "pyramid (>=1.9.1)", "falcon (>=2.0.0)", "aiohttp (>=3.0.8)"]
+lint = ["mypy (0.790)", "flake8 (3.8.4)", "flake8-bugbear (20.11.1)", "pre-commit (>=2.4,<3.0)"]
+tests = ["pytest", "webtest (2.0.35)", "webtest-aiohttp (2.0.0)", "pytest-aiohttp (>=0.3.0)", "Flask (>=0.12.5)", "Django (>=2.2.0)", "bottle (>=0.12.13)", "tornado (>=4.5.2)", "pyramid (>=1.9.1)", "falcon (>=2.0.0)", "aiohttp (>=3.0.8)"]
 
 [[package]]
 category = "main"
@@ -744,14 +744,14 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["pytest (>=3.5,<3.7.3 || >3.7.3)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pytest-cov", "jaraco.test (>=3.2.0)", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy"]
 
 [metadata]
-content-hash = "d02bdd1af86451834a93e51b29ace33b9937bbd00ca1e5b2e338a3008c87da03"
+content-hash = "67a60e52ed427cafd128c581cb967dcee6d1225e3de0b66f9cb821653024b702"
 lock-version = "1.0"
 python-versions = "^3.7"
 
 [metadata.files]
 alembic = [
-    {file = "alembic-1.4.3-py2.py3-none-any.whl", hash = "sha256:4e02ed2aa796bd179965041afa092c55b51fb077de19d61835673cc80672c01c"},
-    {file = "alembic-1.4.3.tar.gz", hash = "sha256:5334f32314fb2a56d86b4c4dd1ae34b08c03cae4cb888bc699942104d66bc245"},
+    {file = "alembic-1.5.1-py2.py3-none-any.whl", hash = "sha256:944f8d541d204f3ae22de17ebcfdd0da9539074f1d2fee4eb42735039b3072d8"},
+    {file = "alembic-1.5.1.tar.gz", hash = "sha256:52d1d48109f17959982779e3c4b5cdeca701e449897bacb75bab173bd6ba984e"},
 ]
 apispec = [
     {file = "apispec-4.0.0-py2.py3-none-any.whl", hash = "sha256:20d271f7c8d130719be223fdb122af391ff8d59fb24958c793f632305b87f8ed"},
@@ -845,15 +845,15 @@ flask-melodramatiq = [
     {file = "Flask-Melodramatiq-0.3.8.tar.gz", hash = "sha256:340e8733d5511ecf0d3019c4913eef1d27cffd929ff34e106fa837f9942a8581"},
 ]
 flask-migrate = [
-    {file = "Flask-Migrate-2.5.3.tar.gz", hash = "sha256:a69d508c2e09d289f6e55a417b3b8c7bfe70e640f53d2d9deb0d056a384f37ee"},
-    {file = "Flask_Migrate-2.5.3-py2.py3-none-any.whl", hash = "sha256:4dc4a5cce8cbbb06b8dc963fd86cf8136bd7d875aabe2d840302ea739b243732"},
+    {file = "Flask-Migrate-2.6.0.tar.gz", hash = "sha256:8626af845e6071ef80c70b0dc16d373f761c981f0ad61bb143a529cab649e725"},
+    {file = "Flask_Migrate-2.6.0-py2.py3-none-any.whl", hash = "sha256:c1601dfd46b9204233935e5d73473cd7fa959db7a4b0e894c7aa7a9e8aeebf0e"},
 ]
 flask-signalbus = [
-    {file = "Flask-SignalBus-0.5.4.tar.gz", hash = "sha256:09cdf9a44b33659ee7c03143cd5fefb739fdc2c23b46769e206c26193d61aa45"},
+    {file = "Flask-SignalBus-0.5.6.tar.gz", hash = "sha256:6a6ce05d1fe9cc297866dd23bc49cdce32d3430845414b8ba72a76b8c0ac9727"},
 ]
 flask-smorest = [
-    {file = "flask-smorest-0.25.1.tar.gz", hash = "sha256:faafc1997939b5a51e941d42db223962aba22c1ff80ba39466d1f44bcf50c02e"},
-    {file = "flask_smorest-0.25.1-py3-none-any.whl", hash = "sha256:8067ce77dd15f76b3630e4e2fd33ca2b84e2a9239cf78d050b2dea280e4865a0"},
+    {file = "flask-smorest-0.27.0.tar.gz", hash = "sha256:9b49499a50aa65078c8cf38a7ce5ed4b352b4f0a4d04bc0696ce290712d21663"},
+    {file = "flask_smorest-0.27.0-py3-none-any.whl", hash = "sha256:9aa3d355d446de6502e760d2878f63b4f3a860103d6750e471a5d0814e71c84a"},
 ]
 flask-sqlalchemy = [
     {file = "Flask-SQLAlchemy-2.4.4.tar.gz", hash = "sha256:bfc7150eaf809b1c283879302f04c42791136060c6eeb12c0c6674fb1291fae5"},
@@ -876,8 +876,7 @@ jinja2 = [
     {file = "Jinja2-2.11.2.tar.gz", hash = "sha256:89aab215427ef59c34ad58735269eb58b1a5808103067f7bb9d5836c651b3bb0"},
 ]
 mako = [
-    {file = "Mako-1.1.3-py2.py3-none-any.whl", hash = "sha256:93729a258e4ff0747c876bd9e20df1b9758028946e976324ccd2d68245c7b6a9"},
-    {file = "Mako-1.1.3.tar.gz", hash = "sha256:8195c8c1400ceb53496064314c6736719c6f25e7479cd24c77be3d9361cddc27"},
+    {file = "Mako-1.1.4.tar.gz", hash = "sha256:17831f0b7087c313c0ffae2bcbbd3c1d5ba9eeac9c38f2eb7b50e8c99fe9d5ab"},
 ]
 markupsafe = [
     {file = "MarkupSafe-1.1.1-cp27-cp27m-macosx_10_6_intel.whl", hash = "sha256:09027a7803a62ca78792ad89403b1b7a73a01c8cb65909cd876f7fcebd79b161"},
@@ -1024,8 +1023,8 @@ pytest = [
     {file = "pytest-4.6.11.tar.gz", hash = "sha256:50fa82392f2120cc3ec2ca0a75ee615be4c479e66669789771f1758332be4353"},
 ]
 pytest-cov = [
-    {file = "pytest-cov-2.10.1.tar.gz", hash = "sha256:47bd0ce14056fdd79f93e1713f88fad7bdcc583dcd7783da86ef2f085a0bb88e"},
-    {file = "pytest_cov-2.10.1-py2.py3-none-any.whl", hash = "sha256:45ec2d5182f89a81fc3eb29e3d1ed3113b9e9a873bcddb2a71faaab066110191"},
+    {file = "pytest-cov-2.11.0.tar.gz", hash = "sha256:e90e034cde61dacb1394639a33f449725c591025b182d69752c1dd0bfec639a7"},
+    {file = "pytest_cov-2.11.0-py2.py3-none-any.whl", hash = "sha256:626a8a6ab188656c4f84b67d22436d6c494699d917e567e0048dda6e7f59e028"},
 ]
 pytest-dotenv = [
     {file = "pytest-dotenv-0.4.0.tar.gz", hash = "sha256:a3a0adf9e17cf7c9e38ec597a74cc902ac76baa1cc5a9bd7581a3711930ad057"},
@@ -1151,8 +1150,8 @@ web-pdb = [
     {file = "web_pdb-1.5.6-py2.py3-none-any.whl", hash = "sha256:00caf906fc5d730c9bd4d3a219e3cbc5b93e334c4beac28a9617fc82275f5e8b"},
 ]
 webargs = [
-    {file = "webargs-6.1.1-py2.py3-none-any.whl", hash = "sha256:2ead6ce38559152043ab4ada4d389aef6c804b0c169482e7c92b3f498f690b2c"},
-    {file = "webargs-6.1.1.tar.gz", hash = "sha256:412ecadd977afdea0ed6fa5f5b65ddd13a099269e622ec537f9c74c443ce4d0b"},
+    {file = "webargs-7.0.1-py2.py3-none-any.whl", hash = "sha256:ce8c565789ece1584be7edba41617319eb75de59b2987958bee3f3fdb3669e60"},
+    {file = "webargs-7.0.1.tar.gz", hash = "sha256:2f3d883ce9f348fa884889440fcc1b207e7c67b04be5e90be00a5be73e2cd91d"},
 ]
 werkzeug = [
     {file = "Werkzeug-1.0.1-py2.py3-none-any.whl", hash = "sha256:2de2a5db0baeae7b2d2664949077c2ac63fbd16d98da0ff71837f7d1dea3fd43"},
