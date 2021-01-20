@@ -14,6 +14,13 @@ def debtor(db_session):
     return debtor
 
 
+def test_sibnalbus_burst_count(app):
+    from swpt_debtors import models as m
+    assert isinstance(m.ConfigureAccountSignal.signalbus_burst_count, int)
+    assert isinstance(m.PrepareTransferSignal.signalbus_burst_count, int)
+    assert isinstance(m.FinalizeTransferSignal.signalbus_burst_count, int)
+
+
 def test_running_transfer_attrs(debtor, db_session, current_ts):
     debtor_id = debtor.debtor_id
     transfer_uuid = uuid.uuid4()

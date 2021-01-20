@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 from datetime import datetime, timezone
+from flask import current_app
 from marshmallow import Schema, fields
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
@@ -34,6 +35,14 @@ SC_CANCELED_BY_THE_SENDER = 'CANCELED_BY_THE_SENDER'
 
 def get_now_utc():
     return datetime.now(tz=timezone.utc)
+
+
+class classproperty(object):
+    def __init__(self, f):
+        self.f = f
+
+    def __get__(self, obj, owner):
+        return self.f(owner)
 
 
 class Signal(db.Model):
@@ -240,6 +249,10 @@ class ConfigureAccountSignal(Signal):
     config_data = db.Column(db.String, nullable=False)
     config_flags = db.Column(db.Integer, nullable=False)
 
+    @classproperty
+    def signalbus_burst_count(self):
+        return current_app.config['APP_FLUSH_CONFIGURE_ACCOUNTS_BURST_COUNT']
+
 
 class PrepareTransferSignal(Signal):
     queue_name = 'swpt_accounts'
@@ -265,6 +278,10 @@ class PrepareTransferSignal(Signal):
     __table_args__ = (
         db.CheckConstraint(amount >= 0),
     )
+
+    @classproperty
+    def signalbus_burst_count(self):
+        return current_app.config['APP_FLUSH_PREPARE_TRANSFERS_BURST_COUNT']
 
 
 class FinalizeTransferSignal(Signal):
@@ -295,3 +312,7 @@ class FinalizeTransferSignal(Signal):
     __table_args__ = (
         db.CheckConstraint(committed_amount >= 0),
     )
+
+    @classproperty
+    def signalbus_burst_count(self):
+        return current_app.config['APP_FLUSH_FINALIZE_TRANSFERS_BURST_COUNT']
