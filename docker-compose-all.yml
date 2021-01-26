@@ -38,64 +38,14 @@ services:
       - 'NGINX_ENTRYPOINT_QUIET_LOGS=1'
       - 'USER_FACING_HOSTNAME=$DEBTORS_HOSTNAME'
       - 'USER_FACING_PORT=$DEBTORS_PORT'
-      - 'HYDRA_URL=http://hydra:4444'
+      - 'HYDRA_URL=http://login:4444'
       - 'LOGIN_URL=http://login:8080'
       - 'RESOURCE_SERVER_URL=http://resource-server:8080'
       - 'SWAGGER_UI_URL=http://swagger-ui:8080'
     depends_on:
-      - hydra
       - login
       - resource-server
       - swagger-ui
-
-
-  hydra:
-    image: oryd/hydra:$HYDRA_VERSION
-    command:
-      serve all --dangerous-force-http
-    environment:
-      - 'DSN=postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable'
-      - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
-      - 'SERVE_PUBLIC_PORT=4444'
-      - 'SERVE_PUBLIC_CORS_ENABLED=true'
-      - 'SERVE_PUBLIC_CORS_DEBUG=false'
-      - 'SERVE_PUBLIC_CORS_ALLOWED_ORIGINS=*'
-      - 'SERVE_PUBLIC_CORS_ALLOWED_HEADERS=Authorization,Content-Type,X-Requested-With'
-      - 'SERVE_PUBLIC_CORS_MAX_AGE=86400'
-      - 'SERVE_ADMIN_PORT=4445'
-      - 'URLS_SELF_ISSUER=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT'
-      - 'URLS_LOGIN=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/login'
-      - 'URLS_CONSENT=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/consent'
-      - 'LOG_LEVEL=warn'
-      - 'LOG_FORMAT=json'
-      - 'LOG_LEAK_SENSITIVE_VALUES=false'
-      - 'OAUTH2_EXPOSE_INTERNAL_ERRORS=true'
-      - 'SQA_OPT_OUT=true'
-    depends_on:
-      - pg
-    restart: on-failure
-
-
-  hydra-migrate:
-    image: oryd/hydra:$HYDRA_VERSION
-    command:
-      migrate sql postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable --yes
-    depends_on:
-      - pg
-    restart: on-failure
-
-
-  hydra-config:
-    image: oryd/hydra:$HYDRA_VERSION
-    environment:
-      - 'HYDRA_ADMIN_URL=http://hydra:4445'
-    volumes:
-      - './docker/hydra:/etc/hydra-config'
-    command:
-      clients import --fail-after 3m /etc/hydra-config/debtors-supervisor.json /etc/hydra-config/swagger-ui.json
-    depends_on:
-      - hydra
-    restart: on-failure
 
 
   login:
@@ -103,29 +53,43 @@ services:
       context: ./submodules/swpt_login
       dockerfile: Dockerfile
     environment:
-      - 'PORT=8080'
+      - 'SERVE_PUBLIC_PORT=4444'
+      - 'SERVE_ADMIN_PORT=4445'
+      - 'WEBSERVER_PORT=8080'
+      - 'LOGIN_PATH=/login'
+      - 'CONSENT_PATH=/consent'
+      - 'SUBJECT_PREFIX=debtors:'
+      - 'URLS_SELF_ISSUER=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT'
+      - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
+      - 'HYDRA_DSN=postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
       - 'REDIS_URL=redis://redis:6379/0'
-      - 'HYDRA_ADMIN_URL=http://hydra:4445'
+      - 'HYDRA_ADMIN_URL=http://login:4445'
+      - 'SITE_TITLE=Swaptacular'
+      - 'STYLE_URL='
+      - 'ABOUT_URL=https://github.com/epandurski/swpt_login'
+      - 'RECAPTCHA_PUBLIC_KEY=6Lc902MUAAAAAJL22lcbpY3fvg3j4LSERDDQYe37'
+      - 'RECAPTCHA_PIVATE_KEY=6Lc902MUAAAAAN--r4vUr8Vr7MU1PF16D9k2Ds9Q'
       - 'MAIL_SERVER=mail'
       - 'MAIL_PORT=1025'
+      - 'MAIL_USE_TLS=False'
+      - 'MAIL_USE_SSL=False'
+      - 'MAIL_USERNAME=None'
+      - 'MAIL_PASSWORD=None'
       - 'MAIL_DEFAULT_SENDER=Swaptacular <no-reply@example.com>'
-      - 'GUNICORN_LOGLEVEL=warning'
-      - 'GUNICORN_WORKERS=1'
-      - 'GUNICORN_THREADS=3'
-      - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
-      - 'SUPERVISOR_CLIENT_SECRET=debtors-supervisor'
-      - 'API_AUTH2_TOKEN_URL=http://hydra:4444/oauth2/token'
+      - 'API_AUTH2_TOKEN_URL=http://login:4444/oauth2/token'
       - 'API_RESOURCE_SERVER=http://resource-server:8080'
       - 'API_RESERVE_USER_ID_PATH=/debtors/.debtor-reserve'
       - 'API_USER_ID_FIELD_NAME=debtorId'
       - 'API_TIMEOUT_SECONDS=5'
-      - 'SUBJECT_PREFIX=debtors:'
-      - 'OAUTHLIB_INSECURE_TRANSPORT=1'
+      - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
+      - 'SUPERVISOR_CLIENT_SECRET=debtors-supervisor'
+      - 'WEBSERVER_LOGLEVEL=warning'
+      - 'WEBSERVER_WORKERS=1'
+      - 'WEBSERVER_THREADS=3'
     depends_on:
       - pg
       - redis
-      - hydra
       - mail
 
 
@@ -141,6 +105,32 @@ services:
     restart: on-failure
 
 
+  hydra-migrate:
+    build:
+      context: ./submodules/swpt_login
+      dockerfile: Dockerfile
+    command:
+      hydra migrate sql postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable --yes
+    depends_on:
+      - pg
+    restart: on-failure
+
+
+  hydra-config:
+    build:
+      context: ./submodules/swpt_login
+      dockerfile: Dockerfile
+    environment:
+      - 'HYDRA_ADMIN_URL=http://login:4445'
+    volumes:
+      - './docker/hydra:/etc/hydra-config'
+    command:
+      hydra clients import --fail-after 3m /etc/hydra-config/debtors-supervisor.json /etc/hydra-config/swagger-ui.json
+    depends_on:
+      - login
+    restart: on-failure
+
+
   resource-server:
     build:
       context: .
@@ -148,7 +138,7 @@ services:
       target: app-image
     environment:
       - 'PORT=8080'
-      - 'OAUTH2_INTROSPECT_URL=http://hydra:4445/oauth2/introspect'
+      - 'OAUTH2_INTROSPECT_URL=http://login:4445/oauth2/introspect'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors:swpt_debtors@pg:5432/${POSTGRES_DB}'
       - 'WEBSERVER_LOGLEVEL=warning'
       - 'WEBSERVER_WORKERS=1'
@@ -188,7 +178,7 @@ services:
       - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/token'
       - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/swagger-ui/oauth2-redirect.html'
     depends_on:
-      - hydra
+      - login
       - resource-server
 
 
