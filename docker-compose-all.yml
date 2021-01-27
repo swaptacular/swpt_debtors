@@ -60,7 +60,7 @@ services:
       - 'CONSENT_PATH=/consent'
       - 'SUBJECT_PREFIX=debtors:'
       - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
-      - 'SERVE_TLS_ALLOW_TERMINATION_FROM=172.16.0.0/12'
+      - 'SERVE_TLS_ALLOW_TERMINATION_FROM=0.0.0.0/0'
       - 'URLS_SELF_ISSUER=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT'
       - 'URLS_ERROR=https://github.com/epandurski/swpt_login'
       - 'HYDRA_DSN=postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable'
