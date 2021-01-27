@@ -60,6 +60,7 @@ services:
       - 'CONSENT_PATH=/consent'
       - 'SUBJECT_PREFIX=debtors:'
       - 'URLS_SELF_ISSUER=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT'
+      - 'URLS_ERROR=https://github.com/epandurski/swpt_login'
       - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
       - 'HYDRA_DSN=postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
