@@ -120,10 +120,9 @@ services:
       /etc/hydra-config/debtors-supervisor.json
       /etc/hydra-config/swagger-ui.json
       --fake-tls-termination
-      --fail-after 3m
+      --fail-after 5m
     depends_on:
       - login
-    restart: on-failure
 
 
   resource-server:
