@@ -63,7 +63,7 @@ services:
       - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
       - 'HYDRA_DSN=postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
-      - 'REDIS_URL=redis://redis:6379/0'
+      - 'REDIS_URL=redis://redis:6379/0?health_check_interval=30'
       - 'HYDRA_ADMIN_URL=http://login:4445'
       - 'SITE_TITLE=Swaptacular'
       - 'STYLE_URL='
