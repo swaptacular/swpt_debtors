@@ -99,19 +99,9 @@ services:
       context: ./submodules/swpt_login
       dockerfile: Dockerfile
     environment:
+      - 'HYDRA_DSN=postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
     command: configure
-    depends_on:
-      - pg
-    restart: on-failure
-
-
-  hydra-migrate:
-    build:
-      context: ./submodules/swpt_login
-      dockerfile: Dockerfile
-    command:
-      hydra migrate sql postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable --yes
     depends_on:
       - pg
     restart: on-failure
