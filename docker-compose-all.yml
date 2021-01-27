@@ -59,9 +59,10 @@ services:
       - 'LOGIN_PATH=/login'
       - 'CONSENT_PATH=/consent'
       - 'SUBJECT_PREFIX=debtors:'
+      - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
+      - 'SERVE_TLS_ALLOW_TERMINATION_FROM=172.16.0.0/12'
       - 'URLS_SELF_ISSUER=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT'
       - 'URLS_ERROR=https://github.com/epandurski/swpt_login'
-      - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
       - 'HYDRA_DSN=postgres://hydra:hydra@pg/${POSTGRES_DB}?sslmode=disable'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
       - 'REDIS_URL=redis://redis:6379/0?health_check_interval=30'
@@ -78,7 +79,7 @@ services:
       - 'MAIL_USERNAME=None'
       - 'MAIL_PASSWORD=None'
       - 'MAIL_DEFAULT_SENDER=Swaptacular <no-reply@example.com>'
-      - 'API_AUTH2_TOKEN_URL=http://login:4444/oauth2/token'
+      - 'API_AUTH2_TOKEN_URL=https://nginx:$DEBTORS_PORT/oauth2/token'
       - 'API_RESOURCE_SERVER=http://resource-server:8080'
       - 'API_RESERVE_USER_ID_PATH=/debtors/.debtor-reserve'
       - 'API_USER_ID_FIELD_NAME=debtorId'
@@ -104,7 +105,6 @@ services:
     command: configure
     depends_on:
       - pg
-    restart: on-failure
 
 
   hydra-config:
@@ -116,7 +116,11 @@ services:
     volumes:
       - './docker/hydra:/etc/hydra-config'
     command:
-      hydra clients import --fail-after 3m /etc/hydra-config/debtors-supervisor.json /etc/hydra-config/swagger-ui.json
+      hydra clients import
+      /etc/hydra-config/debtors-supervisor.json
+      /etc/hydra-config/swagger-ui.json
+      --fake-tls-termination
+      --fail-after 3m
     depends_on:
       - login
     restart: on-failure

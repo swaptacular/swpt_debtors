@@ -37,8 +37,8 @@ authenticators:
       cache:
         enabled: true
         ttl: 300s
-      # introspection_request_headers:
-      #   x-forwarded-proto: https
+      introspection_request_headers:
+        x-forwarded-proto: https
 
 authorizers:
   allow:
