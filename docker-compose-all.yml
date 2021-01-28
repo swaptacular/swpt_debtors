@@ -56,7 +56,10 @@ services:
       - 'SERVE_PUBLIC_PORT=4444'
       - 'SERVE_ADMIN_PORT=4445'
       - 'SERVE_TLS_ALLOW_TERMINATION_FROM=0.0.0.0/0'
+      - 'SERVE_LOGLEVEL=warn'
       - 'WEBSERVER_PORT=8080'
+      - 'WEBSERVER_WORKERS=1'
+      - 'WEBSERVER_THREADS=3'
       - 'LOGIN_PATH=/debtors-login'
       - 'CONSENT_PATH=/debtors-consent'
       - 'SUBJECT_PREFIX=debtors:'
@@ -84,9 +87,6 @@ services:
       - 'API_TIMEOUT_SECONDS=5'
       - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
       - 'SUPERVISOR_CLIENT_SECRET=debtors-supervisor'
-      - 'WEBSERVER_LOGLEVEL=warning'
-      - 'WEBSERVER_WORKERS=1'
-      - 'WEBSERVER_THREADS=3'
     depends_on:
       - pg
       - redis
@@ -132,7 +132,6 @@ services:
       - 'PORT=8080'
       - 'OAUTH2_INTROSPECT_URL=http://login:4445/oauth2/introspect'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors:swpt_debtors@pg:5432/${POSTGRES_DB}'
-      - 'WEBSERVER_LOGLEVEL=warning'
       - 'WEBSERVER_WORKERS=1'
       - 'WEBSERVER_THREADS=3'
       - 'PROTOCOL_BROKER_URL=amqp://guest:guest@localhost:5672'
