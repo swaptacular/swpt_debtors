@@ -62,6 +62,8 @@ services:
       - 'LOGIN_PATH=/debtors-login'
       - 'CONSENT_PATH=/debtors-consent'
       - 'SUBJECT_PREFIX=debtors:'
+      - 'TTL_ACCESS_TOKEN=24h'
+      - 'TTL_REFRESH_TOKEN=720h'
       - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
       - 'URLS_SELF_ISSUER=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT'
       - 'URLS_ERROR=https://github.com/epandurski/swpt_login'

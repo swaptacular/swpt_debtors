@@ -5,8 +5,7 @@
   "client_secret": "swagger-ui",
   "scope": "access access.readonly",
   "grant_types": [
-    "authorization_code",
-    "refresh_token"
+    "authorization_code"
   ],
   "response_types": [
     "code"
