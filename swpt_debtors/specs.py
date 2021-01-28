@@ -130,8 +130,8 @@ API_SPEC_OPTIONS = {
         'description': API_DESCRIPTION,
     },
     'servers': [
-        {'url': '/'},
         {'url': '$API_ROOT', 'description': 'Production server (uses live data)'},
+        {'url': '/'},
     ],
     'consumes': ['application/json'],
     'produces': ['application/json'],
