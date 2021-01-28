@@ -67,7 +67,7 @@ services:
       - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
       - 'URLS_SELF_ISSUER=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT'
       - 'URLS_ERROR=https://github.com/epandurski/swpt_login'
-      - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable'
+      - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
       - 'REDIS_URL=redis://redis:6379/0?health_check_interval=30'
       - 'HYDRA_ADMIN_URL=http://login:4445'
@@ -99,7 +99,7 @@ services:
       context: ./submodules/swpt_login
       dockerfile: Dockerfile
     environment:
-      - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable'
+      - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
     command: configure
     depends_on:
