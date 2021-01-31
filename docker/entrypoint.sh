@@ -14,6 +14,12 @@ for envvar_name in $SUBSTITUTE_LOCALHOST_IN_VARS; do
     fi
 done
 
+# The WEBSERVER_* variables should be used instead of the GUNICORN_*
+# variables, because we do not want to tie the public interface to the
+# "gunicorn" server, which we may, or may not use in the future.
+export GUNICORN_WORKERS=${WEBSERVER_WORKERS:-1}
+export GUNICORN_THREADS=${WEBSERVER_THREADS:-3}
+
 # This function tries to upgrade the database schema with exponential
 # backoff. This is necessary during development, because the database
 # might not be running yet when this script executes.
@@ -49,9 +55,6 @@ perform_db_initialization() {
 }
 
 configure_web_server() {
-    export GUNICORN_LOGLEVEL=${WEBSERVER_LOGLEVEL:-warning}
-    export GUNICORN_WORKERS=${WEBSERVER_WORKERS:-1}
-    export GUNICORN_THREADS=${WEBSERVER_THREADS:-3}
     envsubst '$PORT $OAUTH2_INTROSPECT_URL' \
              < "$APP_ROOT_DIR/oathkeeper/config.yaml.template" \
              > "$APP_ROOT_DIR/oathkeeper/config.yaml"

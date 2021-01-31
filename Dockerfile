@@ -34,11 +34,12 @@ ARG FLASK_APP=swpt_debtors
 
 ENV FLASK_APP=$FLASK_APP
 ENV APP_ROOT_DIR=/usr/src/app
-ENV APP_LOGGING_CONFIG_FILE="$APP_ROOT_DIR/$FLASK_APP/logging.conf"
+ENV APP_ASSOCIATED_LOGGERS=flask_signalbus.signalbus_cli
 ENV PYTHONPATH="$APP_ROOT_DIR"
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PORT=8080
 ENV RESOURCE_SERVER=http://127.0.0.1:4499
+ENV GUNICORN_LOGLEVEL=warning
 ENV dramatiq_restart_delay=300
 
 RUN apk add --no-cache \
