@@ -88,6 +88,8 @@ services:
       - 'API_TIMEOUT_SECONDS=5'
       - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
       - 'SUPERVISOR_CLIENT_SECRET=debtors-supervisor'
+      - 'APP_LOG_LEVEL=warning'
+      - 'APP_LOG_FORMAT=json'
     depends_on:
       - pg
       - redis
