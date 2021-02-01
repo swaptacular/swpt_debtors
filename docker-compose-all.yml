@@ -42,10 +42,6 @@ services:
       - 'LOGIN_URL=http://login:8080'
       - 'RESOURCE_SERVER_URL=http://resource-server:8080'
       - 'SWAGGER_UI_URL=http://swagger-ui:8080'
-    depends_on:
-      - login
-      - resource-server
-      - swagger-ui
 
 
   login:
@@ -92,10 +88,6 @@ services:
       - 'APP_LOG_FORMAT=json'
       - 'HYDRA_LOG_LEVEL=warning'
       - 'HYDRA_LOG_FORMAT=json'
-    depends_on:
-      - pg
-      - redis
-      - mail
 
 
   login-config:
@@ -106,8 +98,6 @@ services:
       - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
     command: configure
-    depends_on:
-      - pg
 
 
   hydra-config:
@@ -124,8 +114,6 @@ services:
       /etc/hydra-config/swagger-ui.json
       --fake-tls-termination
       --fail-after 5m
-    depends_on:
-      - login
 
 
   resource-server:
@@ -145,8 +133,6 @@ services:
       - 'APP_LOG_LEVEL=warning'
       - 'APP_LOG_FORMAT=json'
       - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
-    depends_on:
-      - pg
 
 
   resource-server-config:
@@ -161,8 +147,6 @@ services:
       - 'MAX_DEBTOR_ID=8589934591'
       - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
     command: configure
-    depends_on:
-      - pg
 
 
   swagger-ui:
@@ -177,9 +161,6 @@ services:
       - 'OAUTH2_TOKEN_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/token'
       - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/token'
       - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/swagger-ui/oauth2-redirect.html'
-    depends_on:
-      - login
-      - resource-server
 
 
 volumes:
