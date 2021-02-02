@@ -64,7 +64,7 @@ services:
       - 'TTL_ACCESS_TOKEN=24h'
       - 'TTL_REFRESH_TOKEN=720h'
       - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
-      - 'URLS_SELF_ISSUER=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT'
+      - 'URLS_SELF_ISSUER=https://$DEBTORS_HOST'
       - 'URLS_ERROR=https://github.com/epandurski/swpt_login'
       - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
@@ -171,11 +171,11 @@ services:
       target: swagger-ui-image
     environment:
       - 'BASE_URL=/debtors-swagger-ui'
-      - 'API_ROOT=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/'
-      - 'OAUTH2_AUTHORIZATION_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/auth'
-      - 'OAUTH2_TOKEN_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/token'
-      - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/token'
-      - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/debtors-swagger-ui/oauth2-redirect.html'
+      - 'API_ROOT=https://$DEBTORS_HOST/'
+      - 'OAUTH2_AUTHORIZATION_URL=https://$DEBTORS_HOST/oauth2/auth'
+      - 'OAUTH2_TOKEN_URL=https://$DEBTORS_HOST/oauth2/token'
+      - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOST/oauth2/token'
+      - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOST/debtors-swagger-ui/oauth2-redirect.html'
     depends_on:
       - login
       - debtors-server
