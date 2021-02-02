@@ -39,12 +39,12 @@ services:
       - 'HYDRA_URL=http://login:4444'
       - 'LOGIN_URL=http://login:8080'
       - 'DEBTORS_SERVER_URL=http://debtors-server:8080'
-      - 'SWAGGER_UI_URL=http://swagger-ui:8080'
+      - 'DEBTORS_SWAGGER_UI_URL=http://debtors-swagger-ui:8080'
       - 'NGINX_ENTRYPOINT_QUIET_LOGS=1'
     depends_on:
       - login
       - debtors-server
-      - swagger-ui
+      - debtors-swagger-ui
 
 
   login:
@@ -164,18 +164,18 @@ services:
       - pg
 
 
-  swagger-ui:
+  debtors-swagger-ui:
     build:
       context: .
       dockerfile: Dockerfile
       target: swagger-ui-image
     environment:
-      - 'BASE_URL=/swagger-ui'
+      - 'BASE_URL=/debtors-swagger-ui'
       - 'API_ROOT=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/'
       - 'OAUTH2_AUTHORIZATION_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/auth'
       - 'OAUTH2_TOKEN_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/token'
       - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/oauth2/token'
-      - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/swagger-ui/oauth2-redirect.html'
+      - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/debtors-swagger-ui/oauth2-redirect.html'
     depends_on:
       - login
       - debtors-server
