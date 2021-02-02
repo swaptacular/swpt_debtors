@@ -9,8 +9,8 @@ services:
       - 'POSTGRES_USER=$POSTGRES_USER'
       - 'POSTGRES_PASSWORD=$POSTGRES_PASSWORD'
     volumes:
-      - pg-data-volume:/var/lib/postgresql/data
-      - ./docker/pg/create-users.sql:/docker-entrypoint-initdb.d/create-users.sql
+      - 'pg-data-volume:/var/lib/postgresql/data'
+      - './docker/pg/create-users.sql:/docker-entrypoint-initdb.d/create-users.sql'
     command: -c log_min_messages=FATAL
 
 
@@ -38,12 +38,12 @@ services:
       - 'PORT=$DEBTORS_PORT'
       - 'HYDRA_URL=http://login:4444'
       - 'LOGIN_URL=http://login:8080'
-      - 'RESOURCE_SERVER_URL=http://resource-server:8080'
+      - 'DEBTORS_SERVER_URL=http://debtors-server:8080'
       - 'SWAGGER_UI_URL=http://swagger-ui:8080'
       - 'NGINX_ENTRYPOINT_QUIET_LOGS=1'
     depends_on:
       - login
-      - resource-server
+      - debtors-server
       - swagger-ui
 
 
@@ -83,7 +83,7 @@ services:
       - 'MAIL_PASSWORD=None'
       - 'MAIL_DEFAULT_SENDER=Swaptacular <no-reply@example.com>'
       - 'API_AUTH2_TOKEN_URL=https://nginx:$DEBTORS_PORT/oauth2/token'
-      - 'API_RESOURCE_SERVER=http://resource-server:8080'
+      - 'API_RESOURCE_SERVER=http://debtors-server:8080'
       - 'API_TIMEOUT_SECONDS=5'
       - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
       - 'SUPERVISOR_CLIENT_SECRET=debtors-supervisor'
@@ -127,7 +127,7 @@ services:
       - login
 
 
-  resource-server:
+  debtors-server:
     build:
       context: .
       dockerfile: Dockerfile
@@ -148,7 +148,7 @@ services:
       - pg
 
 
-  resource-server-config:
+  debtors-server-config:
     build:
       context: .
       dockerfile: Dockerfile
@@ -178,7 +178,7 @@ services:
       - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOSTNAME:$DEBTORS_PORT/swagger-ui/oauth2-redirect.html'
     depends_on:
       - login
-      - resource-server
+      - debtors-server
 
 
 volumes:
