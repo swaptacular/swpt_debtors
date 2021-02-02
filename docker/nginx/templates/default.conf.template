@@ -1,22 +1,23 @@
 server {
     listen ${PORT} ssl;
     server_name $hostname;
-    location /oauth2/ {
-        proxy_pass ${HYDRA_URL}/oauth2/;
+    location /debtors-hydra/oauth2/ {
+        proxy_pass ${DEBTORS_HYDRA_URL}/oauth2/;
+        proxy_redirect default;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
     location /debtors-login/ {
-        proxy_pass ${LOGIN_URL}/debtors-login/;
+        proxy_pass ${DEBTORS_LOGIN_URL}/debtors-login/;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
     location /debtors-consent/ {
-        proxy_pass ${LOGIN_URL}/debtors-consent/;
+        proxy_pass ${DEBTORS_LOGIN_URL}/debtors-consent/;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
         proxy_set_header X-Forwarded-Proto $scheme;
