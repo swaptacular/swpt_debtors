@@ -176,9 +176,6 @@ services:
       - 'OAUTH2_TOKEN_URL=https://$DEBTORS_HOST/oauth2/token'
       - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOST/oauth2/token'
       - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOST/debtors-swagger-ui/oauth2-redirect.html'
-    depends_on:
-      - debtors-login
-      - debtors-server
 
 
 volumes:
