@@ -36,18 +36,18 @@ services:
       - $DEBTORS_PORT:$DEBTORS_PORT
     environment:
       - 'PORT=$DEBTORS_PORT'
-      - 'HYDRA_URL=http://login:4444'
-      - 'LOGIN_URL=http://login:8080'
+      - 'HYDRA_URL=http://debtors-login:4444'
+      - 'LOGIN_URL=http://debtors-login:8080'
       - 'DEBTORS_SERVER_URL=http://debtors-server:8080'
       - 'DEBTORS_SWAGGER_UI_URL=http://debtors-swagger-ui:8080'
       - 'NGINX_ENTRYPOINT_QUIET_LOGS=1'
     depends_on:
-      - login
+      - debtors-login
       - debtors-server
       - debtors-swagger-ui
 
 
-  login:
+  debtors-login:
     build:
       context: ./submodules/swpt_login
       dockerfile: Dockerfile
@@ -69,7 +69,7 @@ services:
       - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
       - 'REDIS_URL=redis://redis:6379/1?health_check_interval=30'
-      - 'HYDRA_ADMIN_URL=http://login:4445'
+      - 'HYDRA_ADMIN_URL=http://debtors-login:4445'
       - 'SITE_TITLE=Swaptacular'
       - 'STYLE_URL='
       - 'ABOUT_URL=https://github.com/epandurski/swpt_login'
@@ -97,7 +97,7 @@ services:
       - mail
 
 
-  login-config:
+  debtors-login-config:
     build:
       context: ./submodules/swpt_login
       dockerfile: Dockerfile
@@ -109,12 +109,12 @@ services:
       - pg
 
 
-  hydra-config:
+  debtors-hydra-config:
     build:
       context: ./submodules/swpt_login
       dockerfile: Dockerfile
     environment:
-      - 'HYDRA_ADMIN_URL=http://login:4445'
+      - 'HYDRA_ADMIN_URL=http://debtors-login:4445'
     volumes:
       - './docker/hydra:/etc/hydra-config'
     command:
@@ -124,7 +124,7 @@ services:
       --fake-tls-termination
       --fail-after 5m
     depends_on:
-      - login
+      - debtors-login
 
 
   debtors-server:
@@ -134,7 +134,7 @@ services:
       target: app-image
     environment:
       - 'PORT=8080'
-      - 'OAUTH2_INTROSPECT_URL=http://login:4445/oauth2/introspect'
+      - 'OAUTH2_INTROSPECT_URL=http://debtors-login:4445/oauth2/introspect'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors:swpt_debtors@pg:5432/${POSTGRES_DB}'
       - 'WEBSERVER_WORKERS=1'
       - 'WEBSERVER_THREADS=3'
@@ -177,7 +177,7 @@ services:
       - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOST/oauth2/token'
       - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOST/debtors-swagger-ui/oauth2-redirect.html'
     depends_on:
-      - login
+      - debtors-login
       - debtors-server
 
 
