@@ -58,8 +58,6 @@ services:
       - 'WEBSERVER_PORT=8080'
       - 'WEBSERVER_WORKERS=1'
       - 'WEBSERVER_THREADS=3'
-      - 'LOGIN_PATH=/debtors-login'
-      - 'CONSENT_PATH=/debtors-consent'
       - 'SUBJECT_PREFIX=debtors:'
       - 'TTL_ACCESS_TOKEN=24h'
       - 'TTL_REFRESH_TOKEN=720h'
