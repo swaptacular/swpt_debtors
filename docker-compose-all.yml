@@ -33,9 +33,9 @@ services:
       - './docker/nginx/ssl/cert.pem:/etc/nginx/ssl/cert.pem'
       - './docker/nginx/ssl/key.pem:/etc/nginx/ssl/key.pem'
     ports:
-      - $DEBTORS_PORT:$DEBTORS_PORT
+      - $PUBLIC_PORT:$PUBLIC_PORT
     environment:
-      - 'PORT=$DEBTORS_PORT'
+      - 'PORT=$PUBLIC_PORT'
       - 'DEBTORS_HYDRA_URL=http://debtors-login:4444'
       - 'DEBTORS_LOGIN_URL=http://debtors-login:8080'
       - 'DEBTORS_SERVER_URL=http://debtors-server:8080'
@@ -62,9 +62,9 @@ services:
       - 'TTL_ACCESS_TOKEN=24h'
       - 'TTL_REFRESH_TOKEN=720h'
       - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
-      - 'URLS_SELF_ISSUER=https://$DEBTORS_HOST/debtors-hydra/'
-      - 'URLS_LOGIN=https://$DEBTORS_HOST/debtors-login/'
-      - 'URLS_CONSENT=https://$DEBTORS_HOST/debtors-consent/'
+      - 'URLS_SELF_ISSUER=https://$PUBLIC_HOST/debtors-hydra/'
+      - 'URLS_LOGIN=https://$PUBLIC_HOST/debtors-login/'
+      - 'URLS_CONSENT=https://$PUBLIC_HOST/debtors-consent/'
       - 'URLS_ERROR=https://github.com/epandurski/swpt_login'
       - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
@@ -82,7 +82,7 @@ services:
       - 'MAIL_USERNAME=None'
       - 'MAIL_PASSWORD=None'
       - 'MAIL_DEFAULT_SENDER=Swaptacular <no-reply@example.com>'
-      - 'API_AUTH2_TOKEN_URL=https://nginx:$DEBTORS_PORT/debtors-hydra/oauth2/token'
+      - 'API_AUTH2_TOKEN_URL=https://nginx:$PUBLIC_PORT/debtors-hydra/oauth2/token'
       - 'API_RESOURCE_SERVER=http://debtors-server:8080'
       - 'API_TIMEOUT_SECONDS=5'
       - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
@@ -171,11 +171,11 @@ services:
       target: swagger-ui-image
     environment:
       - 'BASE_URL=/debtors-swagger-ui'
-      - 'API_ROOT=https://$DEBTORS_HOST/'
-      - 'OAUTH2_AUTHORIZATION_URL=https://$DEBTORS_HOST/debtors-hydra/oauth2/auth'
-      - 'OAUTH2_TOKEN_URL=https://$DEBTORS_HOST/debtors-hydra/oauth2/token'
-      - 'OAUTH2_REFRESH_URL=https://$DEBTORS_HOST/debtors-hydra/oauth2/token'
-      - 'OAUTH2_REDIRECT_URL=https://$DEBTORS_HOST/debtors-swagger-ui/oauth2-redirect.html'
+      - 'API_ROOT=https://$PUBLIC_HOST/'
+      - 'OAUTH2_AUTHORIZATION_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/auth'
+      - 'OAUTH2_TOKEN_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/token'
+      - 'OAUTH2_REFRESH_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/token'
+      - 'OAUTH2_REDIRECT_URL=https://$PUBLIC_HOST/debtors-swagger-ui/oauth2-redirect.html'
 
 
 volumes:
