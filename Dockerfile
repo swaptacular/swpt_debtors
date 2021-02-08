@@ -1,9 +1,9 @@
-FROM oryd/oathkeeper:v0.38.5-beta.1 as oathkeeper-image
+FROM oryd/oathkeeper:v0.38.6-alpine as oathkeeper-image
 
-FROM python:3.7.9-alpine3.12 AS venv-image
+FROM python:3.7.9-alpine3.13 AS venv-image
 WORKDIR /usr/src/app
 
-ENV PIP_VERSION="21.0"
+ENV PIP_VERSION="21.0.1"
 ENV POETRY_VERSION="1.1.4"
 RUN apk add --no-cache \
     file \
@@ -16,6 +16,8 @@ RUN apk add --no-cache \
     libffi-dev \
     python3-dev \
     postgresql-dev \
+    openssl-dev \
+    cargo \
   && pip install --upgrade pip==$PIP_VERSION \
   && curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python \
   && ln -s "$HOME/.poetry/bin/poetry" "/usr/local/bin" \
@@ -29,7 +31,7 @@ RUN poetry config virtualenvs.create false \
 
 # This is the final app image. Starting from a clean alpine image, it
 # copies over the previously created virtual environment.
-FROM python:3.7.9-alpine3.12 AS app-image
+FROM python:3.7.9-alpine3.13 AS app-image
 ARG FLASK_APP=swpt_debtors
 
 ENV FLASK_APP=$FLASK_APP
