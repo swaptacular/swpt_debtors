@@ -12,7 +12,7 @@ How to run it
 2. To create an *.env* file with reasonable defalut values, run this
    command::
 
-     $ cp env.development .env
+     $ cp development.env .env
 
 3. To run the unit tests, use this command::
 
@@ -21,7 +21,7 @@ How to run it
 4. To run the minimal set of services needed for development, use this
    command::
 
-     $ docker-compose up --build -d
+     $ docker-compose up --build
 
 
 How to setup a development environment
@@ -46,7 +46,7 @@ How to run all services (production-like)
 
 To start the containers, use this command::
 
-     $ docker-compose -f docker-compose-all.yml up
+     $ docker-compose -f docker-compose-all.yml up --build
 
 
 .. _Docker: https://docs.docker.com/
