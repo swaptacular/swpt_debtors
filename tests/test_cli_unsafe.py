@@ -1,8 +1,7 @@
 import pytest
 from uuid import UUID
-from datetime import datetime, timezone, timedelta, date
-from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal, \
-    ROOT_CREDITOR_ID, TS0
+from datetime import timedelta
+from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal
 from swpt_debtors.extensions import db
 from swpt_debtors import procedures
 
