@@ -84,7 +84,7 @@ CMD ["all"]
 # copies the auto-generated OpenAPI spec file. The entrypoint
 # substitutes the placeholders in the spec file with values from
 # environment variables.
-FROM swaggerapi/swagger-ui:v3.36.2 AS swagger-ui-image
+FROM swaggerapi/swagger-ui:v3.42.0 AS swagger-ui-image
 
 ENV SWAGGER_JSON=/openapi.json
 
