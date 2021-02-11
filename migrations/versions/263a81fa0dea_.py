@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 72f326d2bae2
+Revision ID: 263a81fa0dea
 Revises: 8d09bea9c7d1
-Create Date: 2020-12-06 18:32:43.125786
+Create Date: 2021-02-11 20:19:12.544010
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '72f326d2bae2'
+revision = '263a81fa0dea'
 down_revision = '8d09bea9c7d1'
 branch_labels = None
 depends_on = None
@@ -57,7 +57,11 @@ def upgrade():
     sa.CheckConstraint('config_latest_update_id > 0'),
     sa.CheckConstraint('deactivation_date IS NULL OR (status_flags & 2) != 0')
     )
-    op.create_index('idx_debtor_pk', 'debtor', ['debtor_id'], unique=True)
+
+    # Create a "covering" index instead of a "normal" index.
+    op.execute('CREATE UNIQUE INDEX idx_debtor_pk ON debtor (debtor_id) INCLUDE (status_flags)')
+    op.execute('ALTER TABLE debtor ADD CONSTRAINT debtor_pkey PRIMARY KEY USING INDEX idx_debtor_pk')
+
     op.create_table('finalize_transfer_signal',
     sa.Column('inserted_at', sa.TIMESTAMP(timezone=True), nullable=False),
     sa.Column('debtor_id', sa.BigInteger(), nullable=False),
@@ -122,7 +126,6 @@ def downgrade():
     op.drop_table('prepare_transfer_signal')
     op.drop_table('node_config')
     op.drop_table('finalize_transfer_signal')
-    op.drop_index('idx_debtor_pk', table_name='debtor')
     op.drop_table('debtor')
     op.drop_table('configure_account_signal')
     # ### end Alembic commands ###
