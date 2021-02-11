@@ -105,14 +105,13 @@ class Debtor(db.Model):
 
     _ad_seq = db.Sequence('debtor_reservation_id_seq', metadata=db.Model.metadata)
 
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+
     # NOTE: The `status_flags` column is not be part of the primary
     # key, but should be included in the primary key index to allow
     # index-only scans. Because SQLAlchemy does not support this yet
-    # (2020-01-11), the migration file should be edited so as no not
-    # to create a "normal" index, but create a "covering" index
-    # instead.
-    debtor_id = db.Column(db.BigInteger, primary_key=True)
-
+    # (2020-01-11), the migration file should be edited so as not to
+    # create a "normal" index, but create a "covering" index instead.
     status_flags = db.Column(
         db.SmallInteger,
         nullable=False,
@@ -121,6 +120,7 @@ class Debtor(db.Model):
                 f"{STATUS_IS_ACTIVATED_FLAG} - is activated, "
                 f"{STATUS_IS_DEACTIVATED_FLAG} - is deactivated.",
     )
+
     deactivation_date = db.Column(
         db.DATE,
         comment='The date on which the debtor was deactivated. When a debtor gets '
