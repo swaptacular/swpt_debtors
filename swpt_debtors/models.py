@@ -48,10 +48,9 @@ class classproperty(object):
 class Signal(db.Model):
     __abstract__ = True
 
-    # TODO: Define `send_signalbus_messages` class method, set
-    #      `ModelClass.signalbus_autoflush = False` and
+    # TODO: Define `send_signalbus_messages` class method, and set
     #      `ModelClass.signalbus_burst_count = N` in models. Make sure
-    #      TTL is set properly for the messages.
+    #      RabbitMQ message headers are set properly for the messages.
 
     queue_name: Optional[str] = None
 
