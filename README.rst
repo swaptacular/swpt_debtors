@@ -1,7 +1,22 @@
 swpt_debtors
 ============
 
-Swaptacular micro-service that manages debtors
+Swaptacular service that manages debtors
+
+This service implements a `messaging protocol`_ client. The
+deliverables are two docker images: the app-image, and the
+swagger-ui-image. Both images are generated from the project's
+`Dockerfile`_. The app-image is the debtor managing service. The
+swagger-ui-image is a simple Swagger UI cleint for the service. To
+find out what processes can be spawned from the generated app-image,
+see the `entrypoint`_. For the available configuration options, see
+the `example file`_.
+
+
+.. _`messaging protocol`: https://github.com/epandurski/swpt_accounts/blob/master/protocol.rst
+.. _Dockerfile: Dockerfile
+.. _entrypoint: docker/entrypoint.sh
+.. _`example file`: docker-compose-all.yml
 
 
 How to run it
