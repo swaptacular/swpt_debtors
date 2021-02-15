@@ -113,9 +113,9 @@ services:
       - mail
 
 
-  # The purpose of this container is to create the database schema for
-  # the `debtors-login` container. It has to be run only once, but
-  # running it multiple times should not do any harm.
+  # The purpose of this container is to create the database schemas
+  # for the `debtors-login` container. It has to be run only once,
+  # but running it multiple times should not do any harm.
   debtors-login-config:
     build:
       context: ./submodules/swpt_login
