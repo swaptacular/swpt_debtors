@@ -21,6 +21,7 @@ services:
       target: app-image
     volumes:
       - './swpt_debtors:/usr/src/app/swpt_debtors'
+      - './tests:/usr/src/app/tests'
     env_file: .env
     environment:
       - 'PYTHONDONTWRITEBYTECODE=1'

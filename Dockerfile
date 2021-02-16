@@ -68,7 +68,6 @@ COPY docker/entrypoint.sh \
      ./
 COPY docker/oathkeeper/ oathkeeper/
 COPY migrations/ migrations/
-COPY tests/ tests/
 COPY $FLASK_APP/ $FLASK_APP/
 RUN python -m compileall -x '^\./(migrations|tests)/' . \
     && rm -f .env \
