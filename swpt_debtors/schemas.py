@@ -115,30 +115,6 @@ class ObjectReferencesPageSchema(Schema):
         return obj
 
 
-class AuthorityIdentitySchema(ValidateTypeMixin, Schema):
-    type = fields.String(
-        missing='AuthorityIdentity',
-        default='AuthorityIdentity',
-        description='The type of this object.',
-        example='AuthorityIdentity',
-    )
-    uri = fields.String(
-        required=True,
-        validate=validate.Length(max=100),
-        format='uri',
-        description="The information contained in this field must be enough to uniquely and "
-                    "reliably identify the accounting authority that manages this debtor. Note "
-                    "that a network request *should not be needed* to identify the accounting "
-                    "authority.",
-        example='urn:example:authority',
-    )
-
-    @post_dump
-    def assert_required_fields(self, obj, many):
-        assert 'uri' in obj
-        return obj
-
-
 class DebtorIdentitySchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='DebtorIdentity',
@@ -376,14 +352,6 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         description='The type of this object.',
         example='Debtor',
     )
-    authority = fields.Nested(
-        AuthorityIdentitySchema,
-        required=True,
-        dump_only=True,
-        data_key='authority',
-        description="The accounting authority that manages this debtor (`AuthorityIdentity`).",
-        example={'type': 'AuthorityIdentity', 'uri': 'urn:example:authority'},
-    )
     identity = fields.Nested(
         DebtorIdentitySchema,
         required=True,
@@ -473,7 +441,6 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         assert isinstance(obj, Debtor)
         obj = copy(obj)
         obj.uri = url_for(self.context['Debtor'], _external=False, debtorId=obj.debtor_id)
-        obj.authority = {'uri': current_app.config['APP_AUTHORITY_URI']}
         obj.identity = {'uri': f'swpt:{i64_to_u64(obj.debtor_id)}'}
         obj.config = obj
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}

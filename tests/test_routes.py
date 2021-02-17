@@ -92,7 +92,6 @@ def test_create_debtor(client):
     data = r.get_json()
     assert data['type'] == 'Debtor'
     assert data['uri'] == '/debtors/4294967296/'
-    assert data['authority'] == {'type': 'AuthorityIdentity', 'uri': 'urn:example:authority'}
     assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:4294967296'}
     assert data['transfersList'] == {'uri': '/debtors/4294967296/transfers/'}
     assert data['createTransfer'] == {'uri': '/debtors/4294967296/transfers/'}
@@ -183,7 +182,6 @@ def test_get_debtor(client, debtor):
     data = r.get_json()
     assert data['type'] == 'Debtor'
     assert data['uri'] == '/debtors/123/'
-    assert data['authority'] == {'type': 'AuthorityIdentity', 'uri': 'urn:example:authority'}
     assert data['config'] == {
         'type': 'DebtorConfig',
         'uri': '/debtors/123/config',
