@@ -16,7 +16,7 @@ generated image.
 .. _Dockerfile: Dockerfile
 .. _entrypoint: docker/entrypoint.sh
 .. _development.env: development.env
-.. _`example file`: docker-compose-all.yml
+.. _`example`: docker-compose-all.yml
 
 
 How to run it
