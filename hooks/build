@@ -1,0 +1,3 @@
+#!/bin/sh
+
+docker build --target ${BUILD_TARGET:-app-image} -f $DOCKERFILE_PATH -t $IMAGE_NAME .
