@@ -11,11 +11,6 @@ atomic: Callable[[T], T] = db.atomic
 SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
 
 
-class CachedInterestRate(NamedTuple):
-    interest_rate: float
-    timestamp: datetime
-
-
 class DebtorScanner(TableScanner):
     """Garbage-collects inactive debtors."""
 

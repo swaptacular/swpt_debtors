@@ -21,7 +21,6 @@ def test_serialize_debtor_schema(db_session):
     assert obj['type'] == 'Debtor'
     assert datetime.fromisoformat(obj['createdAt'])
     assert obj['balance'] == 0
-    assert obj['interestRate'] == 0.0
     assert obj['transfersList'] == {'uri': '/debtors/1/transfers/'}
     assert obj['config'] == {
         'type': 'DebtorConfig',

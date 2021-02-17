@@ -400,13 +400,6 @@ class DebtorSchema(ValidateTypeMixin, Schema):
                     "possible, should be very rare.",
         example=-1000000,
     )
-    interest_rate = fields.Float(
-        required=True,
-        dump_only=True,
-        data_key='interestRate',
-        description="The current annual interest rate (in percents) at which "
-                    "interest accumulates on creditors' accounts.",
-    )
     transfer_note_max_bytes = fields.Integer(
         required=True,
         dump_only=True,

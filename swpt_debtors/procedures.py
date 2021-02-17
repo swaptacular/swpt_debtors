@@ -342,7 +342,6 @@ def process_account_purge_signal(
     if debtor:
         debtor.has_server_account = False
         debtor.balance = 0
-        debtor.interest_rate = 0.0
         debtor.transfer_note_max_bytes = 0
         debtor.account_id = ''
         debtor.is_config_effectual = False
@@ -516,7 +515,6 @@ def process_account_update_signal(
     debtor.account_last_change_seqnum = last_change_seqnum
     debtor.account_id = account_id
     debtor.balance = principal
-    debtor.interest_rate = interest_rate
     debtor.transfer_note_max_bytes = transfer_note_max_bytes
 
 

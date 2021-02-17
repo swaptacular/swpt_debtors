@@ -192,7 +192,6 @@ def test_get_debtor(client, debtor):
     }
     assert data['transfersList'] == {'uri': '/debtors/123/transfers/'}
     assert data['createTransfer'] == {'uri': '/debtors/123/transfers/'}
-    assert data['interestRate'] == 0.0
     assert data['balance'] == 0
     assert datetime.fromisoformat(data['createdAt'])
     assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:123'}

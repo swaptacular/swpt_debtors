@@ -38,10 +38,7 @@ def test_running_transfer_attrs(debtor, db_session, current_ts):
 
 
 def test_debtor_attrs(debtor, db_session, current_ts):
-    assert debtor.interest_rate == 0.0
-    debtor.interest_rate = 6.66
     debtor.status = Debtor.STATUS_IS_ACTIVATED_FLAG
-    assert debtor.interest_rate == 6.66
     debtor.deactivate()
     assert debtor.is_activated
     assert debtor.is_deactivated

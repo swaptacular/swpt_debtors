@@ -133,7 +133,6 @@ class Debtor(db.Model):
     reservation_id = db.Column(db.BigInteger, server_default=_ad_seq.next_value())
     created_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
     balance = db.Column(db.BigInteger, nullable=False, default=0)
-    interest_rate = db.Column(db.REAL, nullable=False, default=0.0)
     transfer_note_max_bytes = db.Column(db.Integer, nullable=False, default=0)
     running_transfers_count = db.Column(db.Integer, nullable=False, default=0)
     actions_count = db.Column(db.Integer, nullable=False, default=0)

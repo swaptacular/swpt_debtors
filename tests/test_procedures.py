@@ -154,7 +154,6 @@ def test_account_change_signal_effectual_config(db_session, debtor, current_ts):
     d = p.get_debtor(D_ID)
     assert d.account_last_heartbeat_ts == current_ts
     assert d.balance == -9999
-    assert d.interest_rate == 10.0
     assert d.account_id == '0'
     assert d.transfer_note_max_bytes == 100
     assert d.has_server_account
@@ -187,7 +186,6 @@ def test_account_change_signal_ineffectual_config(db_session, debtor, current_ts
     )
     d = p.get_debtor(D_ID)
     assert d.balance == -9999
-    assert d.interest_rate == 10.0
     assert d.account_id == '0'
     assert d.transfer_note_max_bytes == 100
     assert d.has_server_account
