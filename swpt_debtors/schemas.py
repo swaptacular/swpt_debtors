@@ -404,6 +404,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         required=True,
         dump_only=True,
         data_key='noteMaxBytes',
+        format='int32',
         description='The maximal number of bytes that transfer notes are allowed to contain when '
                     'UTF-8 encoded. This will be a non-negative number.',
         example=500,
