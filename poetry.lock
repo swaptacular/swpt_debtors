@@ -154,6 +154,18 @@ docs = ["sphinx", "pallets-sphinx-themes", "sphinxcontrib-log-cabinet", "sphinx-
 dotenv = ["python-dotenv"]
 
 [[package]]
+name = "flask-cors"
+version = "3.0.10"
+description = "A Flask extension adding a decorator for CORS support"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+Flask = ">=0.9"
+Six = "*"
+
+[[package]]
 name = "flask-melodramatiq"
 version = "0.3.9"
 description = "A Flask extension that adds support for the \"dramatiq\" task processing library"
@@ -726,7 +738,7 @@ testing = ["pytest (>=3.5,!=3.7.3)", "pytest-checkdocs (>=1.2.3)", "pytest-flake
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "066473cf5cd70c90894dd9a6728e9444dee23115afa8aa53c9138e4b103b182a"
+content-hash = "1e3f78ac0b3a50e3784111699e9596386f2fd8b00018656b45e3ea0ab8688159"
 
 [metadata.files]
 alembic = [
@@ -819,6 +831,10 @@ flake8 = [
 flask = [
     {file = "Flask-1.1.2-py2.py3-none-any.whl", hash = "sha256:8a4fdd8936eba2512e9c85df320a37e694c93945b33ef33c89946a340a238557"},
     {file = "Flask-1.1.2.tar.gz", hash = "sha256:4efa1ae2d7c9865af48986de8aeb8504bf32c7f3d6fdc9353d34b21f4b127060"},
+]
+flask-cors = [
+    {file = "Flask-Cors-3.0.10.tar.gz", hash = "sha256:b60839393f3b84a0f3746f6cdca56c1ad7426aa738b70d6c61375857823181de"},
+    {file = "Flask_Cors-3.0.10-py2.py3-none-any.whl", hash = "sha256:74efc975af1194fc7891ff5cd85b0f7478be4f7f59fe158102e91abb72bb4438"},
 ]
 flask-melodramatiq = [
     {file = "Flask-Melodramatiq-0.3.9.tar.gz", hash = "sha256:06c8dfc7cf4df541fb9d3d8f91b7182c9a4e46cd920b483890aee0f927e0fcbf"},

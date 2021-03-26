@@ -5,6 +5,7 @@ import sys
 import os
 import os.path
 from typing import List
+from flask_cors import CORS
 
 
 def _excepthook(exc_type, exc_value, traceback):  # pragma: nocover
@@ -184,6 +185,7 @@ def create_app(config_dict={}):
     app.config.from_object(Configuration)
     app.config.from_mapping(config_dict)
     app.config['API_SPEC_OPTIONS'] = specs.API_SPEC_OPTIONS
+    CORS(app, max_age=24 * 60 * 60, vary_header=False, expose_headers=['Location'])
     db.init_app(app)
     migrate.init_app(app, db)
     protocol_broker.init_app(app)
