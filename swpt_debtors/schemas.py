@@ -1,7 +1,7 @@
 from copy import copy
 from marshmallow import Schema, fields, validate, pre_dump, post_dump, validates, missing, \
     ValidationError
-from flask import url_for, current_app
+from flask import url_for
 from swpt_lib.utils import i64_to_u64
 from swpt_lib.swpt_uris import make_account_uri
 from swpt_debtors.models import MAX_INT64, TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, \
@@ -487,7 +487,8 @@ class TransferErrorSchema(Schema):
     )
     total_locked_amount = fields.Method(
         'get_total_locked_amount',
-        format="int64",
+        type='integer',
+        format='int64',
         data_key='totalLockedAmount',
         description='This field will be present only when the transfer has been rejected '
                     'due to insufficient available amount. In this case, it will contain '
