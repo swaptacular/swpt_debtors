@@ -103,6 +103,11 @@ TRANSFER_EXISTS = {
     'headers': LOCATION_HEADER,
 }
 
+DEBTOR_INFO_EXISTS = {
+    "description": "The debtor's public info document has been found.",
+    'headers': LOCATION_HEADER,
+}
+
 SCOPE_ACCESS_READONLY = [
     {'oauth2': ['access.readonly']},
 ]

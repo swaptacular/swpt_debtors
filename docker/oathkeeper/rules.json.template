@@ -28,14 +28,14 @@
   },
 
   {
-    "id": "docs",
+    "id": "public",
     "version": "v0.36.0-beta.4",
     "upstream": {
       "url": "$RESOURCE_SERVER",
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/debtors/\\.docs(/.*)?$>",
+      "url": "<https?://[^/]+/debtors/(\\.docs(/.*)?|.*[./-]public)$>",
       "methods": [
         "GET", "HEAD"
       ]
@@ -94,7 +94,7 @@
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/debtors/(?!\\.docs(/.*)?$).*>",
+      "url": "<https?://[^/]+/debtors/(?!(\\.docs(/.*)?|.*[./-]public)$).*>",
       "methods": [
         "GET", "HEAD"
       ]

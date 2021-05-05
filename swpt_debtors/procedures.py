@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, date, timedelta, timezone
 from random import randint
 from uuid import UUID
@@ -516,6 +517,25 @@ def process_account_update_signal(
     debtor.account_id = account_id
     debtor.balance = principal
     debtor.transfer_note_max_bytes = transfer_note_max_bytes
+    if is_config_effectual:
+        debtor.debtor_info_iri = _get_debtor_info_iri_from_config_data(config_data)
+
+
+def _get_debtor_info_iri_from_config_data(config_data: str) -> Optional[str]:
+    """Parse `config_data` and return `config_data['info']['iri']`."""
+
+    def get_dict_key(d, key):
+        return d.get(key) if isinstance(d, dict) else None
+
+    try:
+        config_data = json.loads(config_data)
+    except json.JSONDecodeError:
+        config_data = None
+
+    debtor_info = get_dict_key(config_data, 'info')
+    debtor_info_iri = get_dict_key(debtor_info, 'iri')
+
+    return debtor_info_iri if isinstance(debtor_info_iri, str) else None
 
 
 def _throttle_debtor_actions(debtor_id: int, max_actions_per_month: int, current_ts: datetime) -> Debtor:

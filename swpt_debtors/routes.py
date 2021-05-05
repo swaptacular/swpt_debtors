@@ -453,3 +453,26 @@ class TransferEndpoint(MethodView):
             procedures.delete_running_transfer(debtorId, transferUuid)
         except procedures.TransferDoesNotExist:
             pass
+
+
+archive_api = Blueprint(
+    'archive',
+    __name__,
+    url_prefix='/debtors',
+    description="Maintains an ever-growing set of public documents.",
+)
+
+
+@archive_api.route('/<i64:debtorId>/info-public', parameters=[specs.DEBTOR_ID])
+class RedirectToLatestInfo(MethodView):
+    @archive_api.response(code=302)
+    @archive_api.doc(operationId='redirectToLatestInfo', responses={302: specs.DEBTOR_INFO_EXISTS})
+    def get(self, debtorId):
+        """Redirect to the debtor's latest public info document."""
+
+        debtor = procedures.get_active_debtor(debtorId) or abort(404)
+        location = debtor.debtor_info_iri or abort(404)
+        response = redirect(location, code=302)
+        response.headers['Cache-Control'] = 'max-age=86400'
+
+        return response

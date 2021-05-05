@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime, timezone
 from urllib.parse import urljoin, urlparse
 import pytest
 from swpt_debtors import procedures as p
@@ -406,3 +406,62 @@ def test_redirect_to_debtor(client, debtor):
     r = client.get('/debtors/.debtor', headers={'X-Swpt-User-Id': 'debtors:18446744073709551615'})
     assert r.status_code == 303
     assert r.headers['Location'] == 'http://example.com/debtors/18446744073709551615/'
+
+
+def test_redirect_to_latest_info(client, debtor):
+    r = client.get('/debtors/123/info-public')
+    assert r.status_code == 404
+
+    request = {
+        'configData': '{"info": {"iri": "https://example.com/"}}',
+        'latestUpdateId': 2
+    }
+    r = client.patch('/debtors/123/config', json=request)
+    assert r.status_code == 200
+
+    debtor = p.get_debtor(123)
+    current_ts = datetime.now(tz=timezone.utc)
+
+    p.process_account_update_signal(
+        debtor_id=debtor.debtor_id,
+        creditor_id=p.ROOT_CREDITOR_ID,
+        creation_date=date(2020, 1, 1),
+        last_change_ts=current_ts,
+        last_change_seqnum=1,
+        principal=0,
+        interest_rate=0.0,
+        last_config_ts=debtor.last_config_ts,
+        last_config_seqnum=debtor.last_config_seqnum,
+        negligible_amount=p.HUGE_NEGLIGIBLE_AMOUNT,
+        config_data='INCORRECT CONFIG DATA',
+        config_flags=debtor.config_flags,
+        account_id='',
+        transfer_note_max_bytes=0,
+        ts=current_ts,
+        ttl=10000000,
+    )
+    r = client.get('/debtors/123/info-public')
+    assert r.status_code == 404
+
+    p.process_account_update_signal(
+        debtor_id=debtor.debtor_id,
+        creditor_id=p.ROOT_CREDITOR_ID,
+        creation_date=date(2020, 1, 1),
+        last_change_ts=current_ts,
+        last_change_seqnum=2,
+        principal=0,
+        interest_rate=0.0,
+        last_config_ts=debtor.last_config_ts,
+        last_config_seqnum=debtor.last_config_seqnum,
+        negligible_amount=p.HUGE_NEGLIGIBLE_AMOUNT,
+        config_data=debtor.config_data,
+        config_flags=debtor.config_flags,
+        account_id='',
+        transfer_note_max_bytes=0,
+        ts=current_ts,
+        ttl=10000000,
+    )
+    r = client.get('/debtors/123/info-public')
+    assert r.status_code == 302
+    assert r.headers['Location'] == 'https://example.com/'
+    assert r.headers['Cache-Control'] == 'max-age=86400'

@@ -150,6 +150,7 @@ class Debtor(db.Model):
     config_data = db.Column(db.String, nullable=False, default='')
     config_error = db.Column(db.String)
     config_latest_update_id = db.Column(db.BigInteger, nullable=False, default=1)
+    debtor_info_iri = db.Column(db.String)
 
     __mapper_args__ = {
         'eager_defaults': True,
@@ -186,6 +187,7 @@ class Debtor(db.Model):
         self.config_flags = DEFAULT_CONFIG_FLAGS | self.CONFIG_SCHEDULED_FOR_DELETION_FLAG
         self.config_data = ''
         self.config_error = None
+        self.debtor_info_iri = None
 
 
 class RunningTransfer(db.Model):
