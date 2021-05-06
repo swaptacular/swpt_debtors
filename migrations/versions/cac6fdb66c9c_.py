@@ -28,8 +28,14 @@ def upgrade():
     sa.PrimaryKeyConstraint('debtor_id', 'document_id'),
     comment='Represents a document saved by the debtor, which should remain available indefinitely, or at least for a very long time.'
     )
-    op.add_column('debtor', sa.Column('documents_count', sa.Integer(), nullable=False))
-    op.add_column('debtor', sa.Column('documents_count_reset_date', sa.DATE(), nullable=False))
+
+    op.add_column('debtor', sa.Column('documents_count', sa.Integer(), nullable=True))
+    op.execute("UPDATE debtor SET documents_count = 0")
+    op.alter_column('debtor', 'documents_count', nullable=False)
+
+    op.add_column('debtor', sa.Column('documents_count_reset_date', sa.DATE(), nullable=True))
+    op.execute("UPDATE debtor SET documents_count_reset_date = current_date")
+    op.alter_column('debtor', 'documents_count_reset_date', nullable=False)
     # ### end Alembic commands ###
 
 
