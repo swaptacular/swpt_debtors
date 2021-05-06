@@ -22,7 +22,7 @@ TRANSFER_UUID = {
     },
 }
 
-DOCUMENT_ID = {
+DOC_ID = {
     'in': 'path',
     'name': 'documentId',
     'required': True,

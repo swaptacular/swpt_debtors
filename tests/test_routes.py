@@ -410,7 +410,7 @@ def test_redirect_to_debtor(client, debtor):
 
 
 def test_redirect_to_latest_info(client, debtor):
-    r = client.get('/debtors/123/info-public')
+    r = client.get('/debtors/123/public')
     assert r.status_code == 404
 
     request = {
@@ -441,7 +441,7 @@ def test_redirect_to_latest_info(client, debtor):
         ts=current_ts,
         ttl=10000000,
     )
-    r = client.get('/debtors/123/info-public')
+    r = client.get('/debtors/123/public')
     assert r.status_code == 404
 
     p.process_account_update_signal(
@@ -462,18 +462,18 @@ def test_redirect_to_latest_info(client, debtor):
         ts=current_ts,
         ttl=10000000,
     )
-    r = client.get('/debtors/123/info-public')
+    r = client.get('/debtors/123/public')
     assert r.status_code == 302
     assert r.headers['Location'] == 'https://example.com/'
     assert r.headers['Cache-Control'] == 'max-age=86400'
 
 
 def test_save_document(client, debtor):
-    r = client.get('/debtors/123/archive/0/public')
+    r = client.get('/debtors/123/documents/0/public')
     assert r.status_code == 404
 
     r = client.post(
-        '/debtors/123/archive/',
+        '/debtors/123/documents/',
         content_type='application/octet-stream',
         data=101 * b'1',
     )
@@ -481,7 +481,7 @@ def test_save_document(client, debtor):
 
     content = 100 * b'1'
     r = client.post(
-        '/debtors/123/archive/',
+        '/debtors/123/documents/',
         content_type='application/octet-stream',
         data=content,
     )
@@ -489,7 +489,7 @@ def test_save_document(client, debtor):
     assert r.content_type == 'application/octet-stream'
     assert r.get_data() == content
     location = r.headers['Location']
-    m = re.match(r'http://example.com/debtors/123/archive/(\d)+/public', location)
+    m = re.match(r'http://example.com/debtors/123/documents/(\d)+/public', location)
     assert m is not None
     document_id = int(m.group(1))
     assert document_id >= 0
@@ -500,7 +500,7 @@ def test_save_document(client, debtor):
     assert r.get_data() == content
 
     r = client.post(
-        '/debtors/123/archive/',
+        '/debtors/123/documents/',
         content_type='application/octet-stream',
         data=content,
     )
@@ -510,14 +510,14 @@ def test_save_document(client, debtor):
     assert location != r.headers['Location']
 
     r = client.post(
-        '/debtors/123/archive/',
+        '/debtors/123/documents/',
         content_type='application/octet-stream',
         data=content,
     )
     assert r.status_code == 403
 
     r = client.post(
-        '/debtors/666/archive/',
+        '/debtors/666/documents/',
         content_type='application/octet-stream',
         data=content,
     )

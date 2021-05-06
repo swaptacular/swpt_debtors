@@ -455,18 +455,18 @@ class TransferEndpoint(MethodView):
             pass
 
 
-archive_api = Blueprint(
-    'archive',
+documents_api = Blueprint(
+    'documents',
     __name__,
     url_prefix='/debtors',
     description="Maintains an ever-growing set of public documents.",
 )
 
 
-@archive_api.route('/<i64:debtorId>/info-public', parameters=[specs.DEBTOR_ID])
+@documents_api.route('/<i64:debtorId>/public', parameters=[specs.DEBTOR_ID])
 class RedirectToDebtorsInfoEndpoint(MethodView):
-    @archive_api.response(code=302)
-    @archive_api.doc(operationId='redirectToDebtorsInfo', responses={302: specs.DEBTOR_INFO_EXISTS})
+    @documents_api.response(code=302)
+    @documents_api.doc(operationId='redirectToDebtorsInfo', responses={302: specs.DEBTOR_INFO_EXISTS})
     def get(self, debtorId):
         """Redirect to the debtor's public info document."""
 
@@ -478,13 +478,13 @@ class RedirectToDebtorsInfoEndpoint(MethodView):
         return response
 
 
-@archive_api.route('/<i64:debtorId>/archive/', parameters=[specs.DEBTOR_ID])
+@documents_api.route('/<i64:debtorId>/documents/', parameters=[specs.DEBTOR_ID])
 class SaveDocumentEndpoint(MethodView):
-    @archive_api.response(code=201, headers=specs.LOCATION_HEADER)
-    @archive_api.doc(operationId='saveDocument',
-                     security=specs.SCOPE_ACCESS_MODIFY,
-                     responses={403: specs.FORBIDDEN_OPERATION,
-                                413: specs.DOCUMENT_IS_TOO_BIG})
+    @documents_api.response(code=201, headers=specs.LOCATION_HEADER)
+    @documents_api.doc(operationId='saveDocument',
+                       security=specs.SCOPE_ACCESS_MODIFY,
+                       responses={403: specs.FORBIDDEN_OPERATION,
+                                  413: specs.DOCUMENT_IS_TOO_BIG})
     def post(self, debtorId):
         """Save a document.
 
@@ -515,7 +515,7 @@ class SaveDocumentEndpoint(MethodView):
             abort(404)
 
         location = url_for(
-            'archive.DocumentEndpoint',
+            'documents.DocumentEndpoint',
             _external=True,
             debtorId=debtorId,
             documentId=document.document_id,
@@ -524,10 +524,10 @@ class SaveDocumentEndpoint(MethodView):
         return make_response(content, 201, {'Content-Type': content_type, 'Location': location})
 
 
-@archive_api.route('/<i64:debtorId>/archive/<i64:documentId>/public', parameters=[specs.DEBTOR_ID, specs.DOCUMENT_ID])
+@documents_api.route('/<i64:debtorId>/documents/<i64:documentId>/public', parameters=[specs.DEBTOR_ID, specs.DOC_ID])
 class DocumentEndpoint(MethodView):
-    @archive_api.response(code=200)
-    @archive_api.doc(operationId='getDocument')
+    @documents_api.response(code=200)
+    @documents_api.doc(operationId='getDocument')
     def get(self, debtorId, documentId):
         """Return a saved document.
 
