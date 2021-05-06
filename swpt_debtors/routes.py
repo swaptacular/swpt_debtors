@@ -2,7 +2,7 @@ import re
 from enum import IntEnum
 from typing import Tuple, Optional
 from datetime import datetime, timedelta, timezone
-from flask import redirect, url_for, request, current_app, g
+from flask import redirect, url_for, request, current_app, g, make_response
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from swpt_lib.utils import u64_to_i64
@@ -464,11 +464,11 @@ archive_api = Blueprint(
 
 
 @archive_api.route('/<i64:debtorId>/info-public', parameters=[specs.DEBTOR_ID])
-class RedirectToLatestInfo(MethodView):
+class RedirectToDebtorsInfoEndpoint(MethodView):
     @archive_api.response(code=302)
-    @archive_api.doc(operationId='redirectToLatestInfo', responses={302: specs.DEBTOR_INFO_EXISTS})
+    @archive_api.doc(operationId='redirectToDebtorsInfo', responses={302: specs.DEBTOR_INFO_EXISTS})
     def get(self, debtorId):
-        """Redirect to the debtor's latest public info document."""
+        """Redirect to the debtor's public info document."""
 
         debtor = procedures.get_active_debtor(debtorId) or abort(404)
         location = debtor.debtor_info_iri or abort(404)
@@ -476,3 +476,68 @@ class RedirectToLatestInfo(MethodView):
         response.headers['Cache-Control'] = 'max-age=86400'
 
         return response
+
+
+@archive_api.route('/<i64:debtorId>/archive/', parameters=[specs.DEBTOR_ID])
+class SaveDocumentEndpoint(MethodView):
+    @archive_api.response(code=201, headers=specs.LOCATION_HEADER)
+    @archive_api.doc(operationId='saveDocument',
+                     security=specs.SCOPE_ACCESS_MODIFY,
+                     responses={403: specs.FORBIDDEN_OPERATION,
+                                413: specs.DOCUMENT_IS_TOO_BIG})
+    def post(self, debtorId):
+        """Save a document.
+
+        The body of the request should contain the document to be
+        saved. The document can be of any type, as long as the type is
+        correctly specified by the `Content-Type` header in the
+        request.
+
+        """
+
+        ensure_debtor_permissions()
+
+        if request.content_length > current_app.config['APP_DOCUMENT_MAX_CONTENT_LENGTH']:
+            abort(413)
+
+        content_type = request.content_type or 'text/html; charset=utf-8'
+        content = request.get_data() or b''
+        try:
+            document = procedures.save_document(
+                debtor_id=debtorId,
+                content_type=content_type,
+                content=content,
+                max_saves_per_year=current_app.config['APP_DOCUMENT_MAX_SAVES_PER_YEAR'],
+            )
+        except procedures.TooManySavedDocuments:
+            abort(403)
+        except procedures.DebtorDoesNotExist:
+            abort(404)
+
+        location = url_for(
+            'archive.DocumentEndpoint',
+            _external=True,
+            debtorId=debtorId,
+            documentId=document.document_id,
+        )
+
+        return make_response(content, 201, {'Content-Type': content_type, 'Location': location})
+
+
+@archive_api.route('/<i64:debtorId>/archive/<i64:documentId>/public', parameters=[specs.DEBTOR_ID, specs.DOCUMENT_ID])
+class DocumentEndpoint(MethodView):
+    @archive_api.response(code=200)
+    @archive_api.doc(operationId='getDocument')
+    def get(self, debtorId, documentId):
+        """Return a saved document.
+
+        The returned document can be of any type. The document's type
+        will be specified by the `Content-Type` header in the
+        response.
+
+        """
+
+        document = procedures.get_document(debtorId, documentId) or abort(404)
+        headers = {'Content-Type': document.content_type, 'Cache-Control': 'max-age=31536000'}
+
+        return make_response(document.content, headers)

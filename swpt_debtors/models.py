@@ -137,6 +137,8 @@ class Debtor(db.Model):
     running_transfers_count = db.Column(db.Integer, nullable=False, default=0)
     actions_count = db.Column(db.Integer, nullable=False, default=0)
     actions_count_reset_date = db.Column(db.DATE, nullable=False, default=get_now_utc)
+    documents_count = db.Column(db.Integer, nullable=False, default=0)
+    documents_count_reset_date = db.Column(db.DATE, nullable=False, default=get_now_utc)
     has_server_account = db.Column(db.BOOLEAN, nullable=False, default=False)
     account_creation_date = db.Column(db.DATE, nullable=False, default=DATE0)
     account_last_change_ts = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=TS0)
@@ -227,6 +229,21 @@ class RunningTransfer(db.Model):
     @property
     def is_finalized(self):
         return bool(self.finalized_at)
+
+
+class Document(db.Model):
+    debtor_id = db.Column(db.BigInteger, primary_key=True)
+    document_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    content_type = db.Column(db.String, nullable=False)
+    content = db.Column(db.LargeBinary, nullable=False)
+    inserted_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
+    __table_args__ = (
+        db.ForeignKeyConstraint(['debtor_id'], ['debtor.debtor_id'], ondelete='CASCADE'),
+        {
+            'comment': 'Represents a document saved by the debtor, which should remain '
+                       'available indefinitely, or at least for a very long time.',
+        }
+    )
 
 
 class ConfigureAccountSignal(Signal):

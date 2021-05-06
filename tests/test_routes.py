@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime, timezone
 from urllib.parse import urljoin, urlparse
 import pytest
@@ -465,3 +466,59 @@ def test_redirect_to_latest_info(client, debtor):
     assert r.status_code == 302
     assert r.headers['Location'] == 'https://example.com/'
     assert r.headers['Cache-Control'] == 'max-age=86400'
+
+
+def test_save_document(client, debtor):
+    r = client.get('/debtors/123/archive/0/public')
+    assert r.status_code == 404
+
+    r = client.post(
+        '/debtors/123/archive/',
+        content_type='application/octet-stream',
+        data=101 * b'1',
+    )
+    assert r.status_code == 413
+
+    content = 100 * b'1'
+    r = client.post(
+        '/debtors/123/archive/',
+        content_type='application/octet-stream',
+        data=content,
+    )
+    assert r.status_code == 201
+    assert r.content_type == 'application/octet-stream'
+    assert r.get_data() == content
+    location = r.headers['Location']
+    m = re.match(r'http://example.com/debtors/123/archive/(\d)+/public', location)
+    assert m is not None
+    document_id = int(m.group(1))
+    assert document_id >= 0
+
+    r = client.get(location)
+    assert r.status_code == 200
+    assert r.content_type == 'application/octet-stream'
+    assert r.get_data() == content
+
+    r = client.post(
+        '/debtors/123/archive/',
+        content_type='application/octet-stream',
+        data=content,
+    )
+    assert r.status_code == 201
+    assert r.content_type == 'application/octet-stream'
+    assert r.get_data() == content
+    assert location != r.headers['Location']
+
+    r = client.post(
+        '/debtors/123/archive/',
+        content_type='application/octet-stream',
+        data=content,
+    )
+    assert r.status_code == 403
+
+    r = client.post(
+        '/debtors/666/archive/',
+        content_type='application/octet-stream',
+        data=content,
+    )
+    assert r.status_code == 404

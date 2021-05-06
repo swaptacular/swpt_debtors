@@ -9,7 +9,7 @@ from sqlalchemy.sql.expression import func
 from swpt_lib.utils import Seqnum, increment_seqnum
 from swpt_debtors.extensions import db
 from swpt_debtors.models import Debtor, FinalizeTransferSignal, RunningTransfer, ConfigureAccountSignal, \
-    PrepareTransferSignal, NodeConfig, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
+    PrepareTransferSignal, NodeConfig, Document, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
     DEFAULT_CONFIG_FLAGS, HUGE_NEGLIGIBLE_AMOUNT, SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
 
 T = TypeVar('T')
@@ -66,6 +66,10 @@ class ForbiddenTransferCancellation(Exception):
 
 class TooManyManagementActions(Exception):
     """Too many management actions per month by a debtor."""
+
+
+class TooManySavedDocuments(Exception):
+    """Too many saved documents per year by a debtor."""
 
 
 @atomic
@@ -521,6 +525,35 @@ def process_account_update_signal(
         debtor.debtor_info_iri = _get_debtor_info_iri_from_config_data(config_data)
 
 
+@atomic
+def save_document(
+        *,
+        debtor_id: int,
+        content_type: str,
+        content: bytes,
+        max_saves_per_year: int = MAX_INT32) -> Document:
+
+    assert content_type is not None
+    assert content is not None
+
+    _throttle_document_saves(debtor_id, max_saves_per_year, datetime.now(tz=timezone.utc))
+
+    document = Document(
+        debtor_id=debtor_id,
+        content_type=content_type,
+        content=content,
+    )
+    with db.retry_on_integrity_error():
+        db.session.add(document)
+
+    return document
+
+
+@atomic
+def get_document(debtor_id: int, document_id: int) -> Optional[Document]:
+    return Document.query.filter_by(debtor_id=debtor_id, document_id=document_id).one_or_none()
+
+
 def _get_debtor_info_iri_from_config_data(config_data: str) -> Optional[str]:
     """Parse `config_data` and return `config_data['info']['iri']`."""
 
@@ -530,7 +563,7 @@ def _get_debtor_info_iri_from_config_data(config_data: str) -> Optional[str]:
     try:
         config_data = json.loads(config_data)
     except json.JSONDecodeError:
-        config_data = None
+        return None
 
     debtor_info = get_dict_key(config_data, 'info')
     debtor_info_iri = get_dict_key(debtor_info, 'iri')
@@ -553,6 +586,24 @@ def _throttle_debtor_actions(debtor_id: int, max_actions_per_month: int, current
         raise TooManyManagementActions()
 
     debtor.actions_count += 1
+    return debtor
+
+
+def _throttle_document_saves(debtor_id: int, max_saves_per_year: int, current_ts: datetime) -> Debtor:
+    debtor = get_active_debtor(debtor_id, lock=True)
+    if debtor is None:
+        raise DebtorDoesNotExist()
+
+    current_date = current_ts.date()
+    number_of_elapsed_days = (current_date - debtor.documents_count_reset_date).days
+    if number_of_elapsed_days > 365:  # pragma: no cover
+        debtor.documents_count = 0
+        debtor.documents_count_reset_date = current_date
+
+    if debtor.documents_count >= max_saves_per_year:
+        raise TooManySavedDocuments()
+
+    debtor.documents_count += 1
     return debtor
 
 

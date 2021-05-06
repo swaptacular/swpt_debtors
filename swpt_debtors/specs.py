@@ -22,6 +22,17 @@ TRANSFER_UUID = {
     },
 }
 
+DOCUMENT_ID = {
+    'in': 'path',
+    'name': 'documentId',
+    'required': True,
+    'description': "The document's ID",
+    'schema': {
+        'type': 'string',
+        'pattern': '^[0-9A-Za-z_=-]{1,64}$',
+    },
+}
+
 LOCATION_HEADER = {
     'Location': {
         'description': 'The URI of the entry.',
@@ -95,6 +106,11 @@ TRANSFER_CANCELLATION_FAILURE = {
 
 FORBIDDEN_OPERATION = {
     'description': 'Forbidden operation.',
+    'content': ERROR_CONTENT,
+}
+
+DOCUMENT_IS_TOO_BIG = {
+    'description': 'The document is too big.',
     'content': ERROR_CONTENT,
 }
 
