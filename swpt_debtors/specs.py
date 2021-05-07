@@ -114,6 +114,15 @@ DOCUMENT_IS_TOO_BIG = {
     'content': ERROR_CONTENT,
 }
 
+DOCUMENT_CONTENT = {
+    'content': {
+        'text/plain': {
+            'example': 'This is an example document.',
+        },
+        '*/*': {},
+    }
+}
+
 TRANSFER_EXISTS = {
     'description': 'The same transfer entry already exists.',
     'headers': LOCATION_HEADER,

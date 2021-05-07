@@ -468,7 +468,13 @@ class RedirectToDebtorsInfoEndpoint(MethodView):
     @documents_api.response(code=302)
     @documents_api.doc(operationId='redirectToDebtorsInfo', responses={302: specs.DEBTOR_INFO_EXISTS})
     def get(self, debtorId):
-        """Redirect to the debtor's public info document."""
+        """Redirect to the debtor's public info document.
+
+        The user will be redirected to the info URL specified in the
+        debtor's configuration. If no URL is specified in the
+        configuration, a `404` error code will be returned.
+
+        """
 
         debtor = procedures.get_active_debtor(debtorId) or abort(404)
         location = debtor.debtor_info_iri or abort(404)
@@ -483,7 +489,9 @@ class SaveDocumentEndpoint(MethodView):
     @documents_api.response(code=201, headers=specs.LOCATION_HEADER)
     @documents_api.doc(operationId='saveDocument',
                        security=specs.SCOPE_ACCESS_MODIFY,
-                       responses={403: specs.FORBIDDEN_OPERATION,
+                       requestBody=specs.DOCUMENT_CONTENT,
+                       responses={201: specs.DOCUMENT_CONTENT,
+                                  403: specs.FORBIDDEN_OPERATION,
                                   413: specs.DOCUMENT_IS_TOO_BIG})
     def post(self, debtorId):
         """Save a document.
@@ -527,7 +535,7 @@ class SaveDocumentEndpoint(MethodView):
 @documents_api.route('/<i64:debtorId>/documents/<i64:documentId>/public', parameters=[specs.DEBTOR_ID, specs.DOC_ID])
 class DocumentEndpoint(MethodView):
     @documents_api.response(code=200)
-    @documents_api.doc(operationId='getDocument')
+    @documents_api.doc(operationId='getDocument', responses={200: specs.DOCUMENT_CONTENT})
     def get(self, debtorId, documentId):
         """Return a saved document.
 
