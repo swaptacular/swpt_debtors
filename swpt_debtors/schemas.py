@@ -695,7 +695,7 @@ class TransferSchema(TransferCreationRequestSchema):
         return calc_checkup_datetime(obj.debtor_id, obj.initiated_at).isoformat()
 
 
-class TransferCancelationRequestSchema(Schema):
+class TransferCancelationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='TransferCancelationRequest',
         default='TransferCancelationRequest',
