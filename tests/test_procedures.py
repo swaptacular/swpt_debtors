@@ -281,7 +281,7 @@ def test_too_many_initiated_transfers(db_session, debtor):
         p.initiate_running_transfer(D_ID, uuid, *acc_id(D_ID, C_ID), 1000, '', '', 10)
     assert len(RunningTransfer.query.all()) == 10
     assert p.get_debtor(D_ID).running_transfers_count == 10
-    with pytest.raises(p.TransfersConflict):
+    with pytest.raises(p.TooManyRunningTransfers):
         p.initiate_running_transfer(D_ID, '123e4567-e89b-12d3-a456-426655440010', *acc_id(D_ID, C_ID), 1000, '', '', 10)
 
 

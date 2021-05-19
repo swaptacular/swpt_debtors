@@ -60,6 +60,10 @@ class TransfersConflict(Exception):
     """A different transfer with conflicting UUID already exists."""
 
 
+class TooManyRunningTransfers(Exception):
+    """Too many initiated, not deleted transfers."""
+
+
 class ForbiddenTransferCancellation(Exception):
     """The transfer can not be canceled."""
 
@@ -276,7 +280,7 @@ def initiate_running_transfer(
     debtor = _throttle_debtor_actions(debtor_id, max_actions_per_month, current_ts)
     debtor.running_transfers_count += 1
     if debtor.running_transfers_count > max_actions_per_month:
-        raise TransfersConflict()
+        raise TooManyRunningTransfers()
 
     new_running_transfer = RunningTransfer(
         debtor_id=debtor_id,

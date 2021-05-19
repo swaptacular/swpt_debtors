@@ -396,7 +396,7 @@ class TransfersListEndpoint(MethodView):
                 transfer_note=transfer_creation_request['transfer_note'],
                 max_actions_per_month=current_app.config['APP_MAX_TRANSFERS_PER_MONTH'],
             )
-        except procedures.TooManyManagementActions:
+        except (procedures.TooManyManagementActions, procedures.TooManyRunningTransfers):
             abort(403)
         except procedures.DebtorDoesNotExist:
             abort(404)
