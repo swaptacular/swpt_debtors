@@ -109,6 +109,8 @@ context = {
     'DebtorConfig': 'debtors.DebtorConfigEndpoint',
     'TransfersList': 'transfers.TransfersListEndpoint',
     'Transfer': 'transfers.TransferEndpoint',
+    'SaveDocument': 'documents.SaveDocumentEndpoint',
+    'RedirectToDebtorsInfo': 'documents.RedirectToDebtorsInfoEndpoint',
     'calc_reservation_deadline': calc_reservation_deadline,
     'calc_checkup_datetime': calc_checkup_datetime,
 }

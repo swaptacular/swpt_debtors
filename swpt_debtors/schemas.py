@@ -385,6 +385,22 @@ class DebtorSchema(ValidateTypeMixin, Schema):
                     'create new credit-issuing transfers.',
         example={'uri': '/debtors/1/transfers/'},
     )
+    save_document = fields.Nested(
+        ObjectReferenceSchema,
+        required=True,
+        dump_only=True,
+        data_key='saveDocument',
+        description='A URI to which the debtor can POST documents to be saved.',
+        example={'uri': '/debtors/1/documents/'},
+    )
+    public_info_document = fields.Nested(
+        ObjectReferenceSchema,
+        required=True,
+        dump_only=True,
+        data_key='publicInfoDocument',
+        description="A URI that redirects to the debtor's public info document.",
+        example={'uri': '/debtors/1/public'},
+    )
     created_at = fields.DateTime(
         required=True,
         dump_only=True,
@@ -439,6 +455,16 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         obj.config = obj
         obj.transfers_list = {'uri': url_for(self.context['TransfersList'], _external=False, debtorId=obj.debtor_id)}
         obj.create_transfer = obj.transfers_list
+        obj.save_document = {'uri': url_for(
+            self.context['SaveDocument'],
+            _external=False,
+            debtorId=obj.debtor_id,
+        )}
+        obj.public_info_document = {'uri': url_for(
+            self.context['RedirectToDebtorsInfo'],
+            _external=False,
+            debtorId=obj.debtor_id
+        )}
 
         if obj.config_error is not None:
             obj.optional_config_error = obj.config_error

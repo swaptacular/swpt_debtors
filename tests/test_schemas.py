@@ -22,6 +22,8 @@ def test_serialize_debtor_schema(db_session):
     assert datetime.fromisoformat(obj['createdAt'])
     assert obj['balance'] == 0
     assert obj['transfersList'] == {'uri': '/debtors/1/transfers/'}
+    assert obj['saveDocument'] == {'uri': '/debtors/1/documents/'}
+    assert obj['publicInfoDocument'] == {'uri': '/debtors/1/public'}
     assert obj['config'] == {
         'type': 'DebtorConfig',
         'uri': '/debtors/1/config',
