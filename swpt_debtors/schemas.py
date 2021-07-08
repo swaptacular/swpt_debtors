@@ -492,7 +492,7 @@ class TransferErrorSchema(Schema):
         description='The error code.'
                     '\n\n'
                     '* `"CANCELED_BY_THE_SENDER"` signifies that the transfer has been '
-                    '  canceled the sender.\n'
+                    '  canceled by the sender.\n'
                     '* `"SENDER_DOES_NOT_EXIST"` signifies that the sender\'s account '
                     '  does not exist.\n'
                     '* `"RECIPIENT_IS_UNREACHABLE"` signifies that the recipient\'s'
