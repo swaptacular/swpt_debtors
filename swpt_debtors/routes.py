@@ -445,6 +445,12 @@ class TransferEndpoint(MethodView):
     def delete(self, debtorId, transferUuid):
         """Delete a transfer.
 
+        Before deleting a transfer, client implementations should
+        ensure that at least 5 days (120 hours) have passed since the
+        transfer was initiated (see the `initiatedAt` field). Also, it
+        is recommended successful transfers to stay on the server at
+        least a few weeks after their finalization.
+
         Note that deleting a running (not finalized) transfer does not
         cancel it. To ensure that a running transfer has not been
         successful, it must be canceled before deletion.
