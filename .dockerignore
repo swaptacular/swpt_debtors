@@ -16,6 +16,8 @@ MANIFEST
 htmlcov/
 submodules/
 hooks/
+.mypy_cache/
+.pytest_cache/
 
 # Byte-compiled files
 **/__pycache__/
