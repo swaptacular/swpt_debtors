@@ -152,6 +152,7 @@ class Configuration(metaclass=MetaEnvReader):
     OPENAPI_REDOC_URL = 'https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js'
     OPENAPI_SWAGGER_UI_PATH = 'swagger-ui'
     OPENAPI_SWAGGER_UI_URL = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/'
+    APP_ENABLE_CORS = False
     APP_TRANSFERS_FINALIZATION_AVG_SECONDS = 5.0
     APP_MAX_TRANSFERS_PER_MONTH = 300
     APP_FLUSH_CONFIGURE_ACCOUNTS_BURST_COUNT = 10000
@@ -187,7 +188,8 @@ def create_app(config_dict={}):
     app.config.from_object(Configuration)
     app.config.from_mapping(config_dict)
     app.config['API_SPEC_OPTIONS'] = specs.API_SPEC_OPTIONS
-    CORS(app, max_age=24 * 60 * 60, vary_header=False, expose_headers=['Location'])
+    if app.config['APP_ENABLE_CORS']:
+        CORS(app, max_age=24 * 60 * 60, vary_header=False, expose_headers=['Location'])
     db.init_app(app)
     migrate.init_app(app, db)
     protocol_broker.init_app(app)
