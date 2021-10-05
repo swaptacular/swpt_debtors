@@ -7,6 +7,9 @@ from swpt_lib.swpt_uris import make_account_uri
 from swpt_debtors.models import MAX_INT64, TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, \
     CONFIG_DATA_MAX_BYTES, Debtor, RunningTransfer
 
+TYPE_DESCRIPTION = '\
+The type of this object. Will always be present in the responses from the server.'
+
 URI_DESCRIPTION = '\
 The URI of this object. Can be a relative URI.'
 
@@ -91,7 +94,7 @@ class ObjectReferencesPageSchema(Schema):
         lambda obj: 'ObjectReferencesPage',
         required=True,
         type='string',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='ObjectReferencesPage',
     )
     items = fields.Nested(
@@ -119,7 +122,7 @@ class DebtorIdentitySchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='DebtorIdentity',
         default='DebtorIdentity',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='DebtorIdentity',
     )
     uri = fields.String(
@@ -142,7 +145,7 @@ class AccountIdentitySchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='AccountIdentity',
         default='AccountIdentity',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='AccountIdentity',
     )
     uri = fields.String(
@@ -177,7 +180,7 @@ class DebtorsListSchema(Schema):
         lambda obj: 'DebtorsList',
         required=True,
         type='string',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='DebtorsList',
     )
     items_type = fields.String(
@@ -211,7 +214,7 @@ class DebtorReservationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='DebtorReservationRequest',
         load_only=True,
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='DebtorReservationRequest',
     )
 
@@ -221,7 +224,7 @@ class DebtorReservationSchema(ValidateTypeMixin, Schema):
         lambda obj: 'DebtorReservation',
         required=True,
         type='string',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='DebtorReservation',
     )
     created_at = fields.DateTime(
@@ -266,7 +269,7 @@ class DebtorActivationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='DebtorActivationRequest',
         load_only=True,
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='DebtorActivationRequest',
     )
     optional_reservation_id = fields.Integer(
@@ -285,7 +288,7 @@ class DebtorDeactivationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='DebtorDeactivationRequest',
         load_only=True,
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='DebtorDeactivationRequest',
     )
 
@@ -301,7 +304,7 @@ class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
     type = fields.String(
         missing='DebtorConfig',
         default='DebtorConfig',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='DebtorConfig',
     )
     debtor = fields.Nested(
@@ -349,7 +352,7 @@ class DebtorSchema(ValidateTypeMixin, Schema):
         lambda obj: 'Debtor',
         required=True,
         type='string',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='Debtor',
     )
     identity = fields.Nested(
@@ -482,7 +485,7 @@ class TransferErrorSchema(Schema):
         lambda obj: 'TransferError',
         required=True,
         type='string',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='TransferError',
     )
     error_code = fields.String(
@@ -539,7 +542,7 @@ class TransferResultSchema(Schema):
         lambda obj: 'TransferResult',
         required=True,
         type='string',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='TransferResult',
     )
     finalized_at = fields.DateTime(
@@ -576,7 +579,7 @@ class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='TransferCreationRequest',
         default='TransferCreationRequest',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='TransferCreationRequest',
     )
     transfer_uuid = fields.UUID(
@@ -635,7 +638,7 @@ class TransferSchema(TransferCreationRequestSchema):
         lambda obj: 'Transfer',
         required=True,
         type='string',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='Transfer',
     )
     transfers_list = fields.Nested(
@@ -725,7 +728,7 @@ class TransferCancelationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
         missing='TransferCancelationRequest',
         default='TransferCancelationRequest',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='TransferCancelationRequest',
     )
 
@@ -742,7 +745,7 @@ class TransfersListSchema(Schema):
         lambda obj: 'TransfersList',
         required=True,
         type='string',
-        description='The type of this object.',
+        description=TYPE_DESCRIPTION,
         example='TransfersList',
     )
     debtor = fields.Nested(
