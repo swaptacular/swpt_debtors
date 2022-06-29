@@ -3,7 +3,7 @@ Swaptacular service that manages debtors
 
 This service implements a
 [Swaptacular](https://github.com/epandurski/swaptacular) [messaging
-protocol](https://github.com/epandurski/swpt_accounts/blob/master/protocol.rst)
+protocol](https://github.com/epandurski/swaptacular/blob/master/docs/protocol.rst)
 client that manages debtors. The deliverables are two docker images:
 the app-image, and the swagger-ui-image. Both images are generated
 from the project's
