@@ -339,6 +339,9 @@ def process_account_purge_signal(
         creditor_id: int,
         creation_date: date) -> None:
 
+    if creditor_id != ROOT_CREDITOR_ID:  # pragma: no cover
+        return
+
     debtor = Debtor.query.\
         filter_by(
             debtor_id=debtor_id,
