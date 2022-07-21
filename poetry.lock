@@ -192,7 +192,7 @@ Flask-SQLAlchemy = ">=1.0"
 
 [[package]]
 name = "flask-signalbus"
-version = "0.5.7"
+version = "0.5.13"
 description = "A Flask-SQLAlchemy extension for atomically sending messages (signals) over a message bus"
 category = "main"
 optional = false
@@ -738,7 +738,7 @@ testing = ["pytest (>=3.5,!=3.7.3)", "pytest-checkdocs (>=1.2.3)", "pytest-flake
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "1e3f78ac0b3a50e3784111699e9596386f2fd8b00018656b45e3ea0ab8688159"
+content-hash = "2646eb4e0c88d12156a74e7ab96321e64cec001070b6414554bb770a2af30838"
 
 [metadata.files]
 alembic = [
@@ -844,9 +844,7 @@ flask-migrate = [
     {file = "Flask-Migrate-2.6.0.tar.gz", hash = "sha256:8626af845e6071ef80c70b0dc16d373f761c981f0ad61bb143a529cab649e725"},
     {file = "Flask_Migrate-2.6.0-py2.py3-none-any.whl", hash = "sha256:c1601dfd46b9204233935e5d73473cd7fa959db7a4b0e894c7aa7a9e8aeebf0e"},
 ]
-flask-signalbus = [
-    {file = "Flask-SignalBus-0.5.7.tar.gz", hash = "sha256:9b13506faa73a958d798c179f4be96a040f4e5bfddc44e7ade5d858d512bf2c3"},
-]
+flask-signalbus = []
 flask-smorest = [
     {file = "flask-smorest-0.28.0.tar.gz", hash = "sha256:cfcbe4e2de34726eb48ab7182dc94ce0e3a8ee8ae7f5454603f77fd685f1b8e0"},
     {file = "flask_smorest-0.28.0-py3-none-any.whl", hash = "sha256:104d1964a5fc1d1472e5802fdb7b4ea24e5b800c5ace0a5cc6297dfe51746fac"},

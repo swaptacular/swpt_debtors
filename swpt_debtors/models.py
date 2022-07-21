@@ -1,12 +1,12 @@
 from __future__ import annotations
-from typing import Optional
 from datetime import datetime, timezone
 from flask import current_app
 from marshmallow import Schema, fields
 import dramatiq
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import null, true, or_
-from swpt_debtors.extensions import db, protocol_broker, MAIN_EXCHANGE_NAME
+from swpt_debtors.extensions import db, publisher, DEBTORS_OUT_EXCHANGE
+from flask_signalbus import rabbitmq
 
 MIN_INT16 = -1 << 15
 MAX_INT16 = (1 << 15) - 1
@@ -48,36 +48,45 @@ class classproperty(object):
 class Signal(db.Model):
     __abstract__ = True
 
-    # TODO: Define `send_signalbus_messages` class method, and set
-    #      `ModelClass.signalbus_burst_count = N` in models. Make sure
-    #      RabbitMQ message headers are set properly for the messages.
-
-    queue_name: Optional[str] = None
-
-    @property
-    def event_name(self):  # pragma: no cover
-        model = type(self)
-        return f'on_{model.__tablename__}'
+    @classmethod
+    def send_signalbus_messages(cls, objects):  # pragma: no cover
+        assert(all(isinstance(obj, cls) for obj in objects))
+        messages = [obj._create_message() for obj in objects]
+        publisher.publish_messages(messages)
 
     def send_signalbus_message(self):  # pragma: no cover
-        model = type(self)
-        if model.queue_name is None:
-            assert not hasattr(model, 'actor_name'), \
-                'SignalModel.actor_name is set, but SignalModel.queue_name is not'
-            actor_name = self.event_name
-            routing_key = f'events.{actor_name}'
-        else:
-            actor_name = model.actor_name
-            routing_key = model.queue_name
-        data = model.__marshmallow_schema__.dump(self)
-        message = dramatiq.Message(
-            queue_name=model.queue_name,
-            actor_name=actor_name,
+        self.send_signalbus_messages([self])
+
+    def _create_message(self):  # pragma: no cover
+        data = self.__marshmallow_schema__.dump(self)
+        dramatiq_message = dramatiq.Message(
+            queue_name=None,
+            actor_name=self.actor_name,
             args=(),
             kwargs=data,
             options={},
         )
-        protocol_broker.publish_message(message, exchange=MAIN_EXCHANGE_NAME, routing_key=routing_key)
+        headers = {
+            'debtor-id': data['debtor_id'],
+            'creditor-id': data['creditor_id'],
+        }
+        if 'coordinator_id' in data:
+            headers['coordinator-id'] = data['coordinator_id']
+            headers['coordinator-type'] = data['coordinator_type']
+        properties = rabbitmq.MessageProperties(
+            delivery_mode=2,
+            app_id='swpt_debtors',
+            content_type='application/json',
+            type=self.message_type,
+            headers=headers,
+        )
+        return rabbitmq.Message(
+            exchange=self.exchange_name,
+            routing_key=self.routing_key,
+            body=dramatiq_message.encode(),
+            properties=properties,
+            mandatory=True,
+        )
 
     inserted_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
 
@@ -247,7 +256,9 @@ class Document(db.Model):
 
 
 class ConfigureAccountSignal(Signal):
-    queue_name = 'swpt_accounts'
+    message_type = 'ConfigureAccount'
+    exchange_name = DEBTORS_OUT_EXCHANGE
+    routing_key = ''
     actor_name = 'configure_account'
 
     class __marshmallow__(Schema):
@@ -271,7 +282,9 @@ class ConfigureAccountSignal(Signal):
 
 
 class PrepareTransferSignal(Signal):
-    queue_name = 'swpt_accounts'
+    message_type = 'PrepareTransfer'
+    exchange_name = DEBTORS_OUT_EXCHANGE
+    routing_key = ''
     actor_name = 'prepare_transfer'
 
     class __marshmallow__(Schema):
@@ -301,7 +314,9 @@ class PrepareTransferSignal(Signal):
 
 
 class FinalizeTransferSignal(Signal):
-    queue_name = 'swpt_accounts'
+    message_type = 'FinalizeTransfer'
+    exchange_name = DEBTORS_OUT_EXCHANGE
+    routing_key = ''
     actor_name = 'finalize_transfer'
 
     class __marshmallow__(Schema):

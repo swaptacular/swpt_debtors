@@ -177,7 +177,7 @@ def create_app(config_dict={}):
     from werkzeug.middleware.proxy_fix import ProxyFix
     from flask import Flask
     from swpt_lib.utils import Int64Converter
-    from .extensions import db, migrate, protocol_broker, api
+    from .extensions import db, migrate, protocol_broker, api, publisher
     from .routes import admin_api, debtors_api, transfers_api, documents_api, specs
     from .cli import swpt_debtors
     from . import models  # noqa
@@ -193,6 +193,7 @@ def create_app(config_dict={}):
     db.init_app(app)
     migrate.init_app(app, db)
     protocol_broker.init_app(app)
+    publisher.init_app(app)
     api.init_app(app)
     api.register_blueprint(admin_api)
     api.register_blueprint(debtors_api)
