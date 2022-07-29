@@ -63,3 +63,8 @@ How to run all services (production-like)
 To start the containers, use this command:
 
     $ docker-compose -f docker-compose-all.yml up --build
+
+Note that you may need to checkout the `swpt_login` Git submodule
+first, by running:
+
+    $ git submodule update --init --recursive
