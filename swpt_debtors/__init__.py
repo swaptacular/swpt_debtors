@@ -143,6 +143,11 @@ class Configuration(metaclass=MetaEnvReader):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
     PROTOCOL_BROKER_URL = 'amqp://guest:guest@localhost:5672'
+    PROTOCOL_BROKER_QUEUE = 'swpt_debtors'
+    PROTOCOL_BROKER_PROCESSES = 1
+    PROTOCOL_BROKER_THREADS = 1
+    PROTOCOL_BROKER_PREFETCH_SIZE = 0
+    PROTOCOL_BROKER_PREFETCH_COUNT = 1
     API_TITLE = 'Debtors API'
     API_VERSION = 'v1'
     OPENAPI_VERSION = '3.0.2'
@@ -176,7 +181,7 @@ def create_app(config_dict={}):
     from werkzeug.middleware.proxy_fix import ProxyFix
     from flask import Flask
     from swpt_lib.utils import Int64Converter
-    from .extensions import db, migrate, protocol_broker, api, publisher
+    from .extensions import db, migrate, api, publisher
     from .routes import admin_api, debtors_api, transfers_api, documents_api, specs
     from .cli import swpt_debtors
     from . import models  # noqa
@@ -191,7 +196,6 @@ def create_app(config_dict={}):
         CORS(app, max_age=24 * 60 * 60, vary_header=False, expose_headers=['Location'])
     db.init_app(app)
     migrate.init_app(app, db)
-    protocol_broker.init_app(app)
     publisher.init_app(app)
     api.init_app(app)
     api.register_blueprint(admin_api)

@@ -7,12 +7,7 @@ C_ID = 1
 
 
 @pytest.fixture(scope='function')
-def actors(mocker):
-    class Broker:
-        def actor(self, fn=None, **kw):
-            return fn or (lambda x: x)
-
-    mocker.patch('swpt_debtors.extensions.protocol_broker', Broker())
+def actors():
     from swpt_debtors import actors
     return actors
 

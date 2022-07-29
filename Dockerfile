@@ -42,7 +42,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV PORT=8080
 ENV RESOURCE_SERVER=http://127.0.0.1:4499
 ENV GUNICORN_LOGLEVEL=warning
-ENV dramatiq_restart_delay=300
 
 RUN apk add --no-cache \
     libffi \
@@ -63,7 +62,6 @@ COPY docker/entrypoint.sh \
      docker/supervisord-all.conf \
      docker/trigger_supervisor_process.py \
      wsgi.py \
-     tasks.py \
      pytest.ini \
      ./
 COPY docker/oathkeeper/ oathkeeper/
