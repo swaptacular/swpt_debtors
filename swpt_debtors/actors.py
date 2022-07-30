@@ -211,11 +211,5 @@ class SmpConsumer(rabbitmq.Consumer):
             LOGGER.warn('The message does not contain a valid JSON document.')
             return False
 
-        try:
-            kwargs = obj['kwargs']
-        except KeyError:
-            LOGGER.warn('Malformed message: does not contain a "kwargs" property.')
-            return False
-
-        actor(**kwargs)
+        actor(**obj)
         return True
