@@ -61,7 +61,7 @@ def on_account_update_signal(
     assert MIN_INT32 <= last_config_seqnum <= MAX_INT32
     assert negligible_amount >= 0.0
     assert MIN_INT32 <= config_flags <= MAX_INT32
-    assert ttl > 0
+    assert ttl >= 0
     assert 0 <= transfer_note_max_bytes <= TRANSFER_NOTE_MAX_BYTES
     assert len(config_data) <= CONFIG_DATA_MAX_BYTES and len(config_data.encode('utf8')) <= CONFIG_DATA_MAX_BYTES
     assert account_id == '' or len(account_id) <= 100 and account_id.encode('ascii')
