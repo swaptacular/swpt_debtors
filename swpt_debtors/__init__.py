@@ -181,7 +181,7 @@ class Configuration(metaclass=MetaEnvReader):
 def create_app(config_dict={}):
     from werkzeug.middleware.proxy_fix import ProxyFix
     from flask import Flask
-    from swpt_lib.utils import Int64Converter
+    from swpt_pythonlib.utils import Int64Converter
     from .extensions import db, migrate, api, publisher
     from .routes import admin_api, debtors_api, transfers_api, documents_api, specs
     from .cli import swpt_debtors

@@ -1,6 +1,6 @@
-from typing import NamedTuple, TypeVar, Callable
+from typing import TypeVar, Callable
 from datetime import datetime, timedelta, timezone
-from swpt_lib.scan_table import TableScanner
+from swpt_pythonlib.scan_table import TableScanner
 from sqlalchemy.sql.expression import and_, or_, null, true, false
 from flask import current_app
 from swpt_debtors.extensions import db

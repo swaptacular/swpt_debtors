@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 from flask import redirect, url_for, request, current_app, g, make_response
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from swpt_lib.utils import u64_to_i64
-from swpt_lib.swpt_uris import parse_account_uri
+from swpt_pythonlib.utils import u64_to_i64
+from swpt_pythonlib.swpt_uris import parse_account_uri
 from swpt_debtors.schemas import DebtorSchema, TransferSchema, \
     TransfersListSchema, TransferCreationRequestSchema, \
     TransfersList, TransferCancelationRequestSchema, DebtorReservationRequestSchema, \

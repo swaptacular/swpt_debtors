@@ -2,7 +2,8 @@ import warnings
 from sqlalchemy.exc import SAWarning
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_signalbus import SignalBusMixin, AtomicProceduresMixin, rabbitmq
+from swpt_pythonlib.flask_signalbus import SignalBusMixin, AtomicProceduresMixin
+from swpt_pythonlib import rabbitmq
 from flask_smorest import Api
 
 TO_COORDINATORS_EXCHANGE = 'to_coordinators'

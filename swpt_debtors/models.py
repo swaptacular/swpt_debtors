@@ -6,7 +6,7 @@ from marshmallow import Schema, fields
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import null, true, or_
 from swpt_debtors.extensions import db, publisher, DEBTORS_OUT_EXCHANGE
-from flask_signalbus import rabbitmq
+from swpt_pythonlib import rabbitmq
 
 MIN_INT16 = -1 << 15
 MAX_INT16 = (1 << 15) - 1
@@ -271,6 +271,8 @@ class ConfigureAccountSignal(Signal):
         config_data = fields.String()
         config_flags = fields.Integer()
 
+    __marshmallow_schema__ = __marshmallow__()
+
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     ts = db.Column(db.TIMESTAMP(timezone=True), primary_key=True)
     seqnum = db.Column(db.Integer, primary_key=True)
@@ -299,6 +301,8 @@ class PrepareTransferSignal(Signal):
         inserted_at = fields.DateTime(data_key='ts')
         max_commit_delay = fields.Constant(MAX_INT32)
         min_interest_rate = fields.Constant(-100.0)
+
+    __marshmallow_schema__ = __marshmallow__()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     coordinator_request_id = db.Column(db.BigInteger, primary_key=True)
@@ -329,6 +333,8 @@ class FinalizeTransferSignal(Signal):
         transfer_note_format = fields.String()
         transfer_note = fields.String()
         inserted_at = fields.DateTime(data_key='ts')
+
+    __marshmallow_schema__ = __marshmallow__()
 
     debtor_id = db.Column(db.BigInteger, primary_key=True)
     signal_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)

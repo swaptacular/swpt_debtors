@@ -36,7 +36,7 @@ ARG FLASK_APP=swpt_debtors
 
 ENV FLASK_APP=$FLASK_APP
 ENV APP_ROOT_DIR=/usr/src/app
-ENV APP_ASSOCIATED_LOGGERS=flask_signalbus.signalbus_cli
+ENV APP_ASSOCIATED_LOGGERS=swpt_pythonlib.flask_signalbus.signalbus_cli
 ENV PYTHONPATH="$APP_ROOT_DIR"
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PORT=8080

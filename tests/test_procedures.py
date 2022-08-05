@@ -1,7 +1,7 @@
 import pytest
 from uuid import UUID
 from datetime import datetime, date, timedelta
-from swpt_lib.utils import i64_to_u64
+from swpt_pythonlib.utils import i64_to_u64
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, \
     FinalizeTransferSignal, ConfigureAccountSignal, MAX_INT64, ROOT_CREDITOR_ID, \

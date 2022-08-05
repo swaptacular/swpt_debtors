@@ -2,8 +2,8 @@ from copy import copy
 from marshmallow import Schema, fields, validate, pre_dump, post_dump, validates, missing, \
     ValidationError
 from flask import url_for
-from swpt_lib.utils import i64_to_u64
-from swpt_lib.swpt_uris import make_account_uri
+from swpt_pythonlib.utils import i64_to_u64
+from swpt_pythonlib.swpt_uris import make_account_uri
 from swpt_debtors.models import MAX_INT64, TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, \
     CONFIG_DATA_MAX_BYTES, Debtor, RunningTransfer
 

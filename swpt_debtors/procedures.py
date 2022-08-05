@@ -6,7 +6,7 @@ from typing import TypeVar, Optional, Callable, List, Tuple, Dict, Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import func
-from swpt_lib.utils import Seqnum, increment_seqnum
+from swpt_pythonlib.utils import Seqnum, increment_seqnum
 from swpt_debtors.extensions import db
 from swpt_debtors.models import Debtor, FinalizeTransferSignal, RunningTransfer, ConfigureAccountSignal, \
     PrepareTransferSignal, NodeConfig, Document, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \

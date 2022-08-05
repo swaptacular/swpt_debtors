@@ -1,7 +1,7 @@
 import logging
 import json
 from datetime import datetime, date
-from flask_signalbus import rabbitmq
+from swpt_pythonlib import rabbitmq
 from swpt_debtors import procedures
 from swpt_debtors.models import CT_ISSUING, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, \
     CONFIG_DATA_MAX_BYTES, TRANSFER_NOTE_MAX_BYTES
