@@ -144,6 +144,7 @@ class Configuration(metaclass=MetaEnvReader):
     SQLALCHEMY_ECHO = False
     PROTOCOL_BROKER_URL = 'amqp://guest:guest@localhost:5672'
     PROTOCOL_BROKER_QUEUE = 'swpt_debtors'
+    PROTOCOL_BROKER_QUEUE_ROUTING_KEY = '#'
     PROTOCOL_BROKER_PROCESSES = 1
     PROTOCOL_BROKER_THREADS = 1
     PROTOCOL_BROKER_PREFETCH_SIZE = 0
