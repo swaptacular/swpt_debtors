@@ -1,33 +1,29 @@
 import logging
 import json
 from datetime import datetime, date
+from marshmallow import ValidationError
 from swpt_pythonlib import rabbitmq
+import swpt_pythonlib.protocol_schemas as ps
 from swpt_debtors import procedures
-from swpt_debtors.models import CT_ISSUING, MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, \
-    CONFIG_DATA_MAX_BYTES, TRANSFER_NOTE_MAX_BYTES
-
-LOGGER = logging.getLogger(__name__)
+from swpt_debtors.models import CT_ISSUING
 
 
-def on_rejected_config_signal(
+def _on_rejected_config_signal(
         debtor_id: int,
         creditor_id: int,
-        config_ts: str,
+        config_ts: datetime,
         config_seqnum: int,
         negligible_amount: float,
         config_data: str,
         config_flags: int,
         rejection_code: str,
-        ts: str,
+        ts: datetime,
         *args, **kwargs) -> None:
-
-    assert rejection_code == '' or len(rejection_code) <= 30 and rejection_code.encode('ascii')
-    assert len(config_data) <= CONFIG_DATA_MAX_BYTES and len(config_data.encode('utf8')) <= CONFIG_DATA_MAX_BYTES
 
     procedures.process_rejected_config_signal(
         debtor_id=debtor_id,
         creditor_id=creditor_id,
-        config_ts=datetime.fromisoformat(config_ts),
+        config_ts=config_ts,
         config_seqnum=config_seqnum,
         negligible_amount=negligible_amount,
         config_data=config_data,
@@ -36,70 +32,59 @@ def on_rejected_config_signal(
     )
 
 
-def on_account_update_signal(
+def _on_account_update_signal(
         debtor_id: int,
         creditor_id: int,
-        creation_date: str,
-        last_change_ts: str,
+        creation_date: date,
+        last_change_ts: datetime,
         last_change_seqnum: int,
         principal: int,
         interest_rate: float,
-        last_config_ts: str,
+        last_config_ts: datetime,
         last_config_seqnum: int,
         negligible_amount: float,
         config_data: str,
         config_flags: int,
         account_id: str,
         transfer_note_max_bytes: int,
-        ts: str,
+        ts: datetime,
         ttl: int,
         *args, **kwargs) -> None:
-
-    assert MIN_INT64 <= debtor_id <= MAX_INT64
-    assert MIN_INT64 <= creditor_id <= MAX_INT64
-    assert MIN_INT32 <= last_change_seqnum <= MAX_INT32
-    assert MIN_INT32 <= last_config_seqnum <= MAX_INT32
-    assert negligible_amount >= 0.0
-    assert MIN_INT32 <= config_flags <= MAX_INT32
-    assert ttl >= 0
-    assert 0 <= transfer_note_max_bytes <= TRANSFER_NOTE_MAX_BYTES
-    assert len(config_data) <= CONFIG_DATA_MAX_BYTES and len(config_data.encode('utf8')) <= CONFIG_DATA_MAX_BYTES
-    assert account_id == '' or len(account_id) <= 100 and account_id.encode('ascii')
 
     procedures.process_account_update_signal(
         debtor_id=debtor_id,
         creditor_id=creditor_id,
-        creation_date=date.fromisoformat(creation_date),
-        last_change_ts=datetime.fromisoformat(last_change_ts),
+        creation_date=creation_date,
+        last_change_ts=last_change_ts,
         last_change_seqnum=last_change_seqnum,
         principal=principal,
         interest_rate=interest_rate,
-        last_config_ts=datetime.fromisoformat(last_config_ts),
+        last_config_ts=last_config_ts,
         last_config_seqnum=last_config_seqnum,
         negligible_amount=negligible_amount,
         config_data=config_data,
         config_flags=config_flags,
         account_id=account_id,
         transfer_note_max_bytes=transfer_note_max_bytes,
-        ts=datetime.fromisoformat(ts),
+        ts=ts,
         ttl=ttl,
     )
 
 
-def on_account_purge_signal(
+def _on_account_purge_signal(
         debtor_id: int,
         creditor_id: int,
-        creation_date: str,
+        creation_date: date,
         *args, **kwargs) -> None:
 
     procedures.process_account_purge_signal(
         debtor_id=debtor_id,
         creditor_id=creditor_id,
-        creation_date=date.fromisoformat(creation_date),
+        creation_date=creation_date,
     )
 
 
-def on_prepared_issuing_transfer_signal(
+def _on_prepared_issuing_transfer_signal(
         debtor_id: int,
         creditor_id: int,
         transfer_id: int,
@@ -110,7 +95,9 @@ def on_prepared_issuing_transfer_signal(
         recipient: str,
         *args, **kwargs) -> None:
 
-    assert coordinator_type == CT_ISSUING
+    if coordinator_type != CT_ISSUING:
+        _LOGGER.error('Unexpected coordinator type: "%s"', coordinator_type)
+        return
 
     procedures.process_prepared_issuing_transfer_signal(
         debtor_id=debtor_id,
@@ -123,7 +110,7 @@ def on_prepared_issuing_transfer_signal(
     )
 
 
-def on_rejected_issuing_transfer_signal(
+def _on_rejected_issuing_transfer_signal(
         coordinator_type: str,
         coordinator_id: int,
         coordinator_request_id: int,
@@ -133,9 +120,9 @@ def on_rejected_issuing_transfer_signal(
         creditor_id: int,
         *args, **kwargs) -> None:
 
-    assert coordinator_type == CT_ISSUING
-    assert status_code == '' or len(status_code) <= 30 and status_code.encode('ascii')
-    assert 0 <= total_locked_amount <= MAX_INT64
+    if coordinator_type != CT_ISSUING:
+        _LOGGER.error('Unexpected coordinator type: "%s"', coordinator_type)
+        return
 
     procedures.process_rejected_issuing_transfer_signal(
         coordinator_id=coordinator_id,
@@ -147,23 +134,23 @@ def on_rejected_issuing_transfer_signal(
     )
 
 
-def on_finalized_issuing_transfer_signal(
+def _on_finalized_issuing_transfer_signal(
         debtor_id: int,
         creditor_id: int,
         transfer_id: int,
         coordinator_type: str,
         coordinator_id: int,
         coordinator_request_id: int,
-        prepared_at: str,
-        ts: str,
+        prepared_at: datetime,
+        ts: datetime,
         committed_amount: int,
         status_code: str,
         total_locked_amount: int,
         *args, **kwargs) -> None:
 
-    assert coordinator_type == CT_ISSUING
-    assert status_code == '' or len(status_code) <= 30 and status_code.encode('ascii')
-    assert 0 <= total_locked_amount <= MAX_INT64
+    if coordinator_type != CT_ISSUING:
+        _LOGGER.error('Unexpected coordinator type: "%s"', coordinator_type)
+        return
 
     procedures.process_finalized_issuing_transfer_signal(
         debtor_id=debtor_id,
@@ -177,14 +164,17 @@ def on_finalized_issuing_transfer_signal(
     )
 
 
-MESSAGE_TYPES = {
-    'RejectedConfig': on_rejected_config_signal,
-    'AccountUpdate': on_account_update_signal,
-    'AccountPurge': on_account_purge_signal,
-    'PreparedTransfer': on_prepared_issuing_transfer_signal,
-    'RejectedTransfer': on_rejected_issuing_transfer_signal,
-    'FinalizedTransfer': on_finalized_issuing_transfer_signal,
+_MESSAGE_TYPES = {
+    'RejectedConfig': (ps.RejectedConfigMessageSchema(), _on_rejected_config_signal),
+    'AccountUpdate': (ps.AccountUpdateMessageSchema(), _on_account_update_signal),
+    'AccountPurge': (ps.AccountPurgeMessageSchema(), _on_account_purge_signal),
+    'PreparedTransfer': (ps.PreparedTransferMessageSchema(), _on_prepared_issuing_transfer_signal),
+    'RejectedTransfer': (ps.RejectedTransferMessageSchema(), _on_rejected_issuing_transfer_signal),
+    'FinalizedTransfer': (ps.FinalizedTransferMessageSchema(), _on_finalized_issuing_transfer_signal),
 }
+
+_LOGGER = logging.getLogger(__name__)
+
 
 TerminatedConsumtion = rabbitmq.TerminatedConsumtion
 
@@ -194,22 +184,38 @@ class SmpConsumer(rabbitmq.Consumer):
 
     def process_message(self, body, properties):
         try:
-            massage_type = properties.type
+            content_type = properties.content_type
         except AttributeError:
-            LOGGER.warn('Missing message type header')
+            _LOGGER.error('Missing message content type header')
+            return False
+
+        if content_type != 'application/json':
+            _LOGGER.error('Unknown message content type: "%s"', content_type)
             return False
 
         try:
-            actor = MESSAGE_TYPES[massage_type]
+            massage_type = properties.type
+        except AttributeError:
+            _LOGGER.error('Missing message type header')
+            return False
+
+        try:
+            schema, actor = _MESSAGE_TYPES[massage_type]
         except KeyError:
-            LOGGER.warn('Unknown message type: "%s"', massage_type)
+            _LOGGER.error('Unknown message type: "%s"', massage_type)
             return False
 
         try:
             obj = json.loads(body.decode('utf8'))
         except (UnicodeError, json.JSONDecodeError):
-            LOGGER.warn('The message does not contain a valid JSON document.')
+            _LOGGER.error('The message does not contain a valid JSON document.')
             return False
 
-        actor(**obj)
+        try:
+            message_content = schema.load(obj)
+        except ValidationError as e:
+            _LOGGER.error('Message validation error: %s', str(e))
+            return False
+
+        actor(**message_content)
         return True
