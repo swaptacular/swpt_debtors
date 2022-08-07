@@ -555,7 +555,7 @@ pymysql = ["pymysql (<1)", "pymysql"]
 
 [[package]]
 name = "Swpt-Pythonlib"
-version = "0.8.0"
+version = "0.8.1"
 description = ""
 category = "main"
 optional = false
@@ -563,15 +563,17 @@ python-versions = "*"
 develop = false
 
 [package.dependencies]
+Flask = ">=1.0"
 Flask-SQLAlchemy = ">=2.4"
-marshmallow = ">=3.10,<4.0"
-pika = ">=1.3,<2.0"
+marshmallow = ">=3.10"
+pika = ">=1.3"
+SQLAlchemy = ">=1.3"
 
 [package.source]
 type = "git"
 url = "https://github.com/swaptacular/swpt_pythonlib.git"
-reference = "v0.8.0"
-resolved_reference = "804e19806259726d066c8ce0d09d0064b02163ee"
+reference = "v0.8.1"
+resolved_reference = "26520ee5afd80ae2ca66e0d53b6d5fb3c9ac1971"
 
 [[package]]
 name = "typed-ast"
@@ -662,7 +664,7 @@ testing = ["pytest (>=3.5,!=3.7.3)", "pytest-checkdocs (>=1.2.3)", "pytest-flake
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "893912a8c56a01221515cc0cc88702b32926174283b1daa307f5ad70856ba5dc"
+content-hash = "bb85f8cf9c1c283f55ca738eeec77f6012840d6e26185e7a91a3e74e5e23be1d"
 
 [metadata.files]
 alembic = [

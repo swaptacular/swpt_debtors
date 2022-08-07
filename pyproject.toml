@@ -16,7 +16,7 @@ pytest = "^4.0"
 pytest-mock = "^1.10"
 flask-smorest = "^0.28.0"
 marshmallow = "^3.0.1"
-swpt_pythonlib = {git = "https://github.com/swaptacular/swpt_pythonlib.git", tag = "v0.8.0"}
+swpt_pythonlib = {git = "https://github.com/swaptacular/swpt_pythonlib.git", tag = "v0.8.1"}
 flask-cors = "^3.0.9"
 
 [tool.poetry.dev-dependencies]
