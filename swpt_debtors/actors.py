@@ -95,7 +95,7 @@ def _on_prepared_issuing_transfer_signal(
         recipient: str,
         *args, **kwargs) -> None:
 
-    if coordinator_type != CT_ISSUING:
+    if coordinator_type != CT_ISSUING:  # pragma: no cover
         _LOGGER.error('Unexpected coordinator type: "%s"', coordinator_type)
         return
 
@@ -120,7 +120,7 @@ def _on_rejected_issuing_transfer_signal(
         creditor_id: int,
         *args, **kwargs) -> None:
 
-    if coordinator_type != CT_ISSUING:
+    if coordinator_type != CT_ISSUING:  # pragma: no cover
         _LOGGER.error('Unexpected coordinator type: "%s"', coordinator_type)
         return
 
@@ -148,7 +148,7 @@ def _on_finalized_issuing_transfer_signal(
         total_locked_amount: int,
         *args, **kwargs) -> None:
 
-    if coordinator_type != CT_ISSUING:
+    if coordinator_type != CT_ISSUING:  # pragma: no cover
         _LOGGER.error('Unexpected coordinator type: "%s"', coordinator_type)
         return
 
@@ -183,22 +183,12 @@ class SmpConsumer(rabbitmq.Consumer):
     """Passes messages to proper handlers (actors)."""
 
     def process_message(self, body, properties):
-        try:
-            content_type = properties.content_type
-        except AttributeError:
-            _LOGGER.error('Missing message content type header')
-            return False
-
+        content_type = getattr(properties, 'content_type', None)
         if content_type != 'application/json':
             _LOGGER.error('Unknown message content type: "%s"', content_type)
             return False
 
-        try:
-            massage_type = properties.type
-        except AttributeError:
-            _LOGGER.error('Missing message type header')
-            return False
-
+        massage_type = getattr(properties, 'type', None)
         try:
             schema, actor = _MESSAGE_TYPES[massage_type]
         except KeyError:

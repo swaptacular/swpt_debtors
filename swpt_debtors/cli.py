@@ -3,7 +3,6 @@ import os
 import sys
 import signal
 import pika
-import multiprocessing
 import click
 from datetime import timedelta
 from flask import current_app
@@ -12,58 +11,7 @@ from swpt_debtors.models import MIN_INT64, MAX_INT64
 from swpt_debtors import procedures
 from swpt_debtors.extensions import db
 from swpt_debtors.table_scanners import DebtorScanner
-
-HANDLED_SIGNALS = {signal.SIGINT, signal.SIGTERM}
-if hasattr(signal, "SIGHUP"):
-    HANDLED_SIGNALS.add(signal.SIGHUP)
-if hasattr(signal, "SIGBREAK"):
-    HANDLED_SIGNALS.add(signal.SIGBREAK)
-
-
-def try_block_signals():
-    """Blocks HANDLED_SIGNALS on platforms that support it."""
-    if hasattr(signal, "pthread_sigmask"):
-        signal.pthread_sigmask(signal.SIG_BLOCK, HANDLED_SIGNALS)
-
-
-def try_unblock_signals():
-    """Unblocks HANDLED_SIGNALS on platforms that support it."""
-    if hasattr(signal, "pthread_sigmask"):
-        signal.pthread_sigmask(signal.SIG_UNBLOCK, HANDLED_SIGNALS)
-
-
-def consume(url, queue, threads, prefetch_size, prefetch_count):
-    """Consume messages in a subprocess."""
-
-    from swpt_debtors.actors import SmpConsumer, TerminatedConsumtion
-    from swpt_debtors import create_app
-
-    consumer = SmpConsumer(
-        app=create_app(),
-        config_prefix='PROTOCOL_BROKER',
-        url=url,
-        queue=queue,
-        threads=threads,
-        prefetch_size=prefetch_size,
-        prefetch_count=prefetch_count,
-    )
-    for sig in HANDLED_SIGNALS:
-        signal.signal(sig, consumer.stop)
-
-    # Unblock the blocked signals inherited from the parent process
-    # before we start any worker threads.
-    try_unblock_signals()
-
-    pid = os.getpid()
-    logger = logging.getLogger(__name__)
-    logger.info('Worker with PID %i started processing messages.', pid)
-
-    try:
-        consumer.start()
-    except TerminatedConsumtion:
-        pass
-
-    logger.info('Worker with PID %i stopped processing messages.', pid)
+from swpt_debtors.multiproc_utils import spawn_worker_processes, try_unblock_signals, HANDLED_SIGNALS
 
 
 @click.group('swpt_debtors')
@@ -218,58 +166,43 @@ def consume_messages(url, queue, processes, threads, prefetch_size, prefetch_cou
 
     """
 
-    worker_processes = []
-    worker_processes_have_been_terminated = False
-    processes = processes or current_app.config['PROTOCOL_BROKER_PROCESSES']
-    assert processes >= 1
+    def _consume_messages(url, queue, threads, prefetch_size, prefetch_count):
+        """Consume messages in a subprocess."""
 
-    def worker(*args):
+        from swpt_debtors.actors import SmpConsumer, TerminatedConsumtion
+        from swpt_debtors import create_app
+
+        consumer = SmpConsumer(
+            app=create_app(),
+            config_prefix='PROTOCOL_BROKER',
+            url=url,
+            queue=queue,
+            threads=threads,
+            prefetch_size=prefetch_size,
+            prefetch_count=prefetch_count,
+        )
+        for sig in HANDLED_SIGNALS:
+            signal.signal(sig, consumer.stop)
+        try_unblock_signals()
+
+        pid = os.getpid()
+        logger = logging.getLogger(__name__)
+        logger.info('Worker with PID %i started processing messages.', pid)
+
         try:
-            consume(*args)
-        except Exception:
-            logger = logging.getLogger(__name__)
-            logger.exception("Uncaught exception occured in worker with PID %i.", os.getpid())
+            consumer.start()
+        except TerminatedConsumtion:
+            pass
 
-    def terminate_worker_processes():
-        nonlocal worker_processes_have_been_terminated
-        if not worker_processes_have_been_terminated:
-            for p in worker_processes:
-                p.terminate()
-            worker_processes_have_been_terminated = True
+        logger.info('Worker with PID %i stopped processing messages.', pid)
 
-    def sighandler(signum, frame):
-        logger.info('Received "%s" signal. Shutting down...', signal.strsignal(signum))
-        terminate_worker_processes()
-
-    # To prevent the main process from exiting due to signals after
-    # worker processes have been defined but before the signal
-    # handling has been configured for the main process, block those
-    # signals that the main process is expected to handle.
-    try_block_signals()
-
-    logger = logging.getLogger(__name__)
-    logger.info('Spawning %i worker processes...', processes)
-
-    for _ in range(processes):
-        p = multiprocessing.Process(target=worker, args=(url, queue, threads, prefetch_size, prefetch_count))
-        p.start()
-        worker_processes.append(p)
-
-    for sig in HANDLED_SIGNALS:
-        signal.signal(sig, sighandler)
-
-    assert all(p.pid is not None for p in worker_processes)
-    try_unblock_signals()
-
-    # This loop waits until all worker processes have exited. However,
-    # as soon as one worker process exits, all remaining worker
-    # processes will be forcefully terminated.
-    while any(p.exitcode is None for p in worker_processes):
-        for p in worker_processes:
-            p.join(timeout=1)
-            if p.exitcode is not None and not worker_processes_have_been_terminated:
-                logger.warn("Worker with PID %r exited unexpectedly. Shutting down...", p.pid)
-                terminate_worker_processes()
-                break
-
+    spawn_worker_processes(
+        processes=processes or current_app.config['PROTOCOL_BROKER_PROCESSES'],
+        target=_consume_messages,
+        url=url,
+        queue=queue,
+        threads=threads,
+        prefetch_size=prefetch_size,
+        prefetch_count=prefetch_count,
+    )
     sys.exit(1)

@@ -128,7 +128,7 @@ admin_api.before_request(ensure_admin)
 @admin_api.route('/.debtor-reserve')
 class RandomDebtorReserveEndpoint(MethodView):
     @admin_api.arguments(DebtorReservationRequestSchema)
-    @admin_api.response(DebtorReservationSchema(context=context))
+    @admin_api.response(200, DebtorReservationSchema(context=context))
     @admin_api.doc(operationId='reserveRandomDebtor',
                    security=specs.SCOPE_ACTIVATE,
                    responses={409: specs.CONFLICTING_DEBTOR})
@@ -155,7 +155,7 @@ class RandomDebtorReserveEndpoint(MethodView):
 
 @admin_api.route('/.list')
 class DebtorsListEndpoint(MethodView):
-    @admin_api.response(DebtorsListSchema, example=specs.DEBTORS_LIST_EXAMPLE)
+    @admin_api.response(200, DebtorsListSchema, example=specs.DEBTORS_LIST_EXAMPLE)
     @admin_api.doc(operationId='getDebtorsList', security=specs.SCOPE_ACCESS_READONLY)
     def get(self):
         """Return a paginated list of links to all activated debtors."""
@@ -169,7 +169,7 @@ class DebtorsListEndpoint(MethodView):
 
 @admin_api.route('/<i64:debtorId>/enumerate', parameters=[specs.DEBTOR_ID])
 class DebtorEnumerateEndpoint(MethodView):
-    @admin_api.response(ObjectReferencesPageSchema(context=context), example=specs.DEBTOR_LINKS_EXAMPLE)
+    @admin_api.response(200, ObjectReferencesPageSchema(context=context), example=specs.DEBTOR_LINKS_EXAMPLE)
     @admin_api.doc(operationId='getDebtorsPage', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
         """Return a collection of activated debtors.
@@ -208,7 +208,7 @@ class DebtorEnumerateEndpoint(MethodView):
 @admin_api.route('/<i64:debtorId>/reserve', parameters=[specs.DEBTOR_ID])
 class DebtorReserveEndpoint(MethodView):
     @admin_api.arguments(DebtorReservationRequestSchema)
-    @admin_api.response(DebtorReservationSchema(context=context))
+    @admin_api.response(200, DebtorReservationSchema(context=context))
     @admin_api.doc(operationId='reserveDebtor',
                    security=specs.SCOPE_ACTIVATE,
                    responses={409: specs.CONFLICTING_DEBTOR})
@@ -236,7 +236,7 @@ class DebtorReserveEndpoint(MethodView):
 @admin_api.route('/<i64:debtorId>/activate', parameters=[specs.DEBTOR_ID])
 class DebtorActivateEndpoint(MethodView):
     @admin_api.arguments(DebtorActivationRequestSchema)
-    @admin_api.response(DebtorSchema(context=context))
+    @admin_api.response(200, DebtorSchema(context=context))
     @admin_api.doc(operationId='activateDebtor',
                    security=specs.SCOPE_ACTIVATE,
                    responses={409: specs.CONFLICTING_DEBTOR})
@@ -262,7 +262,7 @@ class DebtorActivateEndpoint(MethodView):
 @admin_api.route('/<i64:debtorId>/deactivate', parameters=[specs.DEBTOR_ID])
 class DebtorDeactivateEndpoint(MethodView):
     @admin_api.arguments(DebtorDeactivationRequestSchema)
-    @admin_api.response(code=204)
+    @admin_api.response(204)
     @admin_api.doc(operationId='deactivateDebtor', security=specs.SCOPE_DEACTIVATE)
     def post(self, debtor_deactivation_request, debtorId):
         """Deactivate a debtor."""
@@ -284,7 +284,7 @@ debtors_api.before_request(ensure_debtor_permissions)
 
 @debtors_api.route('/.debtor')
 class RedirectToDebtorEndpoint(MethodView):
-    @debtors_api.response(code=204)
+    @debtors_api.response(204)
     @debtors_api.doc(operationId='redirectToDebtor',
                      security=specs.SCOPE_ACCESS_READONLY,
                      responses={204: specs.DEBTOR_DOES_NOT_EXIST,
@@ -300,7 +300,7 @@ class RedirectToDebtorEndpoint(MethodView):
 
 @debtors_api.route('/<i64:debtorId>/', parameters=[specs.DEBTOR_ID])
 class DebtorEndpoint(MethodView):
-    @debtors_api.response(DebtorSchema(context=context))
+    @debtors_api.response(200, DebtorSchema(context=context))
     @debtors_api.doc(operationId='getDebtor', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
         """Return debtor."""
@@ -310,7 +310,7 @@ class DebtorEndpoint(MethodView):
 
 @debtors_api.route('/<i64:debtorId>/config', parameters=[specs.DEBTOR_ID])
 class DebtorConfigEndpoint(MethodView):
-    @debtors_api.response(DebtorConfigSchema(context=context))
+    @debtors_api.response(200, DebtorConfigSchema(context=context))
     @debtors_api.doc(operationId='getDebtorConfig', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
         """Return debtors's configuration."""
@@ -318,7 +318,7 @@ class DebtorConfigEndpoint(MethodView):
         return procedures.get_active_debtor(debtorId) or abort(404)
 
     @debtors_api.arguments(DebtorConfigSchema)
-    @debtors_api.response(DebtorConfigSchema(context=context))
+    @debtors_api.response(200, DebtorConfigSchema(context=context))
     @debtors_api.doc(operationId='updateDebtorConfig',
                      security=specs.SCOPE_ACCESS_MODIFY,
                      responses={403: specs.FORBIDDEN_OPERATION,
@@ -354,7 +354,7 @@ transfers_api.before_request(ensure_debtor_permissions)
 
 @transfers_api.route('/<i64:debtorId>/transfers/', parameters=[specs.DEBTOR_ID])
 class TransfersListEndpoint(MethodView):
-    @transfers_api.response(TransfersListSchema(context=context))
+    @transfers_api.response(200, TransfersListSchema(context=context))
     @transfers_api.doc(operationId='getTransfersList', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId):
         """Return the debtor's list of initiated transfers."""
@@ -367,7 +367,7 @@ class TransfersListEndpoint(MethodView):
         return TransfersList(debtor_id=debtorId, items=transfer_uuids)
 
     @transfers_api.arguments(TransferCreationRequestSchema)
-    @transfers_api.response(TransferSchema(context=context), code=201, headers=specs.LOCATION_HEADER)
+    @transfers_api.response(201, TransferSchema(context=context), headers=specs.LOCATION_HEADER)
     @transfers_api.doc(operationId='createTransfer',
                        security=specs.SCOPE_ACCESS_MODIFY,
                        responses={303: specs.TRANSFER_EXISTS,
@@ -412,7 +412,7 @@ class TransfersListEndpoint(MethodView):
 
 @transfers_api.route('/<i64:debtorId>/transfers/<uuid:transferUuid>', parameters=[specs.DEBTOR_ID, specs.TRANSFER_UUID])
 class TransferEndpoint(MethodView):
-    @transfers_api.response(TransferSchema(context=context))
+    @transfers_api.response(200, TransferSchema(context=context))
     @transfers_api.doc(operationId='getTransfer', security=specs.SCOPE_ACCESS_READONLY)
     def get(self, debtorId, transferUuid):
         """Return a transfer."""
@@ -420,7 +420,7 @@ class TransferEndpoint(MethodView):
         return procedures.get_running_transfer(debtorId, transferUuid) or abort(404)
 
     @transfers_api.arguments(TransferCancelationRequestSchema)
-    @transfers_api.response(TransferSchema(context=context))
+    @transfers_api.response(200, TransferSchema(context=context))
     @transfers_api.doc(operationId='cancelTransfer',
                        security=specs.SCOPE_ACCESS_MODIFY,
                        responses={403: specs.TRANSFER_CANCELLATION_FAILURE})
@@ -440,7 +440,7 @@ class TransferEndpoint(MethodView):
 
         return transfer
 
-    @transfers_api.response(code=204)
+    @transfers_api.response(204)
     @transfers_api.doc(operationId='deleteTransfer', security=specs.SCOPE_ACCESS_MODIFY)
     def delete(self, debtorId, transferUuid):
         """Delete a transfer.
@@ -473,7 +473,7 @@ documents_api = Blueprint(
 
 @documents_api.route('/<i64:debtorId>/public', parameters=[specs.DEBTOR_ID])
 class RedirectToDebtorsInfoEndpoint(MethodView):
-    @documents_api.response(code=302)
+    @documents_api.response(302)
     @documents_api.doc(operationId='redirectToDebtorsInfo', responses={302: specs.DEBTOR_INFO_EXISTS})
     def get(self, debtorId):
         """Redirect to the debtor's public info document.
@@ -494,7 +494,7 @@ class RedirectToDebtorsInfoEndpoint(MethodView):
 
 @documents_api.route('/<i64:debtorId>/documents/', parameters=[specs.DEBTOR_ID])
 class SaveDocumentEndpoint(MethodView):
-    @documents_api.response(code=201, headers=specs.LOCATION_HEADER)
+    @documents_api.response(201, headers=specs.LOCATION_HEADER)
     @documents_api.doc(operationId='saveDocument',
                        security=specs.SCOPE_ACCESS_MODIFY,
                        requestBody=specs.DOCUMENT_CONTENT,
@@ -542,7 +542,7 @@ class SaveDocumentEndpoint(MethodView):
 
 @documents_api.route('/<i64:debtorId>/documents/<i64:documentId>/public', parameters=[specs.DEBTOR_ID, specs.DOC_ID])
 class DocumentEndpoint(MethodView):
-    @documents_api.response(code=200)
+    @documents_api.response(200)
     @documents_api.doc(operationId='getDocument', responses={200: specs.DOCUMENT_CONTENT})
     def get(self, debtorId, documentId):
         """Return a saved document.

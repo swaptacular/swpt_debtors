@@ -290,7 +290,7 @@ class PrepareTransferSignal(Signal):
 
     class __marshmallow__(Schema):
         type = fields.Constant('PrepareTransfer')
-        coordinator_type = fields.String(default=CT_ISSUING)
+        coordinator_type = fields.String(dump_default=CT_ISSUING)
         coordinator_id = fields.Integer(attribute='debtor_id', dump_only=True)
         coordinator_request_id = fields.Integer()
         min_locked_amount = fields.Integer(attribute='amount', dump_only=True)
@@ -326,7 +326,7 @@ class FinalizeTransferSignal(Signal):
         debtor_id = fields.Integer()
         creditor_id = fields.Integer()
         transfer_id = fields.Integer()
-        coordinator_type = fields.String(default=CT_ISSUING)
+        coordinator_type = fields.String(dump_default=CT_ISSUING)
         coordinator_id = fields.Integer()
         coordinator_request_id = fields.Integer()
         committed_amount = fields.Integer()

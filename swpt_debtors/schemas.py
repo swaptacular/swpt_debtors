@@ -49,31 +49,37 @@ class MutableResourceSchema(Schema):
         required=True,
         validate=validate.Range(min=1, max=MAX_INT64),
         data_key='latestUpdateId',
-        format='int64',
-        description='The sequential number of the latest update in the object. This will always '
-                    'be a positive number, which starts from `1` and gets incremented with each '
-                    'change in the object.'
-                    '\n\n'
-                    '**Note:** When the object is changed by the client, the value of this field '
-                    'must be incremented by the client. The server will use the value of the '
-                    'field to detect conflicts which can occur when two clients try to update '
-                    'the object simultaneously.',
-        example=123,
+        metadata=dict(
+            format='int64',
+            description='The sequential number of the latest update in the object. This will always '
+                        'be a positive number, which starts from `1` and gets incremented with each '
+                        'change in the object.'
+                        '\n\n'
+                        '**Note:** When the object is changed by the client, the value of this field '
+                        'must be incremented by the client. The server will use the value of the '
+                        'field to detect conflicts which can occur when two clients try to update '
+                        'the object simultaneously.',
+            example=123,
+        )
     )
     latest_update_ts = fields.DateTime(
         required=True,
         dump_only=True,
         data_key='latestUpdateAt',
-        description='The moment of the latest update on this object.',
+        metadata=dict(
+            description='The moment of the latest update on this object.',
+        )
     )
 
 
 class ObjectReferenceSchema(Schema):
     uri = fields.String(
         required=True,
-        format='uri-reference',
-        description="The URI of the object. Can be a relative URI.",
-        example='https://example.com/objects/1',
+        metadata=dict(
+            format='uri-reference',
+            description="The URI of the object. Can be a relative URI.",
+            example='https://example.com/objects/1',
+        )
     )
 
     @post_dump
@@ -86,29 +92,37 @@ class ObjectReferencesPageSchema(Schema):
     uri = fields.String(
         required=True,
         dump_only=True,
-        format='uri-reference',
-        description=URI_DESCRIPTION,
-        example='/debtors/2/enumerate',
+        metadata=dict(
+            format='uri-reference',
+            description=URI_DESCRIPTION,
+            example='/debtors/2/enumerate',
+        )
     )
     type = fields.Function(
         lambda obj: 'ObjectReferencesPage',
         required=True,
-        type='string',
-        description=TYPE_DESCRIPTION,
-        example='ObjectReferencesPage',
+        metadata=dict(
+            type='string',
+            description=TYPE_DESCRIPTION,
+            example='ObjectReferencesPage',
+        )
     )
     items = fields.Nested(
         ObjectReferenceSchema(many=True),
         required=True,
         dump_only=True,
-        description='An array of `ObjectReference`s. Can be empty.',
-        example=[{'uri': f'{i}/'} for i in [1, 11, 111]],
+        metadata=dict(
+            description='An array of `ObjectReference`s. Can be empty.',
+            example=[{'uri': f'{i}/'} for i in [1, 11, 111]],
+        )
     )
     next = fields.String(
         dump_only=True,
-        format='uri-reference',
-        description=PAGE_NEXT_DESCRIPTION.format(type='ObjectReferencesPage'),
-        example='?prev=111',
+        metadata=dict(
+            format='uri-reference',
+            description=PAGE_NEXT_DESCRIPTION.format(type='ObjectReferencesPage'),
+            example='?prev=111',
+        )
     )
 
     @post_dump
@@ -120,19 +134,23 @@ class ObjectReferencesPageSchema(Schema):
 
 class DebtorIdentitySchema(ValidateTypeMixin, Schema):
     type = fields.String(
-        missing='DebtorIdentity',
-        default='DebtorIdentity',
-        description=TYPE_DESCRIPTION,
-        example='DebtorIdentity',
+        load_default='DebtorIdentity',
+        dump_default='DebtorIdentity',
+        metadata=dict(
+            description=TYPE_DESCRIPTION,
+            example='DebtorIdentity',
+        )
     )
     uri = fields.String(
         required=True,
         validate=validate.Length(max=100),
-        format='uri',
-        description="The information contained in this field must be enough to uniquely and "
-                    "reliably identify the debtor. Note that a network request *should not "
-                    "be needed* to identify the debtor.",
-        example='swpt:1',
+        metadata=dict(
+            format='uri',
+            description="The information contained in this field must be enough to uniquely and "
+                        "reliably identify the debtor. Note that a network request *should not "
+                        "be needed* to identify the debtor.",
+            example='swpt:1',
+        )
     )
 
     @post_dump
@@ -143,23 +161,27 @@ class DebtorIdentitySchema(ValidateTypeMixin, Schema):
 
 class AccountIdentitySchema(ValidateTypeMixin, Schema):
     type = fields.String(
-        missing='AccountIdentity',
-        default='AccountIdentity',
-        description=TYPE_DESCRIPTION,
-        example='AccountIdentity',
+        load_default='AccountIdentity',
+        dump_default='AccountIdentity',
+        metadata=dict(
+            description=TYPE_DESCRIPTION,
+            example='AccountIdentity',
+        )
     )
     uri = fields.String(
         required=True,
         validate=validate.Length(max=200),
-        format='uri',
-        description="The information contained in this field must be enough to: 1) uniquely "
-                    "and reliably identify the debtor, 2) uniquely and reliably identify "
-                    "the creditor's account with the debtor. Note that a network request "
-                    "*should not be needed* to identify the account."
-                    "\n\n"
-                    "For example, if the debtor happens to be a bank, the URI would reveal "
-                    "the type of the debtor (a bank), the ID of the bank, and the bank "
-                    "account number.",
+        metadata=dict(
+            format='uri',
+            description="The information contained in this field must be enough to: 1) uniquely "
+                        "and reliably identify the debtor, 2) uniquely and reliably identify "
+                        "the creditor's account with the debtor. Note that a network request "
+                        "*should not be needed* to identify the account."
+                        "\n\n"
+                        "For example, if the debtor happens to be a bank, the URI would reveal "
+                        "the type of the debtor (a bank), the ID of the bank, and the bank "
+                        "account number.",
+        )
     )
 
     @post_dump
@@ -172,34 +194,42 @@ class DebtorsListSchema(Schema):
     uri = fields.String(
         required=True,
         dump_only=True,
-        format='uri-reference',
-        description=URI_DESCRIPTION,
-        example='/debtors/.list',
+        metadata=dict(
+            format='uri-reference',
+            description=URI_DESCRIPTION,
+            example='/debtors/.list',
+        )
     )
     type = fields.Function(
         lambda obj: 'DebtorsList',
         required=True,
-        type='string',
-        description=TYPE_DESCRIPTION,
-        example='DebtorsList',
+        metadata=dict(
+            type='string',
+            description=TYPE_DESCRIPTION,
+            example='DebtorsList',
+        )
     )
     items_type = fields.String(
         required=True,
         dump_only=True,
         data_key='itemsType',
-        description='The type of the items in the paginated list.',
-        example='string',
+        metadata=dict(
+            description='The type of the items in the paginated list.',
+            example='string',
+        )
     )
     first = fields.String(
         required=True,
         dump_only=True,
-        format='uri-reference',
-        description='The URI of the first page in the paginated list. This can be a relative URI. '
-                    'The object retrieved from this URI will have: 1) An `items` field (an '
-                    'array), which will contain the first items of the paginated list; 2) May '
-                    'have a `next` field (a string), which would contain the URI of the next '
-                    'page in the list.',
-        example='/list?page=1',
+        metadata=dict(
+            format='uri-reference',
+            description='The URI of the first page in the paginated list. This can be a relative URI. '
+                        'The object retrieved from this URI will have: 1) An `items` field (an '
+                        'array), which will contain the first items of the paginated list; 2) May '
+                        'have a `next` field (a string), which would contain the URI of the next '
+                        'page in the list.',
+            example='/list?page=1',
+        )
     )
 
     @post_dump
@@ -212,10 +242,12 @@ class DebtorsListSchema(Schema):
 
 class DebtorReservationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
-        missing='DebtorReservationRequest',
+        load_default='DebtorReservationRequest',
         load_only=True,
-        description=TYPE_DESCRIPTION,
-        example='DebtorReservationRequest',
+        metadata=dict(
+            description=TYPE_DESCRIPTION,
+            example='DebtorReservationRequest',
+        )
     )
 
 
@@ -223,41 +255,51 @@ class DebtorReservationSchema(ValidateTypeMixin, Schema):
     type = fields.Function(
         lambda obj: 'DebtorReservation',
         required=True,
-        type='string',
-        description=TYPE_DESCRIPTION,
-        example='DebtorReservation',
+        metadata=dict(
+            type='string',
+            description=TYPE_DESCRIPTION,
+            example='DebtorReservation',
+        )
     )
     created_at = fields.DateTime(
         required=True,
         dump_only=True,
         data_key='createdAt',
-        description='The moment at which the reservation was created.',
+        metadata=dict(
+            description='The moment at which the reservation was created.',
+        )
     )
     reservation_id = fields.Function(
         lambda obj: obj.reservation_id or 0,
         required=True,
         data_key='reservationId',
-        type='integer',
-        format='int64',
-        description='A number that will be needed in order to activate the debtor.',
-        example=12345,
+        metadata=dict(
+            type='integer',
+            format='int64',
+            description='A number that will be needed in order to activate the debtor.',
+            example=12345,
+        )
     )
     debtor_id = fields.Function(
         lambda obj: str(i64_to_u64(obj.debtor_id)),
         required=True,
         data_key='debtorId',
-        type='string',
-        pattern='^[0-9A-Za-z_=-]{1,64}$',
-        description='The reserved debtor ID.',
-        example='1',
+        metadata=dict(
+            type='string',
+            pattern='^[0-9A-Za-z_=-]{1,64}$',
+            description='The reserved debtor ID.',
+            example='1',
+        )
     )
     valid_until = fields.Method(
         'get_valid_until_string',
         required=True,
         data_key='validUntil',
-        type='string',
-        format='date-time',
-        description='The moment at which the reservation will expire.',
+        metadata=dict(
+            type='string',
+            format='date-time',
+            description='The moment at which the reservation will expire.',
+        )
     )
 
     def get_valid_until_string(self, obj) -> str:
@@ -267,29 +309,35 @@ class DebtorReservationSchema(ValidateTypeMixin, Schema):
 
 class DebtorActivationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
-        missing='DebtorActivationRequest',
+        load_default='DebtorActivationRequest',
         load_only=True,
-        description=TYPE_DESCRIPTION,
-        example='DebtorActivationRequest',
+        metadata=dict(
+            description=TYPE_DESCRIPTION,
+            example='DebtorActivationRequest',
+        )
     )
     optional_reservation_id = fields.Integer(
         load_only=True,
         data_key='reservationId',
-        format='int64',
-        description='When this field is present, the server will try to activate an existing '
-                    'reservation with matching `debtorID` and `reservationID`. When this '
-                    'field is not present, the server will try to reserve the debtor ID '
-                    'specified in the path, and activate it at once.',
-        example=12345,
+        metadata=dict(
+            format='int64',
+            description='When this field is present, the server will try to activate an existing '
+                        'reservation with matching `debtorID` and `reservationID`. When this '
+                        'field is not present, the server will try to reserve the debtor ID '
+                        'specified in the path, and activate it at once.',
+            example=12345,
+        )
     )
 
 
 class DebtorDeactivationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
-        missing='DebtorDeactivationRequest',
+        load_default='DebtorDeactivationRequest',
         load_only=True,
-        description=TYPE_DESCRIPTION,
-        example='DebtorDeactivationRequest',
+        metadata=dict(
+            description=TYPE_DESCRIPTION,
+            example='DebtorDeactivationRequest',
+        )
     )
 
 
@@ -297,30 +345,38 @@ class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
     uri = fields.String(
         required=True,
         dump_only=True,
-        format='uri-reference',
-        description=URI_DESCRIPTION,
-        example='/debtors/1/config',
+        metadata=dict(
+            format='uri-reference',
+            description=URI_DESCRIPTION,
+            example='/debtors/1/config',
+        )
     )
     type = fields.String(
-        missing='DebtorConfig',
-        default='DebtorConfig',
-        description=TYPE_DESCRIPTION,
-        example='DebtorConfig',
+        load_default='DebtorConfig',
+        dump_default='DebtorConfig',
+        metadata=dict(
+            description=TYPE_DESCRIPTION,
+            example='DebtorConfig',
+        )
     )
     debtor = fields.Nested(
         ObjectReferenceSchema,
         required=True,
         dump_only=True,
-        description="The URI of the corresponding `Debtor`.",
-        example={'uri': '/debtors/1/'},
+        metadata=dict(
+            description="The URI of the corresponding `Debtor`.",
+            example={'uri': '/debtors/1/'},
+        )
     )
     config_data = fields.String(
         required=True,
         validate=validate.Length(max=CONFIG_DATA_MAX_BYTES),
         data_key='configData',
-        description="The debtor's configuration data. Different implementations may use "
-                    "different formats for this field.",
-        example='',
+        metadata=dict(
+            description="The debtor's configuration data. Different implementations may use "
+                        "different formats for this field.",
+            example='',
+        )
     )
 
     @validates('config_data')
@@ -344,109 +400,135 @@ class DebtorSchema(ValidateTypeMixin, Schema):
     uri = fields.String(
         required=True,
         dump_only=True,
-        format='uri-reference',
-        description=URI_DESCRIPTION,
-        example='/debtors/1/',
+        metadata=dict(
+            format='uri-reference',
+            description=URI_DESCRIPTION,
+            example='/debtors/1/',
+        )
     )
     type = fields.Function(
         lambda obj: 'Debtor',
         required=True,
-        type='string',
-        description=TYPE_DESCRIPTION,
-        example='Debtor',
+        metadata=dict(
+            type='string',
+            description=TYPE_DESCRIPTION,
+            example='Debtor',
+        )
     )
     identity = fields.Nested(
         DebtorIdentitySchema,
         required=True,
         dump_only=True,
         data_key='identity',
-        description="The debtor's `DebtorIdentity`.",
-        example={'type': 'DebtorIdentity', 'uri': 'swpt:1'},
+        metadata=dict(
+            description="The debtor's `DebtorIdentity`.",
+            example={'type': 'DebtorIdentity', 'uri': 'swpt:1'},
+        )
     )
     config = fields.Nested(
         DebtorConfigSchema,
         required=True,
         dump_only=True,
         data_key='config',
-        description="Debtor's `DebtorConfig` settings.",
+        metadata=dict(
+            description="Debtor's `DebtorConfig` settings.",
+        )
     )
     transfers_list = fields.Nested(
         ObjectReferenceSchema,
         required=True,
         dump_only=True,
         data_key='transfersList',
-        description="The URI of the debtor's list of pending credit-issuing transfers "
-                    "(`TransfersList`).",
-        example={'uri': '/debtors/1/transfers/'},
+        metadata=dict(
+            description="The URI of the debtor's list of pending credit-issuing transfers "
+                        "(`TransfersList`).",
+            example={'uri': '/debtors/1/transfers/'},
+        )
     )
     create_transfer = fields.Nested(
         ObjectReferenceSchema,
         required=True,
         dump_only=True,
         data_key='createTransfer',
-        description='A URI to which the debtor can POST `TransferCreationRequest`s to '
-                    'create new credit-issuing transfers.',
-        example={'uri': '/debtors/1/transfers/'},
+        metadata=dict(
+            description='A URI to which the debtor can POST `TransferCreationRequest`s to '
+                        'create new credit-issuing transfers.',
+            example={'uri': '/debtors/1/transfers/'},
+        )
     )
     save_document = fields.Nested(
         ObjectReferenceSchema,
         required=True,
         dump_only=True,
         data_key='saveDocument',
-        description='A URI to which the debtor can POST documents to be saved.',
-        example={'uri': '/debtors/1/documents/'},
+        metadata=dict(
+            description='A URI to which the debtor can POST documents to be saved.',
+            example={'uri': '/debtors/1/documents/'},
+        )
     )
     public_info_document = fields.Nested(
         ObjectReferenceSchema,
         required=True,
         dump_only=True,
         data_key='publicInfoDocument',
-        description="A URI that redirects to the debtor's public info document.",
-        example={'uri': '/debtors/1/public'},
+        metadata=dict(
+            description="A URI that redirects to the debtor's public info document.",
+            example={'uri': '/debtors/1/public'},
+        )
     )
     created_at = fields.DateTime(
         required=True,
         dump_only=True,
         data_key='createdAt',
-        description='The moment at which the debtor was created.',
+        metadata=dict(
+            description='The moment at which the debtor was created.',
+        )
     )
     balance = fields.Int(
         required=True,
         dump_only=True,
-        format="int64",
-        description="The total issued amount with a negative sign. Normally, it will be a "
-                    "negative number or a zero. A positive value, although theoretically "
-                    "possible, should be very rare.",
-        example=-1000000,
+        metadata=dict(
+            format="int64",
+            description="The total issued amount with a negative sign. Normally, it will be a "
+                        "negative number or a zero. A positive value, although theoretically "
+                        "possible, should be very rare.",
+            example=-1000000,
+        )
     )
     transfer_note_max_bytes = fields.Integer(
         required=True,
         dump_only=True,
         data_key='noteMaxBytes',
-        format='int32',
-        description='The maximal number of bytes that transfer notes are allowed to contain when '
-                    'UTF-8 encoded. This will be a non-negative number.',
-        example=500,
+        metadata=dict(
+            format='int32',
+            description='The maximal number of bytes that transfer notes are allowed to contain when '
+                        'UTF-8 encoded. This will be a non-negative number.',
+            example=500,
+        )
     )
     optional_config_error = fields.String(
         dump_only=True,
         data_key='configError',
-        description='When this field is present, this means that for some reason, the current '
-                    '`DebtorConfig` settings can not be applied, or are not effectual anymore. '
-                    'Usually this means that there has been a network communication problem, or a '
-                    'system configuration problem. The value alludes to the cause of the problem.',
-        example='CONFIGURATION_IS_NOT_EFFECTUAL',
+        metadata=dict(
+            description='When this field is present, this means that for some reason, the current '
+                        '`DebtorConfig` settings can not be applied, or are not effectual anymore. '
+                        'Usually this means that there has been a network communication problem, or a '
+                        'system configuration problem. The value alludes to the cause of the problem.',
+            example='CONFIGURATION_IS_NOT_EFFECTUAL',
+        )
     )
     optional_account = fields.Nested(
         AccountIdentitySchema,
         dump_only=True,
         data_key='account',
-        description="The `AccountIdentity` of the debtor's account. It uniquely and reliably "
-                    "identifies the debtor's account when it participates in transfers as sender "
-                    "or recipient. When this field is not present, this means that the debtor's "
-                    "account does not have an identity yet, and can not participate "
-                    "in transfers.",
-        example={'type': 'AccountIdentity', 'uri': 'swpt:1/0'},
+        metadata=dict(
+            description="The `AccountIdentity` of the debtor's account. It uniquely and reliably "
+                        "identifies the debtor's account when it participates in transfers as sender "
+                        "or recipient. When this field is not present, this means that the debtor's "
+                        "account does not have an identity yet, and can not participate "
+                        "in transfers.",
+            example={'type': 'AccountIdentity', 'uri': 'swpt:1/0'},
+        )
     )
 
     @pre_dump
@@ -484,46 +566,52 @@ class TransferErrorSchema(Schema):
     type = fields.Function(
         lambda obj: 'TransferError',
         required=True,
-        type='string',
-        description=TYPE_DESCRIPTION,
-        example='TransferError',
+        metadata=dict(
+            type='string',
+            description=TYPE_DESCRIPTION,
+            example='TransferError',
+        )
     )
     error_code = fields.String(
         required=True,
         dump_only=True,
         data_key='errorCode',
-        description='The error code.'
-                    '\n\n'
-                    '* `"CANCELED_BY_THE_SENDER"` signifies that the transfer has been '
-                    '  canceled by the sender.\n'
-                    '* `"SENDER_DOES_NOT_EXIST"` signifies that the sender\'s account '
-                    '  does not exist.\n'
-                    '* `"RECIPIENT_IS_UNREACHABLE"` signifies that the recipient\'s'
-                    '  account does not exist, or does not accept incoming transfers.\n'
-                    '* `"NO_RECIPIENT_CONFIRMATION"` signifies that a confirmation from '
-                    '  the recipient is required, but has not been obtained.\n'
-                    '* `"TRANSFER_NOTE_IS_TOO_LONG"` signifies that the transfer has been '
-                    '  rejected because the byte-length of the transfer note is too big.\n'
-                    '* `"INSUFFICIENT_AVAILABLE_AMOUNT"` signifies that the transfer '
-                    '  has been rejected due to insufficient amount available on the '
-                    '  sender\'s account.\n'
-                    '* `"TERMINATED"` signifies that the transfer has been terminated '
-                    '  due to expired deadline, unapproved interest rate change, or '
-                    '  some other *temporary or correctable condition*. If the client '
-                    '  verifies the transer options and retries the transfer, chances '
-                    '  are that it will be committed successfully.\n',
-        example='INSUFFICIENT_AVAILABLE_AMOUNT',
+        metadata=dict(
+            description='The error code.'
+                        '\n\n'
+                        '* `"CANCELED_BY_THE_SENDER"` signifies that the transfer has been '
+                        '  canceled by the sender.\n'
+                        '* `"SENDER_DOES_NOT_EXIST"` signifies that the sender\'s account '
+                        '  does not exist.\n'
+                        '* `"RECIPIENT_IS_UNREACHABLE"` signifies that the recipient\'s'
+                        '  account does not exist, or does not accept incoming transfers.\n'
+                        '* `"NO_RECIPIENT_CONFIRMATION"` signifies that a confirmation from '
+                        '  the recipient is required, but has not been obtained.\n'
+                        '* `"TRANSFER_NOTE_IS_TOO_LONG"` signifies that the transfer has been '
+                        '  rejected because the byte-length of the transfer note is too big.\n'
+                        '* `"INSUFFICIENT_AVAILABLE_AMOUNT"` signifies that the transfer '
+                        '  has been rejected due to insufficient amount available on the '
+                        '  sender\'s account.\n'
+                        '* `"TERMINATED"` signifies that the transfer has been terminated '
+                        '  due to expired deadline, unapproved interest rate change, or '
+                        '  some other *temporary or correctable condition*. If the client '
+                        '  verifies the transer options and retries the transfer, chances '
+                        '  are that it will be committed successfully.\n',
+            example='INSUFFICIENT_AVAILABLE_AMOUNT',
+        )
     )
     total_locked_amount = fields.Method(
         'get_total_locked_amount',
-        type='integer',
-        format='int64',
         data_key='totalLockedAmount',
-        description='This field will be present only when the transfer has been rejected '
-                    'due to insufficient available amount. In this case, it will contain '
-                    'the total sum secured (locked) for transfers on the account, '
-                    '*after* this transfer has been finalized.',
-        example=0,
+        metadata=dict(
+            type='integer',
+            format='int64',
+            description='This field will be present only when the transfer has been rejected '
+                        'due to insufficient available amount. In this case, it will contain '
+                        'the total sum secured (locked) for transfers on the account, '
+                        '*after* this transfer has been finalized.',
+            example=0,
+        )
     )
 
     @post_dump
@@ -541,31 +629,39 @@ class TransferResultSchema(Schema):
     type = fields.Function(
         lambda obj: 'TransferResult',
         required=True,
-        type='string',
-        description=TYPE_DESCRIPTION,
-        example='TransferResult',
+        metadata=dict(
+            type='string',
+            description=TYPE_DESCRIPTION,
+            example='TransferResult',
+        )
     )
     finalized_at = fields.DateTime(
         required=True,
         dump_only=True,
         data_key='finalizedAt',
-        description='The moment at which the transfer was finalized.',
+        metadata=dict(
+            description='The moment at which the transfer was finalized.',
+        )
     )
     committed_amount = fields.Integer(
         required=True,
         dump_only=True,
-        format='int64',
         data_key='committedAmount',
-        description='The transferred amount. If the transfer has been successful, the value will '
-                    'be equal to the requested transfer amount (always a positive number). If '
-                    'the transfer has been unsuccessful, the value will be zero.',
-        example=0,
+        metadata=dict(
+            format='int64',
+            description='The transferred amount. If the transfer has been successful, the value will '
+                        'be equal to the requested transfer amount (always a positive number). If '
+                        'the transfer has been unsuccessful, the value will be zero.',
+            example=0,
+        )
     )
     error = fields.Nested(
         TransferErrorSchema,
         dump_only=True,
-        description='An error that has occurred during the execution of the transfer. This field '
-                    'will be present if, and only if, the transfer has been unsuccessful.',
+        metadata=dict(
+            description='An error that has occurred during the execution of the transfer. This field '
+                        'will be present if, and only if, the transfer has been unsuccessful.',
+        )
     )
 
     @post_dump
@@ -577,47 +673,59 @@ class TransferResultSchema(Schema):
 
 class TransferCreationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
-        missing='TransferCreationRequest',
-        default='TransferCreationRequest',
-        description=TYPE_DESCRIPTION,
-        example='TransferCreationRequest',
+        load_default='TransferCreationRequest',
+        dump_default='TransferCreationRequest',
+        metadata=dict(
+            description=TYPE_DESCRIPTION,
+            example='TransferCreationRequest',
+        )
     )
     transfer_uuid = fields.UUID(
         required=True,
         data_key='transferUuid',
-        description="A client-generated UUID for the transfer.",
-        example='123e4567-e89b-12d3-a456-426655440000',
+        metadata=dict(
+            description="A client-generated UUID for the transfer.",
+            example='123e4567-e89b-12d3-a456-426655440000',
+        )
     )
     recipient_identity = fields.Nested(
         AccountIdentitySchema,
         required=True,
         data_key='recipient',
-        description="The recipient's `AccountIdentity` information.",
-        example={'type': 'AccountIdentity', 'uri': 'swpt:1/2222'}
+        metadata=dict(
+            description="The recipient's `AccountIdentity` information.",
+            example={'type': 'AccountIdentity', 'uri': 'swpt:1/2222'}
+        )
     )
     amount = fields.Integer(
         required=True,
         validate=validate.Range(min=0, max=MAX_INT64),
-        format='int64',
-        description="The amount that has to be transferred. Must be a non-negative "
-                    "number. Setting this value to zero can be useful when the debtor wants to "
-                    "verify whether the recipient's account exists and accepts incoming transfers.",
-        example=1000,
+        metadata=dict(
+            format='int64',
+            description="The amount that has to be transferred. Must be a non-negative "
+                        "number. Setting this value to zero can be useful when the debtor wants to "
+                        "verify whether the recipient's account exists and accepts incoming transfers.",
+            example=1000,
+        )
     )
     transfer_note_format = fields.String(
-        missing='',
+        load_default='',
         validate=validate.Regexp(TRANSFER_NOTE_FORMAT_REGEX),
         data_key='noteFormat',
-        description=TRANSFER_NOTE_FORMAT_DESCRIPTION,
-        example='',
+        metadata=dict(
+            description=TRANSFER_NOTE_FORMAT_DESCRIPTION,
+            example='',
+        )
     )
     transfer_note = fields.String(
-        missing='',
+        load_default='',
         validate=validate.Length(max=TRANSFER_NOTE_MAX_BYTES),
         data_key='note',
-        description='A note from the debtor. Can be any string that the debtor wants the '
-                    'recipient to see.',
-        example='Hello, World!',
+        metadata=dict(
+            description='A note from the debtor. Can be any string that the debtor wants the '
+                        'recipient to see.',
+            example='Hello, World!',
+        )
     )
 
     @validates('transfer_note')
@@ -630,63 +738,79 @@ class TransferSchema(TransferCreationRequestSchema):
     uri = fields.String(
         required=True,
         dump_only=True,
-        format='uri-reference',
-        description=URI_DESCRIPTION,
-        example='/debtors/1/transfers/123e4567-e89b-12d3-a456-426655440000',
+        metadata=dict(
+            format='uri-reference',
+            description=URI_DESCRIPTION,
+            example='/debtors/1/transfers/123e4567-e89b-12d3-a456-426655440000',
+        )
     )
     type = fields.Function(
         lambda obj: 'Transfer',
         required=True,
-        type='string',
-        description=TYPE_DESCRIPTION,
-        example='Transfer',
+        metadata=dict(
+            type='string',
+            description=TYPE_DESCRIPTION,
+            example='Transfer',
+        )
     )
     transfers_list = fields.Nested(
         ObjectReferenceSchema,
         required=True,
         dump_only=True,
         data_key='transfersList',
-        description="The URI of creditor's `TransfersList`.",
-        example={'uri': '/debtors/1/transfers/'},
+        metadata=dict(
+            description="The URI of creditor's `TransfersList`.",
+            example={'uri': '/debtors/1/transfers/'},
+        )
     )
     transfer_note_format = fields.String(
         required=True,
         dump_only=True,
         data_key='noteFormat',
-        pattern=TRANSFER_NOTE_FORMAT_REGEX,
-        description=TRANSFER_NOTE_FORMAT_DESCRIPTION,
-        example='',
+        metadata=dict(
+            pattern=TRANSFER_NOTE_FORMAT_REGEX,
+            description=TRANSFER_NOTE_FORMAT_DESCRIPTION,
+            example='',
+        )
     )
     transfer_note = fields.String(
         required=True,
         dump_only=True,
         data_key='note',
-        description='A note from the debtor. Can be any string that the debtor wants the '
-                    'recipient to see.',
-        example='Hello, World!',
+        metadata=dict(
+            description='A note from the debtor. Can be any string that the debtor wants the '
+                        'recipient to see.',
+            example='Hello, World!',
+        )
     )
     initiated_at = fields.DateTime(
         required=True,
         dump_only=True,
         data_key='initiatedAt',
-        description='The moment at which the transfer was initiated.',
+        metadata=dict(
+            description='The moment at which the transfer was initiated.',
+        )
     )
     checkup_at = fields.Method(
         'get_checkup_at_string',
-        type='string',
-        format='date-time',
         data_key='checkupAt',
-        description="The moment at which the debtor is advised to look at the transfer "
-                    "again, to see if it's status has changed. If this field is not present, "
-                    "this means either that the status of the transfer is not expected to "
-                    "change, or that the moment of the expected change can not be predicted.",
+        metadata=dict(
+            type='string',
+            format='date-time',
+            description="The moment at which the debtor is advised to look at the transfer "
+                        "again, to see if it's status has changed. If this field is not present, "
+                        "this means either that the status of the transfer is not expected to "
+                        "change, or that the moment of the expected change can not be predicted.",
+        )
     )
     result = fields.Nested(
         TransferResultSchema,
         dump_only=True,
-        description='Contains information about the outcome of the transfer. This field will '
-                    'be preset if, and only if, the transfer has been finalized. Note that a '
-                    'finalized transfer can be either successful, or unsuccessful.',
+        metadata=dict(
+            description='Contains information about the outcome of the transfer. This field will '
+                        'be preset if, and only if, the transfer has been finalized. Note that a '
+                        'finalized transfer can be either successful, or unsuccessful.',
+        )
     )
 
     @pre_dump
@@ -726,10 +850,12 @@ class TransferSchema(TransferCreationRequestSchema):
 
 class TransferCancelationRequestSchema(ValidateTypeMixin, Schema):
     type = fields.String(
-        missing='TransferCancelationRequest',
-        default='TransferCancelationRequest',
-        description=TYPE_DESCRIPTION,
-        example='TransferCancelationRequest',
+        load_default='TransferCancelationRequest',
+        dump_default='TransferCancelationRequest',
+        metadata=dict(
+            description=TYPE_DESCRIPTION,
+            example='TransferCancelationRequest',
+        )
     )
 
 
@@ -737,49 +863,61 @@ class TransfersListSchema(Schema):
     uri = fields.String(
         required=True,
         dump_only=True,
-        format='uri-reference',
-        description=URI_DESCRIPTION,
-        example='/debtors/1/transfers/',
+        metadata=dict(
+            format='uri-reference',
+            description=URI_DESCRIPTION,
+            example='/debtors/1/transfers/',
+        )
     )
     type = fields.Function(
         lambda obj: 'TransfersList',
         required=True,
-        type='string',
-        description=TYPE_DESCRIPTION,
-        example='TransfersList',
+        metadata=dict(
+            type='string',
+            description=TYPE_DESCRIPTION,
+            example='TransfersList',
+        )
     )
     debtor = fields.Nested(
         ObjectReferenceSchema,
         required=True,
         dump_only=True,
-        description="The URI of the corresponding `Debtor`.",
-        example={'uri': '/debtors/1/'},
+        metadata=dict(
+            description="The URI of the corresponding `Debtor`.",
+            example={'uri': '/debtors/1/'},
+        )
     )
     items = fields.Nested(
         ObjectReferenceSchema(many=True),
         required=True,
         dump_only=True,
-        description='Contains links to all `Transfers` in an array of `ObjectReference`s.',
-        example=[{'uri': i} for i in [
-            '123e4567-e89b-12d3-a456-426655440000',
-            '183ea7c7-7a96-4ed7-a50a-a2b069687d23',
-        ]],
+        metadata=dict(
+            description='Contains links to all `Transfers` in an array of `ObjectReference`s.',
+            example=[{'uri': i} for i in [
+                '123e4567-e89b-12d3-a456-426655440000',
+                '183ea7c7-7a96-4ed7-a50a-a2b069687d23',
+            ]],
+        )
     )
     itemsType = fields.Function(
         lambda obj: 'ObjectReference',
         required=True,
-        type='string',
-        description='The type of the items in the list.',
-        example='ObjectReference',
+        metadata=dict(
+            type='string',
+            description='The type of the items in the list.',
+            example='ObjectReference',
+        )
     )
     first = fields.Function(
         lambda obj: '',
         required=True,
-        type='string',
-        format="uri-reference",
-        description='This will always be an empty string, representing the relative URI of '
-                    'the first and only page in a paginated list.',
-        example='',
+        metadata=dict(
+            type='string',
+            format="uri-reference",
+            description='This will always be an empty string, representing the relative URI of '
+                        'the first and only page in a paginated list.',
+            example='',
+        )
     )
 
     @pre_dump

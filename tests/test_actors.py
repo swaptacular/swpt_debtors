@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime, timezone, date
+from swpt_pythonlib.rabbitmq import MessageProperties
 from swpt_debtors import procedures as p
 
 D_ID = -1
@@ -96,3 +97,30 @@ def test_on_account_purge_signal(db_session, actors):
         creditor_id=C_ID,
         creation_date=date.fromisoformat('2019-10-01'),
     )
+
+
+def test_consumer(db_session, actors):
+    consumer = actors.SmpConsumer()
+
+    props = MessageProperties(content_type="xxx")
+    assert consumer.process_message(b'body', props) is False
+
+    props = MessageProperties(content_type="application/json", type="xxx")
+    assert consumer.process_message(b'body', props) is False
+
+    props = MessageProperties(content_type="application/json", type="AccountPurge")
+    assert consumer.process_message(b'body', props) is False
+
+    props = MessageProperties(content_type="application/json", type="AccountPurge")
+    assert consumer.process_message(b'{}', props) is False
+
+    props = MessageProperties(content_type="application/json", type="AccountPurge")
+    assert consumer.process_message(b'''
+    {
+      "type": "AccountPurge",
+      "debtor_id": 1,
+      "creditor_id": 2,
+      "creation_date": "2098-12-31",
+      "ts": "2099-12-31T00:00:00+00:00"
+    }
+    ''', props) is True
