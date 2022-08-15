@@ -532,9 +532,6 @@ def test_cancel_running_transfer_failure(db_session, debtor):
 
 
 def test_activate_new_debtor(db_session):
-    with pytest.raises(p.InvalidDebtor):
-        debtor = p.reserve_debtor(MAX_INT64 + 1)
-
     debtor = p.reserve_debtor(D_ID)
     assert debtor.debtor_id == D_ID
     assert not debtor.is_activated

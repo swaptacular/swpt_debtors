@@ -83,37 +83,6 @@ def subscribe():  # pragma: no cover
                 DEBTORS_IN_EXCHANGE, queue_name, routing_key)
 
 
-@swpt_debtors.command('configure_interval')
-@with_appcontext
-@click.argument('min_id', type=int)
-@click.argument('max_id', type=int)
-def configure_interval(min_id, max_id):
-    """Configures the server to manage debtor IDs between MIN_ID and MAX_ID.
-
-    The passed debtor IDs must be between -9223372036854775808 and
-    9223372036854775807. Use "--" to pass negative integers. For
-    example:
-
-    $ flask swpt_debtors configure_interval -- -16 0
-
-    """
-
-    logger = logging.getLogger(__name__)
-
-    def validate(value):
-        if not MIN_INT64 <= value <= MAX_INT64:
-            logger.error(f'{value} is not a valid debtor ID.')
-            sys.exit(1)
-
-    validate(min_id)
-    validate(max_id)
-    if min_id > max_id:
-        logger.error('An invalid interval has been specified.')
-        sys.exit(1)
-
-    procedures.configure_node(min_debtor_id=min_id, max_debtor_id=max_id)
-
-
 @swpt_debtors.command('scan_debtors')
 @with_appcontext
 @click.option('-d', '--days', type=float, help='The number of days.')

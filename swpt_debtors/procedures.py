@@ -1,16 +1,14 @@
 import json
 from datetime import datetime, date, timedelta, timezone
-from random import randint
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, List, Tuple, Dict, Any
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import exc
 from sqlalchemy.sql.expression import func
 from swpt_pythonlib.utils import Seqnum, increment_seqnum
 from swpt_debtors.extensions import db
 from swpt_debtors.models import Debtor, FinalizeTransferSignal, RunningTransfer, ConfigureAccountSignal, \
-    PrepareTransferSignal, NodeConfig, Document, MAX_INT32, MIN_INT64, MAX_INT64, ROOT_CREDITOR_ID, \
-    DEFAULT_CONFIG_FLAGS, HUGE_NEGLIGIBLE_AMOUNT, SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
+    PrepareTransferSignal, Document, MAX_INT32, ROOT_CREDITOR_ID, DEFAULT_CONFIG_FLAGS, \
+    HUGE_NEGLIGIBLE_AMOUNT, SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK, MIN_INT64, MAX_INT64
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -30,10 +28,6 @@ class AlreadyUpToDate(Exception):
 
 class MisconfiguredNode(Exception):
     """The node is misconfigured."""
-
-
-class InvalidDebtor(Exception):
-    """The node is not responsible for this debtor."""
 
 
 class InvalidReservationId(Exception):
@@ -77,56 +71,26 @@ class TooManySavedDocuments(Exception):
 
 
 @atomic
-def configure_node(min_debtor_id: int, max_debtor_id: int) -> None:
-    assert MIN_INT64 <= min_debtor_id <= MAX_INT64
-    assert MIN_INT64 <= max_debtor_id <= MAX_INT64
-    assert min_debtor_id <= max_debtor_id
-
-    node_config = NodeConfig.query.with_for_update().one_or_none()
-
-    if node_config:
-        node_config.min_debtor_id = min_debtor_id
-        node_config.max_debtor_id = max_debtor_id
-    else:  # pragma: no cover
-        with db.retry_on_integrity_error():
-            db.session.add(NodeConfig(
-                min_debtor_id=min_debtor_id,
-                max_debtor_id=max_debtor_id,
-            ))
-
-
-@atomic
-def generate_new_debtor_id() -> int:
-    node_config = _get_node_config()
-    return randint(node_config.min_debtor_id, node_config.max_debtor_id)
-
-
-@atomic
 def get_debtor_ids(start_from: int, count: int = 1) -> Tuple[List[int], Optional[int]]:
+    assert(count >= 1)
     query = db.session.\
         query(Debtor.debtor_id).\
         filter(Debtor.debtor_id >= start_from).\
         filter(Debtor.status_flags.op('&')(STATUS_FLAGS_MASK) == Debtor.STATUS_IS_ACTIVATED_FLAG).\
         order_by(Debtor.debtor_id).\
-        limit(count)
+        limit(count + 1)
     debtor_ids = [t[0] for t in query.all()]
 
-    if len(debtor_ids) > 0:
-        next_debtor_id = debtor_ids[-1] + 1
+    if len(debtor_ids) > count:
+        next_debtor_id = debtor_ids.pop()
     else:
-        next_debtor_id = _get_node_config().max_debtor_id + 1
-
-    if next_debtor_id > MAX_INT64 or next_debtor_id <= start_from:
         next_debtor_id = None
 
     return debtor_ids, next_debtor_id
 
 
 @atomic
-def reserve_debtor(debtor_id, verify_correctness=True) -> Debtor:
-    if verify_correctness and not _is_correct_debtor_id(debtor_id):
-        raise InvalidDebtor()
-
+def reserve_debtor(debtor_id) -> Debtor:
     debtor = Debtor(debtor_id=debtor_id)
     db.session.add(debtor)
     try:
@@ -634,25 +598,6 @@ def _insert_configure_account_signal(debtor: Debtor) -> None:
     ))
 
 
-def _get_node_config() -> NodeConfig:
-    try:
-        return NodeConfig.query.one()
-    except exc.NoResultFound:  # pragma: no cover
-        raise MisconfiguredNode() from None
-
-
-def _is_correct_debtor_id(debtor_id: int) -> bool:
-    try:
-        config = _get_node_config()
-    except MisconfiguredNode:  # pragma: no cover
-        return False
-
-    if not config.min_debtor_id <= debtor_id <= config.max_debtor_id:
-        return False
-
-    return True
-
-
 def _delete_debtor_transfers(debtor: Debtor) -> None:
     debtor.running_transfers_count = 0
 
@@ -696,16 +641,15 @@ def _allow_update(obj, update_id_field_name: str, update_id: int, update: Dict[s
 
 
 def _discard_orphaned_account(debtor_id: int, config_flags: int, negligible_amount: float) -> None:
-    if _is_correct_debtor_id(debtor_id):
-        scheduled_for_deletion_flag = Debtor.CONFIG_SCHEDULED_FOR_DELETION_FLAG
-        safely_huge_amount = (1 - EPS) * HUGE_NEGLIGIBLE_AMOUNT
-        is_already_discarded = config_flags & scheduled_for_deletion_flag and negligible_amount >= safely_huge_amount
+    scheduled_for_deletion_flag = Debtor.CONFIG_SCHEDULED_FOR_DELETION_FLAG
+    safely_huge_amount = (1 - EPS) * HUGE_NEGLIGIBLE_AMOUNT
+    is_already_discarded = config_flags & scheduled_for_deletion_flag and negligible_amount >= safely_huge_amount
 
-        if not is_already_discarded:
-            db.session.add(ConfigureAccountSignal(
-                debtor_id=debtor_id,
-                ts=datetime.now(tz=timezone.utc),
-                seqnum=0,
-                config_data='',
-                config_flags=DEFAULT_CONFIG_FLAGS | scheduled_for_deletion_flag,
-            ))
+    if not is_already_discarded:
+        db.session.add(ConfigureAccountSignal(
+            debtor_id=debtor_id,
+            ts=datetime.now(tz=timezone.utc),
+            seqnum=0,
+            config_data='',
+            config_flags=DEFAULT_CONFIG_FLAGS | scheduled_for_deletion_flag,
+        ))

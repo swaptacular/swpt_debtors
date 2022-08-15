@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import current_app
 from marshmallow import Schema, fields
 from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy.sql.expression import null, true, or_
+from sqlalchemy.sql.expression import null, or_
 from swpt_debtors.extensions import db, publisher, DEBTORS_OUT_EXCHANGE
 from swpt_pythonlib import rabbitmq
 
@@ -31,6 +31,12 @@ SC_OK = 'OK'
 SC_UNEXPECTED_ERROR = 'UNEXPECTED_ERROR'
 SC_INSUFFICIENT_AVAILABLE_AMOUNT = 'INSUFFICIENT_AVAILABLE_AMOUNT'
 SC_CANCELED_BY_THE_SENDER = 'CANCELED_BY_THE_SENDER'
+
+
+def is_valid_debtor_id(debtor_id: int) -> bool:
+    min_debtor_id = current_app.config['MIN_DEBTOR_ID']
+    max_debtor_id = current_app.config['MAX_DEBTOR_ID']
+    return min_debtor_id <= debtor_id <= max_debtor_id
 
 
 def get_now_utc():
@@ -91,21 +97,6 @@ class Signal(db.Model):
         )
 
     inserted_at = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc)
-
-
-class NodeConfig(db.Model):
-    is_effective = db.Column(db.BOOLEAN, primary_key=True, default=True)
-    min_debtor_id = db.Column(db.BigInteger, nullable=False)
-    max_debtor_id = db.Column(db.BigInteger, nullable=False)
-    __table_args__ = (
-        db.CheckConstraint(is_effective == true()),
-        db.CheckConstraint(min_debtor_id <= max_debtor_id),
-        {
-            'comment': 'Represents the global node configuration (a singleton). The '
-                       'node is responsible only for debtor IDs that are within the '
-                       'interval [min_debtor_id, max_debtor_id].',
-        }
-    )
 
 
 class Debtor(db.Model):

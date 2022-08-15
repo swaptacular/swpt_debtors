@@ -12,6 +12,8 @@ server_name = 'example.com'
 config_dict = {
     'TESTING': True,
     'SERVER_NAME': server_name,
+    'MIN_DEBTOR_ID': 4294967296,
+    'MAX_DEBTOR_ID': 8589934591,
     'APP_ENABLE_CORS': True,
     'APP_DEBTORS_PER_PAGE': 2,
     'APP_DEACTIVATED_DEBTOR_RETENTION_DAYS': 365.0,

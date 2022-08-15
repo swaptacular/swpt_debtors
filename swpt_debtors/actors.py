@@ -5,7 +5,7 @@ from marshmallow import ValidationError
 from swpt_pythonlib import rabbitmq
 import swpt_pythonlib.protocol_schemas as ps
 from swpt_debtors import procedures
-from swpt_debtors.models import CT_ISSUING
+from swpt_debtors.models import CT_ISSUING, is_valid_debtor_id
 
 
 def _on_rejected_config_signal(
@@ -206,6 +206,9 @@ class SmpConsumer(rabbitmq.Consumer):
         except ValidationError as e:
             _LOGGER.error('Message validation error: %s', str(e))
             return False
+
+        if not is_valid_debtor_id(message_content['debtor_id']):
+            raise RuntimeError('The agent is not responsible for this debtor.')
 
         actor(**message_content)
         return True

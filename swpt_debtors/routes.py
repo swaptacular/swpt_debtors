@@ -1,4 +1,5 @@
 import re
+from random import randint
 from enum import IntEnum
 from typing import Tuple, Optional
 from datetime import datetime, timedelta, timezone
@@ -12,7 +13,7 @@ from swpt_debtors.schemas import DebtorSchema, TransferSchema, \
     TransfersList, TransferCancelationRequestSchema, DebtorReservationRequestSchema, \
     DebtorReservationSchema, DebtorsListSchema, ObjectReferencesPageSchema, \
     DebtorActivationRequestSchema, DebtorDeactivationRequestSchema, DebtorConfigSchema
-from swpt_debtors.models import MIN_INT64
+from swpt_debtors.models import MIN_INT64, is_valid_debtor_id
 from swpt_debtors import specs
 from swpt_debtors import procedures
 
@@ -140,10 +141,12 @@ class RandomDebtorReserveEndpoint(MethodView):
 
         """
 
+        min_debtor_id = current_app.config['MIN_DEBTOR_ID']
+        max_debtor_id = current_app.config['MAX_DEBTOR_ID']
         for _ in range(100):
-            debtor_id = procedures.generate_new_debtor_id()
+            debtor_id = randint(min_debtor_id, max_debtor_id)
             try:
-                debtor = procedures.reserve_debtor(debtor_id, verify_correctness=False)
+                debtor = procedures.reserve_debtor(debtor_id)
                 break
             except procedures.DebtorExists:  # pragma: no cover
                 pass
@@ -223,12 +226,13 @@ class DebtorReserveEndpoint(MethodView):
 
         """
 
+        if not is_valid_debtor_id(debtorId):  # pragma: no cover
+            abort(500, message='The agent is not responsible for this debtor.')
+
         try:
             debtor = procedures.reserve_debtor(debtorId)
         except procedures.DebtorExists:
             abort(409)
-        except procedures.InvalidDebtor:  # pragma: no cover
-            abort(500, message='The node is not responsible for this debtor.')
 
         return debtor
 
@@ -243,6 +247,9 @@ class DebtorActivateEndpoint(MethodView):
     def post(self, debtor_activation_request, debtorId):
         """Activate a debtor."""
 
+        if not is_valid_debtor_id(debtorId):  # pragma: no cover
+            abort(500, message='The agent is not responsible for this debtor.')
+
         reservation_id = debtor_activation_request.get('optional_reservation_id')
         try:
             if reservation_id is None:
@@ -253,8 +260,6 @@ class DebtorActivateEndpoint(MethodView):
             abort(409)
         except procedures.InvalidReservationId:
             abort(422, errors={'json': {'reservationId': ['Invalid ID.']}})
-        except procedures.InvalidDebtor:  # pragma: no cover
-            abort(500, message='The node is not responsible for this debtor.')
 
         return debtor
 

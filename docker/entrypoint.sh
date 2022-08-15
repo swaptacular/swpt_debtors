@@ -68,7 +68,7 @@ setup_rabbitmq_bindings() {
 # initialization. Make sure that it is idempotent.
 # (https://en.wikipedia.org/wiki/Idempotence)
 perform_db_initialization() {
-    flask swpt_debtors configure_interval -- $MIN_DEBTOR_ID $MAX_DEBTOR_ID
+    return 0
 }
 
 generate_oathkeeper_configuration() {
@@ -97,7 +97,7 @@ case $1 in
         generate_oathkeeper_configuration
         exec supervisord -c "$APP_ROOT_DIR/supervisord-webserver.conf"
         ;;
-    scan_debtors | configure_interval | consume_messages)
+    scan_debtors | consume_messages)
         exec flask swpt_debtors "$@"
         ;;
     flush_configure_accounts  | flush_prepare_transfers | flush_finalize_transfers)

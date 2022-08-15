@@ -115,10 +115,22 @@ def test_consumer(db_session, actors):
     assert consumer.process_message(b'{}', props) is False
 
     props = MessageProperties(content_type="application/json", type="AccountPurge")
+    with pytest.raises(RuntimeError, match='The agent is not responsible for this debtor.'):
+        consumer.process_message(b'''
+        {
+          "type": "AccountPurge",
+          "debtor_id": 1,
+          "creditor_id": 2,
+          "creation_date": "2098-12-31",
+          "ts": "2099-12-31T00:00:00+00:00"
+        }
+        ''', props)
+
+    props = MessageProperties(content_type="application/json", type="AccountPurge")
     assert consumer.process_message(b'''
     {
       "type": "AccountPurge",
-      "debtor_id": 1,
+      "debtor_id": 4294967296,
       "creditor_id": 2,
       "creation_date": "2098-12-31",
       "ts": "2099-12-31T00:00:00+00:00"
