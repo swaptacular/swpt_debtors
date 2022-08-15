@@ -160,11 +160,9 @@ API_SPEC_OPTIONS = {
         'description': API_DESCRIPTION,
     },
     'servers': [
-        {'url': '$API_ROOT', 'description': 'Production server (uses live data)'},
+        {'url': '$API_ROOT'},
         {'url': '/'},
     ],
-    'consumes': ['application/json'],
-    'produces': ['application/json'],
     'components': {
         'securitySchemes': {
             'oauth2': {
