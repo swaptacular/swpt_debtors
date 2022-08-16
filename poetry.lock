@@ -648,8 +648,8 @@ SQLAlchemy = ">=1.3"
 [package.source]
 type = "git"
 url = "https://github.com/swaptacular/swpt_pythonlib.git"
-reference = "v0.8.1"
-resolved_reference = "26520ee5afd80ae2ca66e0d53b6d5fb3c9ac1971"
+reference = "v0.8.2"
+resolved_reference = "87b7bb59874d7d27da7045817383f78a5eeaedb3"
 
 [[package]]
 name = "toml"
@@ -773,7 +773,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "ae3bdab037a5d4ce98b5e4a0e470f13abaed342e1fa1a28725148f3dbbcef129"
+content-hash = "f957205f12eca195c0a6e28a84abf5e7b0da0635557f8d47600c62685f8a3a47"
 
 [metadata.files]
 alembic = []
