@@ -270,14 +270,14 @@ class DebtorReservationSchema(ValidateTypeMixin, Schema):
         )
     )
     reservation_id = fields.Function(
-        lambda obj: obj.reservation_id or 0,
+        lambda obj: str(obj.reservation_id or 0),
         required=True,
         data_key='reservationId',
+        validate=validate.Length(max=100),
         metadata=dict(
-            type='integer',
-            format='int64',
-            description='A number that will be needed in order to activate the debtor.',
-            example=12345,
+            type='string',
+            description='An opaque string that will be required in order to successfully activate the debtor.',
+            example='12345',
         )
     )
     debtor_id = fields.Function(
@@ -316,16 +316,16 @@ class DebtorActivationRequestSchema(ValidateTypeMixin, Schema):
             example='DebtorActivationRequest',
         )
     )
-    optional_reservation_id = fields.Integer(
+    optional_reservation_id = fields.String(
         load_only=True,
         data_key='reservationId',
         metadata=dict(
-            format='int64',
             description='When this field is present, the server will try to activate an existing '
-                        'reservation with matching `debtorID` and `reservationID`. When this '
-                        'field is not present, the server will try to reserve the debtor ID '
-                        'specified in the path, and activate it at once.',
-            example=12345,
+                        'reservation with matching `debtorID` and `reservationID`.'
+                        '\n\n'
+                        'When this field is not present, the server will try to reserve the '
+                        'debtor ID specified in the path, and activate it at once.',
+            example='12345',
         )
     )
 

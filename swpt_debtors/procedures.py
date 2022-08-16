@@ -102,13 +102,13 @@ def reserve_debtor(debtor_id) -> Debtor:
 
 
 @atomic
-def activate_debtor(debtor_id: int, reservation_id: int) -> Debtor:
+def activate_debtor(debtor_id: int, reservation_id: str) -> Debtor:
     debtor = get_debtor(debtor_id, lock=True)
     if debtor is None:
         raise InvalidReservationId()
 
     if not debtor.is_activated:
-        if reservation_id != debtor.reservation_id or debtor.is_deactivated:
+        if reservation_id != str(debtor.reservation_id) or debtor.is_deactivated:
             raise InvalidReservationId()
         debtor.activate()
         _insert_configure_account_signal(debtor)

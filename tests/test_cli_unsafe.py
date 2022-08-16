@@ -24,7 +24,7 @@ def app_unsafe_session(app_unsafe_session):
 def _create_new_debtor(debtor_id: int, activate: bool = False):
     debtor = procedures.reserve_debtor(debtor_id)
     if activate:
-        procedures.activate_debtor(debtor_id, debtor.reservation_id)
+        procedures.activate_debtor(debtor_id, str(debtor.reservation_id))
 
 
 def test_scan_debtors(app_unsafe_session, current_ts):

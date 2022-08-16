@@ -49,7 +49,7 @@ def test_auto_genereate_debtor_id(client):
     data = r.get_json()
     assert data['type'] == 'DebtorReservation'
     assert isinstance(data['debtorId'], str)
-    assert isinstance(data['reservationId'], int)
+    assert isinstance(data['reservationId'], str)
     assert datetime.fromisoformat(data['validUntil'])
     assert datetime.fromisoformat(data['createdAt'])
 
@@ -69,7 +69,7 @@ def test_create_debtor(client):
     data = r.get_json()
     assert data['type'] == 'DebtorReservation'
     assert data['debtorId'] == '4294967296'
-    assert isinstance(data['reservationId'], int)
+    assert isinstance(data['reservationId'], str)
     assert datetime.fromisoformat(data['validUntil'])
     assert datetime.fromisoformat(data['createdAt'])
     reservation_id = data['reservationId']
@@ -81,7 +81,7 @@ def test_create_debtor(client):
     assert r.status_code == 403
 
     r = client.post('/debtors/4294967296/activate', json={
-        'reservationId': 123,
+        'reservationId': '123',
     })
     assert r.status_code == 422
     assert 'reservationId' in r.get_json()['errors']['json']
@@ -104,7 +104,7 @@ def test_create_debtor(client):
     assert r.status_code == 200
 
     r = client.post('/debtors/8589934591/activate', json={
-        'reservationId': 123,
+        'reservationId': '123',
     })
     assert r.status_code == 422
     assert 'reservationId' in r.get_json()['errors']['json']

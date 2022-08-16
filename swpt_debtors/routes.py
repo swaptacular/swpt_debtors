@@ -253,7 +253,7 @@ class DebtorActivateEndpoint(MethodView):
         reservation_id = debtor_activation_request.get('optional_reservation_id')
         try:
             if reservation_id is None:
-                reservation_id = procedures.reserve_debtor(debtorId).reservation_id
+                reservation_id = str(procedures.reserve_debtor(debtorId).reservation_id)
                 assert reservation_id is not None
             debtor = procedures.activate_debtor(debtorId, reservation_id)
         except procedures.DebtorExists:

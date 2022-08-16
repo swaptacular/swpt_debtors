@@ -541,8 +541,8 @@ def test_activate_new_debtor(db_session):
 
     assert not p.get_active_debtor(D_ID)
     with pytest.raises(p.InvalidReservationId):
-        p.activate_debtor(D_ID, -123)
-    p.activate_debtor(D_ID, debtor.reservation_id)
+        p.activate_debtor(D_ID, '-123')
+    p.activate_debtor(D_ID, str(debtor.reservation_id))
     debtor = p.get_active_debtor(D_ID)
     assert debtor
     assert debtor.is_activated
