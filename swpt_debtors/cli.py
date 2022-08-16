@@ -7,8 +7,6 @@ import click
 from datetime import timedelta
 from flask import current_app
 from flask.cli import with_appcontext
-from swpt_debtors.models import MIN_INT64, MAX_INT64
-from swpt_debtors import procedures
 from swpt_debtors.extensions import db
 from swpt_debtors.table_scanners import DebtorScanner
 from swpt_debtors.multiproc_utils import spawn_worker_processes, try_unblock_signals, HANDLED_SIGNALS
@@ -25,6 +23,7 @@ def subscribe():  # pragma: no cover
     """Declare a RabbitMQ queue, and subscribe it to receive incoming
     messages.
 
+    This is mainly useful during development and testing.
     """
 
     from .extensions import ACCOUNTS_IN_EXCHANGE, \
