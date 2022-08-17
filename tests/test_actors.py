@@ -99,6 +99,14 @@ def test_on_account_purge_signal(db_session, actors):
     )
 
 
+def test_activate_debtor_signal(db_session, actors):
+    actors._on_activate_debtor_signal(
+        debtor_id=D_ID,
+        reservation_id='test_id',
+        ts=datetime.fromisoformat('2019-10-01T00:00:00+00:00'),
+    )
+
+
 def test_consumer(db_session, actors):
     consumer = actors.SmpConsumer()
 

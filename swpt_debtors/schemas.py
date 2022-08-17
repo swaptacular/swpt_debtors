@@ -1,10 +1,10 @@
 from copy import copy
 from marshmallow import Schema, fields, validate, pre_dump, post_dump, validates, missing, \
-    ValidationError
+    ValidationError, EXCLUDE
 from flask import url_for
 from swpt_pythonlib.utils import i64_to_u64
 from swpt_pythonlib.swpt_uris import make_account_uri
-from swpt_debtors.models import MAX_INT64, TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, \
+from swpt_debtors.models import MIN_INT64, MAX_INT64, TRANSFER_NOTE_MAX_BYTES, SC_INSUFFICIENT_AVAILABLE_AMOUNT, \
     CONFIG_DATA_MAX_BYTES, Debtor, RunningTransfer
 
 TYPE_DESCRIPTION = '\
@@ -929,3 +929,20 @@ class TransfersListSchema(Schema):
         obj.items = [{'uri': uri} for uri in obj.items]
 
         return obj
+
+
+class ActivateDebtorMessageSchema(Schema):
+    """``ActivateDebtor`` message schema."""
+
+    class Meta:
+        unknown = EXCLUDE
+
+    type = fields.String(required=True)
+    debtor_id = fields.Integer(required=True, validate=validate.Range(min=MIN_INT64, max=MAX_INT64))
+    reservation_id = fields.String(required=True, validate=validate.Length(max=100))
+    ts = fields.DateTime(required=True)
+
+    @validates('type')
+    def validate_type(self, value):
+        if f'{value}MessageSchema' != type(self).__name__:
+            raise ValidationError('Invalid type.')

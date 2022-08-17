@@ -6,6 +6,7 @@ from swpt_pythonlib import rabbitmq
 import swpt_pythonlib.protocol_schemas as ps
 from swpt_debtors import procedures
 from swpt_debtors.models import CT_ISSUING, is_valid_debtor_id
+from swpt_debtors.schemas import ActivateDebtorMessageSchema
 
 
 def _on_rejected_config_signal(
@@ -164,6 +165,13 @@ def _on_finalized_issuing_transfer_signal(
     )
 
 
+def _on_activate_debtor_signal(debtor_id: int, reservation_id: str, *args, **kwargs) -> None:
+    try:
+        procedures.activate_debtor(debtor_id, reservation_id)
+    except procedures.InvalidReservationId:
+        pass
+
+
 _MESSAGE_TYPES = {
     'RejectedConfig': (ps.RejectedConfigMessageSchema(), _on_rejected_config_signal),
     'AccountUpdate': (ps.AccountUpdateMessageSchema(), _on_account_update_signal),
@@ -171,6 +179,7 @@ _MESSAGE_TYPES = {
     'PreparedTransfer': (ps.PreparedTransferMessageSchema(), _on_prepared_issuing_transfer_signal),
     'RejectedTransfer': (ps.RejectedTransferMessageSchema(), _on_rejected_issuing_transfer_signal),
     'FinalizedTransfer': (ps.FinalizedTransferMessageSchema(), _on_finalized_issuing_transfer_signal),
+    'ActivateDebtor': (ActivateDebtorMessageSchema(), _on_activate_debtor_signal),
 }
 
 _LOGGER = logging.getLogger(__name__)

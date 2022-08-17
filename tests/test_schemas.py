@@ -169,3 +169,39 @@ def test_serialize_transfer(app):
         "noteFormat": "json",
         "note": '{"note": "test"}',
     }
+
+
+def test_activate_debtor():
+    s = schemas.ActivateDebtorMessageSchema()
+
+    data = s.loads("""{
+    "type": "ActivateDebtor",
+    "debtor_id": -2000000000000000,
+    "reservation_id": "test_id",
+    "ts": "2022-01-01T00:00:00Z",
+    "unknown": "ignored"
+    }""")
+
+    assert data['type'] == 'ActivateDebtor'
+    assert data['debtor_id'] == -2000000000000000
+    assert data['reservation_id'] == 'test_id'
+    assert data['ts'] == datetime.fromisoformat('2022-01-01T00:00:00+00:00')
+    assert "unknown" not in data
+
+    wrong_type = data.copy()
+    wrong_type['type'] = 'WrongType'
+    wrong_type = s.dumps(wrong_type)
+    with pytest.raises(ValidationError, match='Invalid type.'):
+        s.loads(wrong_type)
+
+    wrong_reservation_id = data.copy()
+    wrong_reservation_id['reservation_id'] = 1000 * 'x'
+    wrong_reservation_id = s.dumps(wrong_reservation_id)
+    with pytest.raises(ValidationError, match='Longer than maximum length'):
+        s.loads(wrong_reservation_id)
+
+    try:
+        s.loads('{}')
+    except ValidationError as e:
+        assert len(e.messages) == len(data)
+        assert all(m == ['Missing data for required field.'] for m in e.messages.values())
