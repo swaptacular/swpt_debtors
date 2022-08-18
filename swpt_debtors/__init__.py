@@ -135,6 +135,9 @@ class MetaEnvReader(type):
 
 
 class Configuration(metaclass=MetaEnvReader):
+    MIN_DEBTOR_ID: int = None
+    MAX_DEBTOR_ID: int = None
+
     SQLALCHEMY_DATABASE_URI = ''
     SQLALCHEMY_POOL_SIZE: int = None
     SQLALCHEMY_POOL_TIMEOUT: int = None
@@ -142,6 +145,7 @@ class Configuration(metaclass=MetaEnvReader):
     SQLALCHEMY_MAX_OVERFLOW: int = None
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
+
     PROTOCOL_BROKER_URL = 'amqp://guest:guest@localhost:5672'
     PROTOCOL_BROKER_QUEUE = 'swpt_debtors'
     PROTOCOL_BROKER_QUEUE_ROUTING_KEY = '#'
@@ -149,6 +153,7 @@ class Configuration(metaclass=MetaEnvReader):
     PROTOCOL_BROKER_THREADS = 1
     PROTOCOL_BROKER_PREFETCH_SIZE = 0
     PROTOCOL_BROKER_PREFETCH_COUNT = 1
+
     API_TITLE = 'Debtors API'
     API_VERSION = 'v1'
     OPENAPI_VERSION = '3.0.2'
@@ -157,8 +162,7 @@ class Configuration(metaclass=MetaEnvReader):
     OPENAPI_REDOC_URL = 'https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js'
     OPENAPI_SWAGGER_UI_PATH = 'swagger-ui'
     OPENAPI_SWAGGER_UI_URL = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/'
-    MIN_DEBTOR_ID: int = None
-    MAX_DEBTOR_ID: int = None
+
     APP_ENABLE_CORS = False
     APP_TRANSFERS_FINALIZATION_APPROX_SECONDS = 20.0
     APP_MAX_TRANSFERS_PER_MONTH = 300
