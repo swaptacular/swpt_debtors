@@ -252,6 +252,14 @@ docs = ["sphinx", "jaraco.packaging (>=9)", "rst.linker (>=1.9)", "jaraco.tideli
 testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)"]
 
 [[package]]
+name = "iniconfig"
+version = "1.1.1"
+description = "iniconfig: brain-dead simple config-ini parsing"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "itsdangerous"
 version = "2.1.2"
 description = "Safely pass data to untrusted environments and back."
@@ -337,14 +345,6 @@ description = "McCabe checker, plugin for flake8"
 category = "dev"
 optional = false
 python-versions = "*"
-
-[[package]]
-name = "more-itertools"
-version = "8.14.0"
-description = "More routines for operating on iterables, beyond itertools"
-category = "main"
-optional = false
-python-versions = ">=3.5"
 
 [[package]]
 name = "mypy"
@@ -491,26 +491,25 @@ diagrams = ["railroad-diagrams", "jinja2"]
 
 [[package]]
 name = "pytest"
-version = "4.6.11"
+version = "7.1.2"
 description = "pytest: simple powerful testing with Python"
 category = "main"
 optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
+python-versions = ">=3.7"
 
 [package.dependencies]
-atomicwrites = ">=1.0"
-attrs = ">=17.4.0"
-colorama = {version = "*", markers = "sys_platform == \"win32\" and python_version != \"3.4\""}
+atomicwrites = {version = ">=1.0", markers = "sys_platform == \"win32\""}
+attrs = ">=19.2.0"
+colorama = {version = "*", markers = "sys_platform == \"win32\""}
 importlib-metadata = {version = ">=0.12", markers = "python_version < \"3.8\""}
-more-itertools = {version = ">=4.0.0", markers = "python_version > \"2.7\""}
+iniconfig = "*"
 packaging = "*"
-pluggy = ">=0.12,<1.0"
-py = ">=1.5.0"
-six = ">=1.10.0"
-wcwidth = "*"
+pluggy = ">=0.12,<2.0"
+py = ">=1.8.2"
+tomli = ">=1.0.0"
 
 [package.extras]
-testing = ["argcomplete", "hypothesis (>=3.56)", "nose", "requests", "mock"]
+testing = ["xmlschema", "requests", "pygments (>=2.7.2)", "nose", "mock", "hypothesis (>=3.56)", "argcomplete"]
 
 [[package]]
 name = "pytest-cov"
@@ -542,17 +541,17 @@ python-dotenv = ">=0.9.1"
 
 [[package]]
 name = "pytest-mock"
-version = "1.13.0"
-description = "Thin-wrapper around the mock package for easier use with py.test"
+version = "3.8.2"
+description = "Thin-wrapper around the mock package for easier use with pytest"
 category = "main"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+python-versions = ">=3.7"
 
 [package.dependencies]
-pytest = ">=2.7"
+pytest = ">=5.0"
 
 [package.extras]
-dev = ["pre-commit", "tox"]
+dev = ["pytest-asyncio", "tox", "pre-commit"]
 
 [[package]]
 name = "pytest-pudb"
@@ -663,7 +662,7 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -704,14 +703,6 @@ urwid = "*"
 
 [package.extras]
 dev = ["black", "pytest"]
-
-[[package]]
-name = "wcwidth"
-version = "0.2.5"
-description = "Measures the displayed width of unicode strings in a terminal"
-category = "main"
-optional = false
-python-versions = "*"
 
 [[package]]
 name = "web-pdb"
@@ -773,7 +764,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "76141a21371832596778dfce9d34a65f9fefce464b2745feb33b984e6b95c648"
+content-hash = "5281131425b768abbc448d5106c2c92367eb55adc7fe1be50432c678af5217f2"
 
 [metadata.files]
 alembic = []
@@ -801,6 +792,10 @@ greenlet = []
 gunicorn = []
 importlib-metadata = []
 importlib-resources = []
+iniconfig = [
+    {file = "iniconfig-1.1.1-py2.py3-none-any.whl", hash = "sha256:011e24c64b7f47f6ebd835bb12a743f2fbe9a26d4cecaa7f53bc4f35ee9da8b3"},
+    {file = "iniconfig-1.1.1.tar.gz", hash = "sha256:bc3af051d7d14b2ee5ef9969666def0cd1a000e121eaea580d4a313df4b37f32"},
+]
 itsdangerous = []
 jedi = []
 jinja2 = []
@@ -811,7 +806,6 @@ mccabe = [
     {file = "mccabe-0.6.1-py2.py3-none-any.whl", hash = "sha256:ab8a6258860da4b6677da4bd2fe5dc2c659cff31b3ee4f7f5d64e79735b80d42"},
     {file = "mccabe-0.6.1.tar.gz", hash = "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"},
 ]
-more-itertools = []
 mypy = []
 mypy-extensions = [
     {file = "mypy_extensions-0.4.3-py2.py3-none-any.whl", hash = "sha256:090fedd75945a69ae91ce1303b5824f428daf5a028d2f6ab8a299250a846f15d"},
@@ -831,19 +825,13 @@ pycodestyle = []
 pyflakes = []
 pygments = []
 pyparsing = []
-pytest = [
-    {file = "pytest-4.6.11-py2.py3-none-any.whl", hash = "sha256:a00a7d79cbbdfa9d21e7d0298392a8dd4123316bfac545075e6f8f24c94d8c97"},
-    {file = "pytest-4.6.11.tar.gz", hash = "sha256:50fa82392f2120cc3ec2ca0a75ee615be4c479e66669789771f1758332be4353"},
-]
+pytest = []
 pytest-cov = []
 pytest-dotenv = [
     {file = "pytest-dotenv-0.4.0.tar.gz", hash = "sha256:a3a0adf9e17cf7c9e38ec597a74cc902ac76baa1cc5a9bd7581a3711930ad057"},
     {file = "pytest_dotenv-0.4.0-py3-none-any.whl", hash = "sha256:12ff70de238cdc2c8d838ef92b720325ceb6ae2c9967be5f4e606a36de48345c"},
 ]
-pytest-mock = [
-    {file = "pytest-mock-1.13.0.tar.gz", hash = "sha256:e24a911ec96773022ebcc7030059b57cd3480b56d4f5d19b7c370ec635e6aed5"},
-    {file = "pytest_mock-1.13.0-py2.py3-none-any.whl", hash = "sha256:67e414b3caef7bff6fc6bd83b22b5bc39147e4493f483c2679bc9d4dc485a94d"},
-]
+pytest-mock = []
 pytest-pudb = [
     {file = "pytest-pudb-0.7.0.tar.gz", hash = "sha256:0ea87316d39c82163d340c28a168e08a163b8d3f484e60a53c9fd5eefe432c63"},
     {file = "pytest_pudb-0.7.0-py2.py3-none-any.whl", hash = "sha256:21e96fc16f313a7bd75e1df1b151de8a721144318b0ae8350208d6554222005a"},
@@ -864,10 +852,6 @@ urwid = [
     {file = "urwid-2.1.2.tar.gz", hash = "sha256:588bee9c1cb208d0906a9f73c613d2bd32c3ed3702012f51efe318a3f2127eae"},
 ]
 urwid-readline = []
-wcwidth = [
-    {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
-    {file = "wcwidth-0.2.5.tar.gz", hash = "sha256:c4d647b99872929fdb7bdcaa4fbe7f01413ed3d98077df798530e5b04f116c83"},
-]
 web-pdb = [
     {file = "web-pdb-1.5.7.tar.gz", hash = "sha256:a13cd43ad13f53bc78d213819a097cc023a3a7069b4f841c252fa4b430d925e4"},
     {file = "web_pdb-1.5.7-py2.py3-none-any.whl", hash = "sha256:c3f785bf39b7d94afafcffc15ee99005661251cfd7d582ded0dc743c58e2ed78"},

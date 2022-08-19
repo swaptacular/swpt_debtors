@@ -20,8 +20,8 @@ sqlalchemy = "^1.4.39"
 alembic = "^1.8.1"
 marshmallow = "^3.17.0"
 swpt_pythonlib = {git = "https://github.com/swaptacular/swpt_pythonlib.git", tag = "v0.8.3"}
-pytest = "^4.0"
-pytest-mock = "^1.10"
+pytest = "^7.1.2"
+pytest-mock = "^3.8.2"
 
 [tool.poetry.dev-dependencies]
 pudb = "*"
