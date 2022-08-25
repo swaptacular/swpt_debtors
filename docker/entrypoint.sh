@@ -1,11 +1,11 @@
 #!/bin/sh
 set -e
 
-# During development, we should be able to connect to services
-# installed on "localhost" from the container. To allow this, we find
-# the IP address of the docker host, and then for each variable name
-# $SUBSTITUTE_LOCALHOST_IN_VARS, we substitute "localhost" with that
-# IP address.
+# During development and testing, we should be able to connect to
+# services installed on "localhost" from the container. To allow this,
+# we find the IP address of the docker host, and then for each
+# variable name in "$SUBSTITUTE_LOCALHOST_IN_VARS", we substitute
+# "localhost" with that IP address.
 host_ip=$(ip route show | awk '/default/ {print $3}')
 for envvar_name in $SUBSTITUTE_LOCALHOST_IN_VARS; do
     eval envvar_value=\$$envvar_name
@@ -17,8 +17,14 @@ done
 # The WEBSERVER_* variables should be used instead of the GUNICORN_*
 # variables, because we do not want to tie the public interface to the
 # "gunicorn" server, which we may, or may not use in the future.
-export GUNICORN_WORKERS=${WEBSERVER_WORKERS:-1}
+export GUNICORN_WORKERS=${WEBSERVER_PROCESSES:-1}
 export GUNICORN_THREADS=${WEBSERVER_THREADS:-3}
+
+# The POSTGRES_URL variable should be used instead of the
+# SQLALCHEMY_DATABASE_URI variable, because we do not want to tie the
+# public interface to the "sqlalchemy" library, which we may, or may
+# not use in the future.
+export SQLALCHEMY_DATABASE_URI=${POSTGRES_URL}
 
 # This function tries to upgrade the database schema with exponential
 # backoff. This is necessary during development, because the database
@@ -72,7 +78,7 @@ perform_db_initialization() {
 }
 
 generate_oathkeeper_configuration() {
-    envsubst '$PORT $OAUTH2_INTROSPECT_URL' \
+    envsubst '$WEBSERVER_PORT $OAUTH2_INTROSPECT_URL' \
              < "$APP_ROOT_DIR/oathkeeper/config.yaml.template" \
              > "$APP_ROOT_DIR/oathkeeper/config.yaml"
     envsubst '$RESOURCE_SERVER' \
@@ -84,7 +90,7 @@ case $1 in
     develop-run-flask)
         # Do not run this in production!
         shift
-        exec flask run --host=0.0.0.0 --port $PORT --without-threads "$@"
+        exec flask run --host=0.0.0.0 --port ${WEBSERVER_PORT:-5000} --without-threads "$@"
         ;;
     test)
         # Do not run this in production!

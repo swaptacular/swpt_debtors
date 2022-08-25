@@ -1,6 +1,6 @@
 serve:
   proxy:
-    port: $PORT
+    port: $WEBSERVER_PORT
     cors:
       enabled: true
       allowed_origins:

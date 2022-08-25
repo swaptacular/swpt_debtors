@@ -1,11 +1,19 @@
 __version__ = '0.1.0'
 
 import logging
+import json
 import sys
 import os
 import os.path
 from typing import List
 from flask_cors import CORS
+
+
+def _parse_dict(s: str) -> dict:
+    try:
+        return json.loads(s)
+    except ValueError:  # pragma: no cover
+        raise ValueError(f'Invalid JSON configuration value: {s}')
 
 
 def _excepthook(exc_type, exc_value, traceback):  # pragma: nocover
@@ -139,10 +147,7 @@ class Configuration(metaclass=MetaEnvReader):
     MAX_DEBTOR_ID: int = None
 
     SQLALCHEMY_DATABASE_URI = ''
-    SQLALCHEMY_POOL_SIZE: int = None
-    SQLALCHEMY_POOL_TIMEOUT: int = None
-    SQLALCHEMY_POOL_RECYCLE: int = None
-    SQLALCHEMY_MAX_OVERFLOW: int = None
+    SQLALCHEMY_ENGINE_OPTIONS: _parse_dict = _parse_dict('{"pool_size": 0}')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
 
