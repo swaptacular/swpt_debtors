@@ -5,8 +5,8 @@ This project implements a [Swaptacular] "Debtors Agent" node. The
 deliverables are two [docker images]: the *app-image*, and the
 *swagger-ui-image*. Both images are generated from the project's
 [Dockerfile](../master/Dockerfile). The *app-image* contains the
-debtor agent service itself, and the *swagger-ui-image* is a simple
-[Swagger UI] cleint for this service, mainly useful for testing.
+debtors agent service itself, and the *swagger-ui-image* is a simple
+[Swagger UI] cleint for the service, mainly useful for testing.
 
 **Note:** This implementation uses [JSON Serialization for the
 Swaptacular Messaging Protocol].
@@ -27,11 +27,10 @@ following servers:
    that all incoming SMP messages for the debtors stored on the
    PostgreSQL server instance, are routed to this queue.
 
-   Also, the following [RabbitMQ exchange] must be configured on the
-   broker instance:
-
-   - **`debtors_out`**: For messages that must be send to the
-     accounting authority. The routing key will be an empty string.
+   Also, a [RabbitMQ exchange] named **`debtors_out`** must be
+   configured on the broker instance. This exchange is for messages
+   that must be send to the accounting authority. The routing key will
+   be an empty string.
 
    **Note:** If you execute the "configure" command (see below), with
    the environment variable `SETUP_RABBITMQ_BINDINGS` set to `yes`, an
@@ -39,8 +38,8 @@ following servers:
    RabbitMQ queues, exchanges, and the bindings between them. However,
    this works only for the most basic setup.
 
-3. [OAuth 2.0] authorization server, which authorizes all client
-   requests.
+3. [OAuth 2.0] authorization server, which authorizes clients'
+   requests to the "Simple Issuing Web API".
 
 
 Configuration
@@ -70,8 +69,8 @@ WEBSERVER_PORT=8003
 # browser, for example) presents a token, and to verify the validity
 # of the token, internally, a request is made to the OAuth 2.0
 # authorization server. This is called "token introspection". This
-# variable sets the URL at which token introspection requests will be
-# send.
+# variable sets the URL at which token internal introspection requests
+# will be send.
 OAUTH2_INTROSPECT_URL=http://localhost:4445/oauth2/introspect
 
 # Connection string for a PostgreSQL database server to connect to.
