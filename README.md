@@ -2,11 +2,11 @@ Swaptacular "Debtors Agent" reference implementation
 ====================================================
 
 This project implements a [Swaptacular] "Debtors Agent" node. The
-deliverables are two [docker images]: the `app-image`, and the
-`swagger-ui-image`. Both images are generated from the project's
+deliverables are two [docker images]: the *app-image*, and the
+*swagger-ui-image*. Both images are generated from the project's
 [Dockerfile](../master/Dockerfile). The *app-image* contains the
-debtor agent service. The *swagger-ui-image* is a simple [Swagger UI
-cleint] for this service, mainly useful for testing.
+debtor agent service itself, and the *swagger-ui-image* is a simple
+[Swagger UI] cleint for this service, mainly useful for testing.
 
 **Note:** This implementation uses [JSON Serialization for the
 Swaptacular Messaging Protocol].
@@ -15,13 +15,13 @@ Swaptacular Messaging Protocol].
 Dependencies
 ------------
 
-Containers started from the generated docker image must have access to
-the following servers:
+Containers started from the *app-image* must have access to the
+following servers:
 
 1. [PostgreSQL] server instance, which stores debtors' data.
 
 2. [RabbitMQ] server instance, which acts as broker for [Swaptacular
-   Messaging Protocol](../master/protocol.rst) (SMP) messages.
+   Messaging Protocol] (SMP) messages.
 
    A [RabbitMQ queue] must be configured on the broker instance, so
    that all incoming SMP messages for the debtors stored on the
@@ -213,13 +213,14 @@ first, by running:
 
 [Swaptacular]: https://swaptacular.github.io/overview
 [docker images]: https://www.geeksforgeeks.org/what-is-docker-images/
-[Swagger UI cleint]: https://swagger.io/tools/swagger-ui/
+[Swagger UI]: https://swagger.io/tools/swagger-ui/
 [JSON Serialization for the Swaptacular Messaging Protocol]: https://github.com/epandurski/swpt_accounts/blob/master/protocol-json.rst
 [PostgreSQL]: https://www.postgresql.org/
+[Swaptacular Messaging Protocol]: https://github.com/epandurski/swpt_accounts/blob/master/protocol.rst
 [RabbitMQ]: https://www.rabbitmq.com/
 [RabbitMQ queue]: https://www.cloudamqp.com/blog/part1-rabbitmq-for-beginners-what-is-rabbitmq.html
 [RabbitMQ exchange]: https://www.cloudamqp.com/blog/part4-rabbitmq-for-beginners-exchanges-routing-keys-bindings.html
-[]: https://oauth.net/2/
+[OAuth 2.0]: https://oauth.net/2/
 [Docker Engine]: https://docs.docker.com/engine/
 [Docker Compose]: https://docs.docker.com/compose/
 [Poetry]: https://poetry.eustace.io/docs/
