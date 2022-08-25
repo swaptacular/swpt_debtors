@@ -93,7 +93,9 @@ case $1 in
         ;;
     configure)
         perform_db_upgrade
-        [[ "$SETUP_RABBITMQ_BINDINGS" == "yes" ]] && setup_rabbitmq_bindings
+        if [[ "$SETUP_RABBITMQ_BINDINGS" == "yes" ]]; then
+            setup_rabbitmq_bindings
+        fi
         ;;
     webserver)
         generate_oathkeeper_configuration
