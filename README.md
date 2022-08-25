@@ -69,7 +69,7 @@ WEBSERVER_PORT=8003
 # browser, for example) presents a token, and to verify the validity
 # of the token, internally, a request is made to the OAuth 2.0
 # authorization server. This is called "token introspection". This
-# variable sets the URL at which token internal introspection requests
+# variable sets the URL at which internal token introspection requests
 # will be send.
 OAUTH2_INTROSPECT_URL=http://localhost:4445/oauth2/introspect
 
