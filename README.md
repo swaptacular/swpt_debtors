@@ -9,7 +9,7 @@ deliverables are two [docker images]: the *app-image*, and the
 * The `app-image` provides all the necessary services. The most
   important service is the [Simple Issuing Web API]. This is a server
   Web API, which allows debtors to issue new currency tokens into
-  existence. Normally, in order to "talk" to the debtors agent, the
+  existence. Normally, in order to "talk" to the debtors agent,
   currency issuers will use a [currency issuing client application].
 
 * The `swagger-ui-image` is a simple [Swagger UI] cleint for the
@@ -186,7 +186,8 @@ How to run the tests
 
     This will start its own PostgreSQL server instance in a docker
     container, but will rely on being able to connect to a RabbitMQ
-    server instance at "amqp://guest:guest@localhost:5672".
+    server instance at "amqp://guest:guest@localhost:5672". The OAuth
+    2.0 authorization will be bypassed.
 
     Note that because the RabbitMQ "guest" user [can only connect from
     localhost], you should either explicitly allow the "guest" user to
