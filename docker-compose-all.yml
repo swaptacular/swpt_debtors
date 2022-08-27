@@ -26,20 +26,7 @@ services:
       - $RABBITMQ_MANAGEMENT_LOCAL_PORT:15672
 
 
-  redis:
-    image: redis:6.0.9
-    volumes:
-      - 'redis-data-volume:/data'
-
-
-  # This is a dummy mail server which is useful only for testing.
-  mail:
-    image: mailhog/mailhog:v1.0.1
-    ports:
-      - $MAILHOG_LOCAL_PORT:8025
-
-
-  # This is the HTTP gateway for all the other containers.
+  # This acts as HTTP reverse proxy for all the other containers.
   nginx:
     image: nginx:1.19.4
     volumes:
@@ -62,7 +49,76 @@ services:
       - debtors-swagger-ui
 
 
-  # This container is responsible for the OAuth2 login and consent.
+  debtors-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app-image
+    environment:
+      - 'MIN_DEBTOR_ID=4294967296'
+      - 'MAX_DEBTOR_ID=8589934591'
+      - 'WEBSERVER_PROCESSES=1'
+      - 'WEBSERVER_THREADS=3'
+      - 'WEBSERVER_PORT=8080'
+      - 'OAUTH2_INTROSPECT_URL=http://debtors-login:4445/oauth2/introspect'
+      - 'POSTGRES_URL=postgresql://swpt_debtors:swpt_debtors@pg:5432/${POSTGRES_DB}'
+      - 'PROTOCOL_BROKER_URL=amqp://guest:guest@rabbitmq:5672'
+      - 'PROTOCOL_BROKER_QUEUE=swpt_debtors'
+      - 'PROTOCOL_BROKER_PROCESSES=1'
+      - 'PROTOCOL_BROKER_THREADS=3'
+      - 'PROTOCOL_BROKER_PREFETCH_COUNT=10'
+      - 'APP_LOG_LEVEL=warning'
+      - 'APP_LOG_FORMAT=json'
+      - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
+    depends_on:
+      - pg
+
+
+  # The purpose of this container is to create the database schema for
+  # the `debtors-server` container, and all the necessary RabbitMQ
+  # objects (queues, exchanges, etc.). It has to be run only once, but
+  # running it multiple times should not do any harm. Set
+  # `SETUP_RABBITMQ_BINDINGS` to anything other than "yes", if you do
+  # not want RabbitMQ exchanges and bindings to be (re)configured.
+  debtors-server-config:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app-image
+    environment:
+      - 'MIN_DEBTOR_ID=4294967296'
+      - 'MAX_DEBTOR_ID=8589934591'
+      - 'POSTGRES_URL=postgresql://swpt_debtors:swpt_debtors@pg:5432/${POSTGRES_DB}'
+      - 'PROTOCOL_BROKER_URL=amqp://guest:guest@rabbitmq:5672'
+      - 'PROTOCOL_BROKER_QUEUE=swpt_debtors'
+      - 'APP_LOG_LEVEL=warning'
+      - 'APP_LOG_FORMAT=json'
+      - 'SETUP_RABBITMQ_BINDINGS=yes'
+      - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
+    command: configure
+    depends_on:
+      - pg
+
+
+  # From the `swagger-ui-image`, runs a Swagger UI cleint for the
+  # "Simple Issuing Web API".
+  debtors-swagger-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: swagger-ui-image
+    environment:
+      - 'BASE_URL=/debtors-swagger-ui'
+      - 'API_ROOT=https://$PUBLIC_HOST/'
+      - 'OAUTH2_AUTHORIZATION_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/auth'
+      - 'OAUTH2_TOKEN_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/token'
+      - 'OAUTH2_REFRESH_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/token'
+      - 'OAUTH2_REDIRECT_URL=https://$PUBLIC_HOST/debtors-swagger-ui/oauth2-redirect.html'
+
+
+  # This container runs an OAuth 2.0 authorization server, which
+  # maintains its own user database, and provides UI for user
+  # registration, login, and authorization consent.
   debtors-login:
     image: epandurski/swpt_login:$SWPT_LOGIN_VERSION
     environment:
@@ -120,9 +176,9 @@ services:
       - pg
 
 
-  # The purpose of this container is to create the OAuth2 clients. It
-  # has to be run only once, but running it multiple times should not
-  # do any harm.
+  # The purpose of this container is to create a predefined set of
+  # OAuth2 clients. It has to be run only once, but running it
+  # multiple times should not do any harm.
   debtors-hydra-config:
     image: epandurski/swpt_login:$SWPT_LOGIN_VERSION
     environment:
@@ -139,69 +195,20 @@ services:
       - debtors-login
 
 
-  debtors-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: app-image
-    environment:
-      - 'MIN_DEBTOR_ID=4294967296'
-      - 'MAX_DEBTOR_ID=8589934591'
-      - 'WEBSERVER_PROCESSES=1'
-      - 'WEBSERVER_THREADS=3'
-      - 'WEBSERVER_PORT=8080'
-      - 'OAUTH2_INTROSPECT_URL=http://debtors-login:4445/oauth2/introspect'
-      - 'POSTGRES_URL=postgresql://swpt_debtors:swpt_debtors@pg:5432/${POSTGRES_DB}'
-      - 'PROTOCOL_BROKER_URL=amqp://guest:guest@rabbitmq:5672'
-      - 'PROTOCOL_BROKER_QUEUE=swpt_debtors'
-      - 'PROTOCOL_BROKER_PROCESSES=1'
-      - 'PROTOCOL_BROKER_THREADS=3'
-      - 'PROTOCOL_BROKER_PREFETCH_COUNT=10'
-      - 'APP_LOG_LEVEL=warning'
-      - 'APP_LOG_FORMAT=json'
-      - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
-    depends_on:
-      - pg
+  # The `debtors-login` container requires a Redis server instance.
+  redis:
+    image: redis:6.0.9
+    volumes:
+      - 'redis-data-volume:/data'
 
 
-  # The purpose of this container is to create the database schema for
-  # the `debtors-server` container, and all the necessary RabbitMQ
-  # objects (queues, exchanges, etc.). It has to be run only once, but
-  # running it multiple times should not do any harm. Set
-  # `SETUP_RABBITMQ_BINDINGS` to anything other than "yes", if you do
-  # not want RabbitMQ exchanges and bindings to be (re)configured.
-  debtors-server-config:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: app-image
-    environment:
-      - 'MIN_DEBTOR_ID=4294967296'
-      - 'MAX_DEBTOR_ID=8589934591'
-      - 'POSTGRES_URL=postgresql://swpt_debtors:swpt_debtors@pg:5432/${POSTGRES_DB}'
-      - 'PROTOCOL_BROKER_URL=amqp://guest:guest@rabbitmq:5672'
-      - 'PROTOCOL_BROKER_QUEUE=swpt_debtors'
-      - 'APP_LOG_LEVEL=warning'
-      - 'APP_LOG_FORMAT=json'
-      - 'SETUP_RABBITMQ_BINDINGS=yes'
-      - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
-    command: configure
-    depends_on:
-      - pg
-
-
-  debtors-swagger-ui:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: swagger-ui-image
-    environment:
-      - 'BASE_URL=/debtors-swagger-ui'
-      - 'API_ROOT=https://$PUBLIC_HOST/'
-      - 'OAUTH2_AUTHORIZATION_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/auth'
-      - 'OAUTH2_TOKEN_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/token'
-      - 'OAUTH2_REFRESH_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/token'
-      - 'OAUTH2_REDIRECT_URL=https://$PUBLIC_HOST/debtors-swagger-ui/oauth2-redirect.html'
+  # The `debtors-login` container requires a mail server
+  # instance. This runs a dummy mail server which is useful only for
+  # testing.
+  mail:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - $MAILHOG_LOCAL_PORT:8025
 
 
 volumes:

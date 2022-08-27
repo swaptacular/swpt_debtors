@@ -53,8 +53,10 @@ following servers:
    registration, login, and authorization consent.
 
 To increase security and performance, it is highly recommended that
-you configure a reverse Web-proxy server (like [nginx]) beteen your
-clients and the [Simple Issuing Web API] server.
+you configure reverse Web-proxy server(s) (like [nginx]) between your
+clients and your "Simple Issuing Web API" servers. In addition, this
+approach allows different debtors to be located on different database
+servers (sharding).
 
 
 Configuration
@@ -213,11 +215,18 @@ How to setup a development environment
 How to run all services (production-like)
 -----------------------------------------
 
-To start the "Debtors Agent" server, along with a PostgerSQL server, a
-RabbitMQ server, OAuth 2.0 authorization server, and a HTTP-proxy
-server, use this command:
+To start the "Debtors Agent" server, along with a Swagger UI client, a
+PostgerSQL server, a RabbitMQ server, an OAuth 2.0 authorization
+server, and a HTTP-proxy server, use this command:
 
     $ docker-compose -f docker-compose-all.yml up --build
+
+Then, you can open a browser window at
+https://localhost:44302/debtors-swagger-ui/ and use client ID
+`swagger-ui`, and client secret `swagger-ui` to authorize Swagger UI
+to use the server API. In this testing environment, user registration
+emails will be sent to a fake email server, whose messages can be read
+at http://localhost:8026/
 
 
 
