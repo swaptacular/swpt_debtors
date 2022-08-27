@@ -64,9 +64,7 @@ services:
 
   # This container is responsible for the OAuth2 login and consent.
   debtors-login:
-    build:
-      context: ./submodules/swpt_login
-      dockerfile: Dockerfile
+    image: epandurski/swpt_login:$SWPT_LOGIN_VERSION
     environment:
       - 'SERVE_PUBLIC_PORT=4444'
       - 'SERVE_ADMIN_PORT=4445'
@@ -113,9 +111,7 @@ services:
   # for the `debtors-login` container. It has to be run only once,
   # but running it multiple times should not do any harm.
   debtors-login-config:
-    build:
-      context: ./submodules/swpt_login
-      dockerfile: Dockerfile
+    image: epandurski/swpt_login:$SWPT_LOGIN_VERSION
     environment:
       - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
       - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
@@ -128,9 +124,7 @@ services:
   # has to be run only once, but running it multiple times should not
   # do any harm.
   debtors-hydra-config:
-    build:
-      context: ./submodules/swpt_login
-      dockerfile: Dockerfile
+    image: epandurski/swpt_login:$SWPT_LOGIN_VERSION
     environment:
       - 'HYDRA_ADMIN_URL=http://debtors-login:4445'
     volumes:

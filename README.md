@@ -6,11 +6,12 @@ deliverables are two [docker images]: the *app-image*, and the
 *swagger-ui-image*. Both images are generated from the project's
 [Dockerfile](../master/Dockerfile).
 
-* The `app-image` contains all the necessary services. The main
-  provided service is the [Simple Issuing Web API]. This is a server
-  Web API, which allows debtors to issue new currency tokens into
-  existence. Normally, to "talk" to the debtors agent, the currency
-  issuers will use a [currency issuing client app].
+* The `app-image` contains all the necessary services. The most
+  important provided service is the [Simple Issuing Web API]. This is
+  a server Web API, which allows debtors to issue new currency tokens
+  into existence. Normally, in order to "talk" to the debtors agent,
+  the currency issuers will use a [currency issuing client
+  application].
 
 * The `swagger-ui-image` is a simple [Swagger UI] cleint for the
   server Web API, mainly useful for testing.
@@ -47,13 +48,13 @@ following servers:
 
 3. [OAuth 2.0] authorization server, which authorizes clients'
    requests to the [Simple Issuing Web API]. There is a plethora of
-   popular Oauth 2.0 server implementations which can be
-   used. Normally, they maintain their own user database, and go
-   together with some UI for user registration, and login.
+   popular Oauth 2.0 server implementations. Normally, they maintain
+   their own user database, and go together with UI for user
+   registration, login, and authorization consent.
 
-Also, to increase security and performance, it is highly recommended
-that you configure a reverse Web-proxy server (like [nginx]), beteen
-your clients and the [Simple Issuing Web API] server.
+To increase security and performance, it is highly recommended that
+you configure a reverse Web-proxy server (like [nginx]) beteen your
+clients and the [Simple Issuing Web API] server.
 
 
 Configuration
@@ -218,16 +219,12 @@ server, use this command:
 
     $ docker-compose -f docker-compose-all.yml up --build
 
-Note that you may need to checkout the `swpt_login` Git submodule
-first, by running:
-
-    $ git submodule update --init --recursive
 
 
 [Swaptacular]: https://swaptacular.github.io/overview
 [docker images]: https://www.geeksforgeeks.org/what-is-docker-images/
 [Simple Issuing Web API]: https://swaptacular.org/public/docs/swpt_debtors/redoc.html
-[currency issuing client app]: https://github.com/swaptacular/swpt_debtors_ui
+[currency issuing client application]: https://github.com/swaptacular/swpt_debtors_ui
 [Swagger UI]: https://swagger.io/tools/swagger-ui/
 [JSON Serialization for the Swaptacular Messaging Protocol]: https://github.com/swaptacular/swpt_accounts/blob/master/protocol-json.rst
 [PostgreSQL]: https://www.postgresql.org/
