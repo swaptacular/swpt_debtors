@@ -213,9 +213,9 @@ first, by running:
 [Swaptacular]: https://swaptacular.github.io/overview
 [docker images]: https://www.geeksforgeeks.org/what-is-docker-images/
 [Swagger UI]: https://swagger.io/tools/swagger-ui/
-[JSON Serialization for the Swaptacular Messaging Protocol]: https://github.com/epandurski/swpt_accounts/blob/master/protocol-json.rst
+[JSON Serialization for the Swaptacular Messaging Protocol]: https://github.com/swaptacular/swpt_accounts/blob/master/protocol-json.rst
 [PostgreSQL]: https://www.postgresql.org/
-[Swaptacular Messaging Protocol]: https://github.com/epandurski/swpt_accounts/blob/master/protocol.rst
+[Swaptacular Messaging Protocol]: https://github.com/swaptacular/swpt_accounts/blob/master/protocol.rst
 [RabbitMQ]: https://www.rabbitmq.com/
 [RabbitMQ queue]: https://www.cloudamqp.com/blog/part1-rabbitmq-for-beginners-what-is-rabbitmq.html
 [RabbitMQ exchange]: https://www.cloudamqp.com/blog/part4-rabbitmq-for-beginners-exchanges-routing-keys-bindings.html
