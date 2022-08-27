@@ -88,7 +88,7 @@ services:
       - 'HYDRA_ADMIN_URL=http://debtors-login:4445'
       - 'SITE_TITLE=Swaptacular'
       - 'STYLE_URL='
-      - 'ABOUT_URL=https://swaptacular.github.io/'
+      - 'ABOUT_URL=https://swaptacular.github.io/overview'
       - 'RECAPTCHA_PUBLIC_KEY=6Lc902MUAAAAAJL22lcbpY3fvg3j4LSERDDQYe37'
       - 'RECAPTCHA_PIVATE_KEY=6Lc902MUAAAAAN--r4vUr8Vr7MU1PF16D9k2Ds9Q'
       - 'MAIL_SERVER=mail'
