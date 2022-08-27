@@ -6,12 +6,11 @@ deliverables are two [docker images]: the *app-image*, and the
 *swagger-ui-image*. Both images are generated from the project's
 [Dockerfile](../master/Dockerfile).
 
-* The `app-image` contains all the necessary services. The most
-  important provided service is the [Simple Issuing Web API]. This is
-  a server Web API, which allows debtors to issue new currency tokens
-  into existence. Normally, in order to "talk" to the debtors agent,
-  the currency issuers will use a [currency issuing client
-  application].
+* The `app-image` provides all the necessary services. The most
+  important service is the [Simple Issuing Web API]. This is a server
+  Web API, which allows debtors to issue new currency tokens into
+  existence. Normally, in order to "talk" to the debtors agent, the
+  currency issuers will use a [currency issuing client application].
 
 * The `swagger-ui-image` is a simple [Swagger UI] cleint for the
   server Web API, mainly useful for testing.
@@ -160,7 +159,7 @@ container allows you to execute the following *documented commands*:
 
 
 This [docker-compose example](../master/docker-compose-all.yml) shows
-how to use the generated docker image, along with the PostgerSQL
+how to use the generated docker images, along with the PostgerSQL
 server, the RabbitMQ server, the OAuth 2.0 authorization server, and
 the HTTP reverse-proxy server.
 

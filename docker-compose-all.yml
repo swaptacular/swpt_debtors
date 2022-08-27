@@ -177,8 +177,8 @@ services:
 
 
   # The purpose of this container is to create a predefined set of
-  # OAuth2 clients. It has to be run only once, but running it
-  # multiple times should not do any harm.
+  # OAuth2 clients (like "swagger-ui"). It has to be run only once,
+  # but running it multiple times should not do any harm.
   debtors-hydra-config:
     image: epandurski/swpt_login:$SWPT_LOGIN_VERSION
     environment:
