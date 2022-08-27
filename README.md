@@ -4,9 +4,16 @@ Swaptacular "Debtors Agent" reference implementation
 This project implements a [Swaptacular] "Debtors Agent" node. The
 deliverables are two [docker images]: the *app-image*, and the
 *swagger-ui-image*. Both images are generated from the project's
-[Dockerfile](../master/Dockerfile). The *app-image* contains the
-debtors agent service itself, and the *swagger-ui-image* is a simple
-[Swagger UI] cleint for the service, mainly useful for testing.
+[Dockerfile](../master/Dockerfile).
+
+* The `app-image` contains all the necessary services. The main
+  provided service is the [Simple Issuing Web API]. This is a server
+  Web API, which allows debtors to issue new currency tokens into
+  existence. Normally, to "talk" to the debtors agent, the currency
+  issuers will use a [currency issuing client app].
+
+* The `swagger-ui-image` is a simple [Swagger UI] cleint for the
+  server Web API, mainly useful for testing.
 
 **Note:** This implementation uses [JSON Serialization for the
 Swaptacular Messaging Protocol].
@@ -39,7 +46,14 @@ following servers:
    this works only for the most basic setup.
 
 3. [OAuth 2.0] authorization server, which authorizes clients'
-   requests to the "Simple Issuing Web API".
+   requests to the [Simple Issuing Web API]. There is a plethora of
+   popular Oauth 2.0 server implementations which can be
+   used. Normally, they maintain their own user database, and go
+   together with some UI for user registration, and login.
+
+Also, to increase security and performance, it is highly recommended
+that you configure a reverse Web-proxy server (like [nginx]), beteen
+your clients and the [Simple Issuing Web API] server.
 
 
 Configuration
@@ -212,6 +226,8 @@ first, by running:
 
 [Swaptacular]: https://swaptacular.github.io/overview
 [docker images]: https://www.geeksforgeeks.org/what-is-docker-images/
+[Simple Issuing Web API]: https://swaptacular.org/public/docs/swpt_debtors/redoc.html
+[currency issuing client app]: https://github.com/swaptacular/swpt_debtors_ui
 [Swagger UI]: https://swagger.io/tools/swagger-ui/
 [JSON Serialization for the Swaptacular Messaging Protocol]: https://github.com/swaptacular/swpt_accounts/blob/master/protocol-json.rst
 [PostgreSQL]: https://www.postgresql.org/
@@ -220,6 +236,7 @@ first, by running:
 [RabbitMQ queue]: https://www.cloudamqp.com/blog/part1-rabbitmq-for-beginners-what-is-rabbitmq.html
 [RabbitMQ exchange]: https://www.cloudamqp.com/blog/part4-rabbitmq-for-beginners-exchanges-routing-keys-bindings.html
 [OAuth 2.0]: https://oauth.net/2/
+[nginx]: https://en.wikipedia.org/wiki/Nginx
 [Docker Engine]: https://docs.docker.com/engine/
 [Docker Compose]: https://docs.docker.com/compose/
 [Poetry]: https://poetry.eustace.io/docs/
