@@ -53,7 +53,7 @@ following servers:
    registration, login, and authorization consent.
 
 To increase security and performance, it is highly recommended that
-you configure reverse Web-proxy server(s) (like [nginx]) between your
+you configure HTTP reverse-proxy server(s) (like [nginx]) between your
 clients and your "Simple Issuing Web API" servers. In addition, this
 approach allows different debtors to be located on different database
 servers (sharding).
@@ -161,7 +161,8 @@ container allows you to execute the following *documented commands*:
 
 This [docker-compose example](../master/docker-compose-all.yml) shows
 how to use the generated docker image, along with the PostgerSQL
-server, and the RabbitMQ server.
+server, the RabbitMQ server, the OAuth 2.0 authorization server, and
+the HTTP reverse-proxy server.
 
 
 How to run the tests
@@ -217,7 +218,7 @@ How to run all services (production-like)
 
 To start the "Debtors Agent" server, along with a Swagger UI client, a
 PostgerSQL server, a RabbitMQ server, an OAuth 2.0 authorization
-server, and a HTTP-proxy server, use this command:
+server, and a HTTP reverse-proxy server, use this command:
 
     $ docker-compose -f docker-compose-all.yml up --build
 

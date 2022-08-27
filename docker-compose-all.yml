@@ -44,9 +44,9 @@ services:
       - 'DEBTORS_SWAGGER_UI_URL=http://debtors-swagger-ui:8080'
       - 'NGINX_ENTRYPOINT_QUIET_LOGS=1'
     depends_on:
-      - debtors-login
       - debtors-server
       - debtors-swagger-ui
+      - debtors-login
 
 
   debtors-server:
@@ -195,14 +195,15 @@ services:
       - debtors-login
 
 
-  # The `debtors-login` container requires a Redis server instance.
+  # The `debtors-login` container needs access to a Redis server
+  # instance.
   redis:
     image: redis:6.0.9
     volumes:
       - 'redis-data-volume:/data'
 
 
-  # The `debtors-login` container requires a mail server
+  # The `debtors-login` container needs access to a mail server
   # instance. This runs a dummy mail server which is useful only for
   # testing.
   mail:
