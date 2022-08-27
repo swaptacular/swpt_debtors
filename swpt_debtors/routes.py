@@ -121,7 +121,13 @@ admin_api = Blueprint(
     'admin',
     __name__,
     url_prefix='/debtors',
-    description="View debtors list, create new debtors.",
+    description="""**View debtors list, create new debtors, deactivate inactive
+    debtors.** The creation of new debtors can optionally be done
+    in two-phases: First a debtors ID can be *reserved*, and only
+    then, the debtor can be *activated*. This is useful when the
+    client wants to know the new debtor ID in advance. If this is
+    not needed, the debtor can also be activated directly, by a
+    single request.""",
 )
 admin_api.before_request(ensure_admin)
 
@@ -282,7 +288,10 @@ debtors_api = Blueprint(
     'debtors',
     __name__,
     url_prefix='/debtors',
-    description="View public information about debtors.",
+    description="""**Obtain information about existing debtors, update debtors'
+    configuration.** Each debtor's record contains references to various kinds of
+    information about the debtor (like debtor's list of transfers).
+    """,
 )
 debtors_api.before_request(ensure_debtor_permissions)
 
@@ -352,7 +361,15 @@ transfers_api = Blueprint(
     'transfers',
     __name__,
     url_prefix='/debtors',
-    description="Make credit-issuing transfers.",
+    description="""**Make credit-issuing transfers.** A new transfer record will be
+    created for every initiated credit-issuing transfer. The client
+    itself is responsible for the deletion of each transfer record,
+    once the client does not need it anymore. Sometime after the
+    transfer has been initiated, it will be automatically finalized as
+    either successful or unsuccessful. Note that the client may try to
+    cancel an erroneously initiated transfer, but there are no
+    guarantees for success.
+    """,
 )
 transfers_api.before_request(ensure_debtor_permissions)
 
@@ -472,7 +489,10 @@ documents_api = Blueprint(
     'documents',
     __name__,
     url_prefix='/debtors',
-    description="Maintains an ever-growing set of public documents.",
+    description="""**Maintains an ever-growing set of public documents.** Usually, the
+    debtor's configuration includes a link to a document that
+    describes the debtor's currency (a public info document).
+    """,
 )
 
 

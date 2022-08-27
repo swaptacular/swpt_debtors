@@ -149,10 +149,13 @@ SCOPE_DEACTIVATE = [
     {'oauth2': ['deactivate']},
 ]
 
-API_DESCRIPTION = """This API can be used to:
-1. Obtain public information about debtors and create new debtors.
-2. Change individual debtor's policies.
-3. Make credit-issuing transfers.
+API_DESCRIPTION = """Since interchangeability of client applications for currency
+issuing is not of critical importance, Swaptacular does not make
+recommendations about the Issuing Web API. The current reference
+implementation uses this `Simple Issuing Web API`.
+
+This API is organized in four separate sections: **admin**,
+**debtors**, **transfers**, **documents**.
 """
 
 API_SPEC_OPTIONS = {
