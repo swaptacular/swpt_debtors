@@ -86,7 +86,7 @@ WEBSERVER_PORT=8003
 # of the token, internally, a request is made to the OAuth 2.0
 # authorization server. This is called "token introspection". This
 # variable sets the URL at which internal token introspection requests
-# will be send.
+# will be sent.
 OAUTH2_INTROSPECT_URL=http://localhost:4445/oauth2/introspect
 
 # Connection string for a PostgreSQL database server to connect to.
