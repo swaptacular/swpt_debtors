@@ -36,7 +36,7 @@ following servers:
 
    Also, a [RabbitMQ exchange] named **`debtors_out`** must be
    configured on the broker instance. This exchange is for messages
-   that must be send to the accounting authority. The routing key will
+   that must be sent to the accounting authority. The routing key will
    be an empty string.
 
    **Note:** If you execute the "configure" command (see below), with
