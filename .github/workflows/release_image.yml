@@ -4,10 +4,6 @@ on:
   release:
     types: [published]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
@@ -15,10 +11,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: app-image
-            image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          - target: swagger-ui-image
-            image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}_swagger_ui
+          - registry: ghcr.io
+            target: app-image
+            image: ${{ env.REGISTRY }}/${{ github.repository }}
+          - registry: ghcr.io
+            target: swagger-ui-image
+            image: ${{ env.REGISTRY }}/$${{ github.repository }}_swagger_ui
 
     permissions:
       contents: read
@@ -31,7 +29,7 @@ jobs:
       - name: Log in to the container registry
         uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ matrix.registry }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
