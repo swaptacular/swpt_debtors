@@ -13,10 +13,10 @@ jobs:
         include:
           - registry: ghcr.io
             target: app-image
-            image: ${{ env.REGISTRY }}/${{ github.repository }}
+            image: ghcr.io/${{ github.repository }}
           - registry: ghcr.io
             target: swagger-ui-image
-            image: ${{ env.REGISTRY }}/$${{ github.repository }}_swagger_ui
+            image: ghcr.io/${{ github.repository }}_swagger_ui
 
     permissions:
       contents: read
