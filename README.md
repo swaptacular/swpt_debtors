@@ -179,6 +179,19 @@ How to run the tests
         $ docker-compose build
         $ docker-compose run tests-config test
 
+
+How to setup a development environment
+--------------------------------------
+
+1.  Install [Poetry](https://poetry.eustace.io/docs/).
+
+2.  Create a new [Python](https://docs.python.org/) virtual
+    environment and activate it.
+
+3.  To install dependencies, run this command:
+
+        $ poetry install
+
 4.  To run the minimal set of services needed for development, use
     this command:
 
@@ -195,20 +208,7 @@ How to run the tests
     the RabbitMQ connection URLs accordingly (`PROTOCOL_BROKER_URL` in
     the *.env* file).
 
-
-How to setup a development environment
---------------------------------------
-
-1.  Install [Poetry](https://poetry.eustace.io/docs/).
-
-2.  Create a new [Python](https://docs.python.org/) virtual
-    environment and activate it.
-
-3.  To install dependencies, run this command:
-
-        $ poetry install
-
-4.  You can use `flask run -p 5000` to run a local web server, and
+5.  You can use `flask run -p 5000` to run a local web server, and
     `pytest --cov=swpt_debtors --cov-report=html` to run the tests and
     generate a test coverage report.
 
