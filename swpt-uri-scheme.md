@@ -32,14 +32,20 @@ as it is defined by the [Swaptacular Messaging Protocol].
 
 The `<account-id-enc>` string uses a very simple encoding:
 
-* If the first symbol in the string **is not** `"!""`, then the string
+* If the first symbol in the string **is not** `"!"`, then the string
   contains the account identifier. In this case, the account
   identifier can contain only a limited set of symbols: ASCII letters,
   numbers, underscore, equal sign, minus sign (regular expression:
   `^[A-Za-z0-9_=-]*$`).
 
-* If the first symbol in the string **is** `"!""`, then the rest of
-  the string contains the account identifier, [Base64URL] encoded.
+* If the first symbol in the string **is** `"!"`, then the rest of the
+  string contains the account identifier, [Base64URL] encoded.
+
+**Important note:** When the account identifier contains only a
+limited set of symbols (regular expression: `^[A-Za-z0-9_=-]*$`), the
+`<account-id-enc>` string MUST be equal to the account identifier,
+that is, an Base64URL encoding MUST NOT be used.
+
 
 
 [Swaptacular]: https://swaptacular.github.io/overview
