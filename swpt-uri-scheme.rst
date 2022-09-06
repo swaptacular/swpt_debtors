@@ -12,9 +12,10 @@
 Overview
 ========
 
-This document specifies a new ``swpt`` `URI scheme`_. `Swaptacular`_
-uses this URI scheme to refer either to a concrete Swaptacular
-currency, or to a concrete account in a given Swaptacular
+This document specifies a new ``swpt`` `URI scheme`_.
+
+`Swaptacular`_ uses this URI scheme to refer either to a concrete
+Swaptacular currency, or to a concrete account in a given Swaptacular
 currency. For example:
 
 * ``swpt:1234`` refers to the Swaptacular currency with debtor
