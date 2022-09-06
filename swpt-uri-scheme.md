@@ -22,6 +22,18 @@ currency with debtor ID `0` is `swpt:0`, and the URI for the currency
 with debtor ID `-1` is `swpt:18446744073709551615`.
 
 
+References to concrete accounts
+-------------------------------
+
+The general form is `swpt:<debtor-id-2c>/<account-id-enc>`. Here, the
+meaning of `<debtor-id-2c>` is the same as before, and
+`<account-id-enc>` encodes the [account identifier] for the account,
+as it is defined by the [Swaptacular Messaging Protocol].
+
+
+
 [Swaptacular]: https://swaptacular.github.io/overview
 [URI scheme]: https://en.wikipedia.org/wiki/Uniform_Resource_Identifier#Syntax
 [two's complement]: https://en.wikipedia.org/wiki/Two%27s_complement
+[account identifier]: https://github.com/epandurski/swpt_accounts/blob/master/protocol.rst#account-id
+[Swaptacular Messaging Protocol]: https://github.com/swaptacular/swpt_accounts/blob/master/protocol.rst
