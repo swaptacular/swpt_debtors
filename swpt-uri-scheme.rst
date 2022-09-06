@@ -14,15 +14,15 @@ Overview
 
 This document specifies a new ``swpt`` `URI scheme`_.
 
-`Swaptacular`_ uses this URI scheme to refer either to a concrete
-Swaptacular currency, or to a concrete account in a given Swaptacular
-currency. For example:
+`Swaptacular`_ uses the ``swpt`` URI scheme to refer either to a
+concrete Swaptacular currency, or to a concrete account with a given
+debtor (currency). For example:
 
 * ``swpt:1234`` refers to the Swaptacular currency with debtor
   ID 1234.
 
 * ``swpt:1234/example-account`` refers to the account
-  "example-account" in the Swaptacular currency with debtor ID 1234.
+  "example-account" with debtor 1234.
 
 **Note:** The key words "MUST", "MUST NOT", "REQUIRED", "SHALL",
 "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and
