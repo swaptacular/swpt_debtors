@@ -30,6 +30,15 @@ meaning of `<debtor-id-2c>` is the same as before, and
 `<account-id-enc>` encodes the [account identifier] for the account,
 as it is defined by the [Swaptacular Messaging Protocol].
 
+The `<account-id-enc>` string uses a very simple encoding:
+
+* If the first symbol in the string **is not** `!`, then the string
+  contains the account identifier. In this case, the account
+  identifier can contain only a limited set of symbols: ASCII letters,
+  numbers, "_", "=", "-" (regular expression: `^[A-Za-z0-9_=-]*$`).
+
+* If the first symbol in the string **is** `!`, then the rest of the
+  string contains the account identifier, [Base64URL] encoded.
 
 
 [Swaptacular]: https://swaptacular.github.io/overview
@@ -37,3 +46,4 @@ as it is defined by the [Swaptacular Messaging Protocol].
 [two's complement]: https://en.wikipedia.org/wiki/Two%27s_complement
 [account identifier]: https://github.com/epandurski/swpt_accounts/blob/master/protocol.rst#account-id
 [Swaptacular Messaging Protocol]: https://github.com/swaptacular/swpt_accounts/blob/master/protocol.rst
+[Base64]: https://base64.guru/standards/base64url
