@@ -1,11 +1,10 @@
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-JSON Serialization for the Swaptacular Messaging Protocol
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-:Description: Specifies the way Swaptacular Messaging Protocol
-              messages should be serialized to JSON
++++++++++++++++++++++++++++++++++++
+``swpt`` URI scheme for Swaptacular
++++++++++++++++++++++++++++++++++++
+:Description: Specifies the "swpt" URI scheme for Swaptacular
 :Author: Evgeni Pandurksi
 :Contact: epandurski@gmail.com
-:Date: 2022-08-07
+:Date: 2022-09-06
 :Version: 1.0
 :Copyright: This document has been placed in the public domain.
 
