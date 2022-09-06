@@ -16,10 +16,10 @@ References to Swaptacular currencies
 
 The general form is `swpt:<debtor-id-2c>`, where `<debtor-id-2c>` is
 an integer (Base-10) between 0 and 18446744073709551615 (an unsigned
-64-bits integer). For negative debtor IDs, `<debtor-id-2c>` is the
-debtor ID's [two's complement]. For example, the URI for the currency
-with debtor ID `0` is `swpt:0`; the URI for the currency with debtor
-ID `-1` is `swpt:18446744073709551615`.
+64-bits integer). For negative debtor IDs `<debtor-id-2c>` should be
+the debtor ID's [two's complement]. For example, the URI for the
+currency with debtor ID `0` is `swpt:0`; the URI for the currency with
+debtor ID `-1` is `swpt:18446744073709551615`.
 
 
 [Swaptacular]: https://swaptacular.github.io/overview
