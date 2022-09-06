@@ -44,8 +44,8 @@ References to Swaptacular accounts
 ----------------------------------
 
 The general form is ``swpt:<debtor-id-2c>/<account-id-enc>``. Here,
-the meaning of ``<debtor-id-2c>`` is the same as before, and
-``<account-id-enc>`` encodes the `account identifier`_ for the
+the meaning of ``<debtor-id-2c>`` is the same as before, and the
+``<account-id-enc>`` string encodes the `account identifier`_ for the
 account, defined by the `Swaptacular Messaging Protocol`_.
 
 The ``<account-id-enc>`` string uses a very simple encoding:
@@ -62,7 +62,8 @@ The ``<account-id-enc>`` string uses a very simple encoding:
 **Important note:** When the account identifier contains only a
 limited set of symbols (regular expression: ``^[A-Za-z0-9_=-]*$``),
 the ``<account-id-enc>`` string MUST be equal to the account
-identifier, and Base64URL encoding MUST NOT be used.
+identifier, and Base64URL encoding MUST NOT be used. This guarantees
+that every Swaptacular account has a unique URI.
 
 
 
