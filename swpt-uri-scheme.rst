@@ -29,8 +29,8 @@ a given debtor (currency). For example:
 RFC 2119.
 
 
-References to Swaptacular currencies
-------------------------------------
+References to Swaptacular debtors
+---------------------------------
 
 The general form is ``swpt:<debtor-id-2c>``, where ``<debtor-id-2c>``
 is an integer (Base-10) between 0 and 18446744073709551615 (an
@@ -40,8 +40,8 @@ the currency with debtor ID ``0`` is ``swpt:0``, and the URI for the
 currency with debtor ID ``-1`` is ``swpt:18446744073709551615``.
 
 
-References to concrete accounts
--------------------------------
+References to Swaptacular accounts
+----------------------------------
 
 The general form is ``swpt:<debtor-id-2c>/<account-id-enc>``. Here,
 the meaning of ``<debtor-id-2c>`` is the same as before, and
