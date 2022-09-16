@@ -233,7 +233,7 @@ at http://localhost:8026/
 
 [Swaptacular]: https://swaptacular.github.io/overview
 [docker images]: https://www.geeksforgeeks.org/what-is-docker-images/
-[Simple Issuing Web API]: https://swaptacular.org/public/docs/swpt_debtors/redoc.html
+[Simple Issuing Web API]: https://swaptacular.github.io/public/docs/swpt_debtors/redoc.html
 [currency issuing client application]: https://github.com/swaptacular/swpt_debtors_ui
 [Swagger UI]: https://swagger.io/tools/swagger-ui/
 [JSON Serialization for the Swaptacular Messaging Protocol]: https://github.com/swaptacular/swpt_accounts/blob/master/protocol-json.rst
