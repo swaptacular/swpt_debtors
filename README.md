@@ -75,7 +75,7 @@ MAX_DEBTOR_ID=8589934591
 # spawned to handle "Simple Issuing Web API" requests (default 1),
 # each process will run "$WEBSERVER_THREADS" threads in parallel
 # (default 3). The container will listen for "Simple Issuing Web API"
-# requests on port "$WEBSERVER_PORT" (default 80).
+# requests on port "$WEBSERVER_PORT" (default 8080).
 WEBSERVER_PROCESSES=2
 WEBSERVER_THREADS=10
 WEBSERVER_PORT=8003
