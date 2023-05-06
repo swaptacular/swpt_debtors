@@ -66,8 +66,13 @@ variables. Here are the most important settings with some random
 example values:
 
 ```shell
-# The debtors agent will be responsible only for debtor IDs between
-# "$MIN_DEBTOR_ID" and "$MAX_DEBTOR_ID".
+# The debtors agent will be responsible only for debtor IDs
+# between "$MIN_DEBTOR_ID" and "$MAX_DEBTOR_ID". This can be
+# passed as a decimal number (like "4294967296"), or a
+# hexadecimal number (like "0x100000000"). Numbers between
+# 0x8000000000000000 and 0xffffffffffffffff will be automatically
+# converted to their corresponding two's complement negative
+# numbers.
 MIN_DEBTOR_ID=4294967296
 MAX_DEBTOR_ID=8589934591
 

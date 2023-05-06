@@ -7,6 +7,17 @@ import os
 import os.path
 from typing import List
 from flask_cors import CORS
+from ast import literal_eval
+from swpt_pythonlib.utils import u64_to_i64
+
+
+def _parse_debtor_id(s: str) -> int:
+    n = literal_eval(s.strip())
+    if not isinstance(n, int) or n < (-1 << 63) or n >= (1 << 64):  # pragma: no cover
+        raise ValueError(f'Invalid creditor ID: {s}')
+    if n < 0:  # pragma: no cover
+        return n
+    return u64_to_i64(n)
 
 
 def _parse_dict(s: str) -> dict:
@@ -143,8 +154,8 @@ class MetaEnvReader(type):
 
 
 class Configuration(metaclass=MetaEnvReader):
-    MIN_DEBTOR_ID: int = None
-    MAX_DEBTOR_ID: int = None
+    MIN_DEBTOR_ID: _parse_debtor_id = None
+    MAX_DEBTOR_ID: _parse_debtor_id = None
 
     SQLALCHEMY_DATABASE_URI = ''
     SQLALCHEMY_ENGINE_OPTIONS: _parse_dict = _parse_dict('{"pool_size": 0}')
