@@ -3,7 +3,7 @@ FROM oryd/oathkeeper:v0.39.3 as oathkeeper-image
 FROM python:3.10.6-alpine3.16 AS venv-image
 WORKDIR /usr/src/app
 
-ENV POETRY_VERSION="1.3.2"
+ENV POETRY_VERSION="1.4.2"
 RUN apk add --no-cache \
     file \
     make \
@@ -24,7 +24,7 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false --local \
   && python -m venv /opt/venv \
   && source /opt/venv/bin/activate \
-  && poetry install --no-dev --no-interaction
+  && poetry install --only main --no-interaction
 
 
 # This is the final app image. Starting from a clean alpine image, it
@@ -40,6 +40,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV WEBSERVER_PORT=8080
 ENV RESOURCE_SERVER=http://127.0.0.1:4499
 ENV GUNICORN_LOGLEVEL=warning
+ENV SQLALCHEMY_SILENCE_UBER_WARNING=1
 
 RUN apk add --no-cache \
     libffi \
