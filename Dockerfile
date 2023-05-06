@@ -24,7 +24,7 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false --local \
   && python -m venv /opt/venv \
   && source /opt/venv/bin/activate \
-  && poetry install --no-dev --no-interaction
+  && poetry install --only main --no-interaction
 
 
 # This is the final app image. Starting from a clean alpine image, it
