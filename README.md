@@ -244,6 +244,10 @@ to use the server API. In this testing environment, user registration
 emails will be sent to a fake email server, whose messages can be read
 at http://localhost:8026/
 
+Note that the `docker/nodedata` directory contains an already populated
+[root-CA database](https://github.com/swaptacular/swpt_ca_scripts), which
+can be used for end-to-end testing.
+
 
 
 [Swaptacular]: https://swaptacular.github.io/overview
