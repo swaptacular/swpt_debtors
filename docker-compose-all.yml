@@ -19,6 +19,7 @@ services:
     hostname: rabbitmq
     volumes:
       - './docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf'
+      - './docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins'
       - 'rabbitmq-data-volume:/var/lib/rabbitmq/mnesia/rabbit@rabbitmq'
     environment:
       - 'RABBITMQ_LOGS=-'
@@ -42,6 +43,7 @@ services:
       - 'DEBTORS_LOGIN_URL=http://debtors-login:8080'
       - 'DEBTORS_SERVER_URL=http://debtors-server:8080'
       - 'DEBTORS_SWAGGER_UI_URL=http://debtors-swagger-ui:8080'
+      - 'DEBTORS_WEBAPP_URL=http://debtors-webapp:80'
       - 'NGINX_ENTRYPOINT_QUIET_LOGS=1'
     depends_on:
       - debtors-server
@@ -55,8 +57,8 @@ services:
       dockerfile: Dockerfile
       target: app-image
     environment:
-      - 'MIN_DEBTOR_ID=4294967296'
-      - 'MAX_DEBTOR_ID=8589934591'
+      - 'MIN_DEBTOR_ID=0x1234abcd00000000'
+      - 'MAX_DEBTOR_ID=0x1234abcd00ffffff'
       - 'WEBSERVER_PROCESSES=1'
       - 'WEBSERVER_THREADS=3'
       - 'WEBSERVER_PORT=8080'
@@ -116,6 +118,19 @@ services:
       - 'OAUTH2_REDIRECT_URL=https://$PUBLIC_HOST/debtors-swagger-ui/oauth2-redirect.html'
 
 
+  # Serves the debtors UI webapp (useful for testing).
+  debtors-webapp:
+    image: ghcr.io/swaptacular/swpt_debtors_ui:$SWPT_DEBTORS_UI_VERSION
+    environment:
+      - 'SERVER_API_ENTRYPOINT=https://$PUBLIC_HOST/debtors/.debtor'
+      - 'SERVER_API_TIMEOUT=8000'
+      - 'AUTHORIZATION_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/auth'
+      - 'TOKEN_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/token'
+      - 'CLIENT_ID=debtors-webapp'
+      - 'REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
+      - 'TRANSFER_DELETION_DELAY_SECONDS=1296000'
+
+
   # This container runs an OAuth 2.0 authorization server, which
   # maintains its own user database, and provides UI for user
   # registration, login, and authorization consent.
@@ -157,6 +172,7 @@ services:
       - 'APP_LOG_FORMAT=json'
       - 'HYDRA_LOG_LEVEL=warning'
       - 'HYDRA_LOG_FORMAT=json'
+      - 'APP_SIGNUP_REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
     depends_on:
       - pg
       - redis
@@ -186,13 +202,82 @@ services:
     volumes:
       - './docker/hydra:/etc/hydra-config'
     command:
+      sh -c 'hydra clients get debtors-webapp --fake-tls-termination ||
       hydra clients import
       /etc/hydra-config/debtors-supervisor.json
       /etc/hydra-config/swagger-ui.json
+      /etc/hydra-config/debtors-webapp.json
       --fake-tls-termination
-      --fail-after 5m
+      --fail-after 5m'
     depends_on:
       - debtors-login
+    restart: on-failure
+
+
+  debtors-stomp-server:
+    image: ghcr.io/swaptacular/swpt_stomp:$SWPT_STOMP_VERSION
+    environment:
+      - 'PROTOCOL_BROKER_URL=amqp://guest:guest@rabbitmq:5672'
+      - 'SWPT_SERVER_PORT=1234'
+      - 'SWPT_SERVER_CERT=/etc/swpt/server.crt'
+      - 'SWPT_SERVER_KEY=/secrets/swpt-server.key'
+      - 'SWPT_NODEDATA_URL=file:///var/lib/swpt-nodedata'
+      - 'APP_LOG_LEVEL=info'
+      - 'APP_LOG_FORMAT=json'
+      - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
+    volumes:
+      - './docker/nodedata/server.crt:/etc/swpt/server.crt'
+      - './docker/nodedata/server.key:/secrets/swpt-server.key'
+      - './docker/nodedata:/var/lib/swpt-nodedata'
+    ports:
+      - $SWPT_SERVER_LOCAL_PORT:1234
+    command: swpt-server
+    restart: always
+
+
+  # The purpose of this container is to create and configure the RabbitMQ
+  # queue, from which the "debtors-peer-1234abcd" container will consume
+  # messages (to send them to the peer). It has to be run only once, but
+  # running it multiple times should not do any harm.
+  debtors-peer-1234abcd-config:
+    image: ghcr.io/swaptacular/swpt_stomp:$SWPT_STOMP_VERSION
+    environment:
+      - 'PROTOCOL_BROKER_URL=amqp://guest:guest@rabbitmq:5672'
+      - 'SWPT_SERVER_CERT=/etc/swpt/server.crt'
+      - 'SWPT_SERVER_KEY=/secrets/swpt-server.key'
+      - 'SWPT_NODEDATA_URL=file:///var/lib/swpt-nodedata'
+      - 'APP_LOG_LEVEL=info'
+      - 'APP_LOG_FORMAT=json'
+      - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
+    volumes:
+      - './docker/nodedata/server.crt:/etc/swpt/server.crt'
+      - './docker/nodedata/server.key:/secrets/swpt-server.key'
+      - './docker/nodedata:/var/lib/swpt-nodedata'
+    command: configure-queue 1234abcd da.1234abcd
+    restart: on-failure
+
+
+  # The purpose of this container is to open and maintain a permanent client
+  # STOMP connection to the "1234abcd" peer, sending outgoing Swaptacular
+  # Messaging Protocol messages to this peer.
+  debtors-peer-1234abcd:
+    image: ghcr.io/swaptacular/swpt_stomp:$SWPT_STOMP_VERSION
+    environment:
+      - 'PROTOCOL_BROKER_URL=amqp://guest:guest@rabbitmq:5672'
+      - 'SWPT_SERVER_CERT=/etc/swpt/server.crt'
+      - 'SWPT_SERVER_KEY=/secrets/swpt-server.key'
+      - 'SWPT_NODEDATA_URL=file:///var/lib/swpt-nodedata'
+      - 'APP_LOG_LEVEL=info'
+      - 'APP_LOG_FORMAT=json'
+      - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
+    volumes:
+      - './docker/nodedata/server.crt:/etc/swpt/server.crt'
+      - './docker/nodedata/server.key:/secrets/swpt-server.key'
+      - './docker/nodedata:/var/lib/swpt-nodedata'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: swpt-client 1234abcd da.1234abcd
+    restart: always
 
 
   # The `debtors-login` container needs access to a Redis server
