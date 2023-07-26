@@ -43,6 +43,7 @@ services:
       - 'DEBTORS_LOGIN_URL=http://debtors-login:8080'
       - 'DEBTORS_SERVER_URL=http://debtors-server:8080'
       - 'DEBTORS_SWAGGER_UI_URL=http://debtors-swagger-ui:8080'
+      - 'DEBTORS_WEBAPP_URL=http://debtors-webapp:80'
       - 'NGINX_ENTRYPOINT_QUIET_LOGS=1'
     depends_on:
       - debtors-server
@@ -117,6 +118,19 @@ services:
       - 'OAUTH2_REDIRECT_URL=https://$PUBLIC_HOST/debtors-swagger-ui/oauth2-redirect.html'
 
 
+  # Serves the debtors UI webapp (useful for testing).
+  debtors-webapp:
+    image: ghcr.io/swaptacular/swpt_debtors_ui:$SWPT_DEBTORS_UI_VERSION
+    environment:
+      - 'SERVER_API_ENTRYPOINT=https://$PUBLIC_HOST/debtors/.debtor'
+      - 'SERVER_API_TIMEOUT=8000'
+      - 'AUTHORIZATION_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/auth'
+      - 'TOKEN_URL=https://$PUBLIC_HOST/debtors-hydra/oauth2/token'
+      - 'CLIENT_ID=debtors-webapp'
+      - 'REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
+      - 'TRANSFER_DELETION_DELAY_SECONDS=1296000'
+
+
   # This container runs an OAuth 2.0 authorization server, which
   # maintains its own user database, and provides UI for user
   # registration, login, and authorization consent.
@@ -158,6 +172,7 @@ services:
       - 'APP_LOG_FORMAT=json'
       - 'HYDRA_LOG_LEVEL=warning'
       - 'HYDRA_LOG_FORMAT=json'
+      - 'APP_SIGNUP_REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
     depends_on:
       - pg
       - redis
@@ -187,13 +202,16 @@ services:
     volumes:
       - './docker/hydra:/etc/hydra-config'
     command:
+      sh -c 'hydra clients get debtors-webapp --fake-tls-termination ||
       hydra clients import
       /etc/hydra-config/debtors-supervisor.json
       /etc/hydra-config/swagger-ui.json
+      /etc/hydra-config/debtors-webapp.json
       --fake-tls-termination
-      --fail-after 5m
+      --fail-after 5m'
     depends_on:
       - debtors-login
+    restart: on-failure
 
 
   debtors-stomp-server:
