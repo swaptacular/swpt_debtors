@@ -42,8 +42,7 @@ following servers:
    **Note:** If you execute the "configure" command (see below), with
    the environment variable `SETUP_RABBITMQ_BINDINGS` set to `yes`, an
    attempt will be made to automatically setup all the required
-   RabbitMQ queues, exchanges, and the bindings between them. However,
-   this works only for the most basic setup.
+   RabbitMQ queues, exchanges, and the bindings between them.
 
 3. [OAuth 2.0] authorization server, which authorizes clients'
    requests to the [Simple Issuing Web API]. There is a plethora of
@@ -247,7 +246,6 @@ at http://localhost:8026/
 Note that the `docker/nodedata` directory contains an already populated
 [root-CA database](https://github.com/swaptacular/swpt_ca_scripts), which
 can be used for end-to-end testing.
-
 
 
 [Swaptacular]: https://swaptacular.github.io/overview
