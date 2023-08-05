@@ -4,7 +4,7 @@ from swpt_pythonlib.scan_table import TableScanner
 from sqlalchemy.sql.expression import and_, or_, null, true, false
 from flask import current_app
 from swpt_debtors.extensions import db
-from swpt_debtors.models import Debtor
+from swpt_debtors.models import Debtor, is_valid_debtor_id
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -46,6 +46,8 @@ class DebtorScanner(TableScanner):
     @atomic
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
+        if current_app.config['APP_DELETE_PARENT_SHARD_RECORDS']:
+            self._delete_parent_shard_debtors(rows, current_ts)
         self._delete_debtors_not_activated_for_long_time(rows, current_ts)
         self._delete_dead_debtors(rows, current_ts)
         self._set_config_errors_if_necessary(rows, current_ts)
@@ -134,6 +136,25 @@ class DebtorScanner(TableScanner):
                     Debtor.deactivation_date == null(),
                     Debtor.deactivation_date < deactivated_cutoff_date),
                 ).\
+                with_for_update(skip_locked=True).\
+                all()
+
+            for debtor in to_delete:
+                db.session.delete(debtor)
+
+    def _delete_parent_shard_debtors(self, rows, current_ts):
+        c = self.table.c
+
+        def belongs_to_parent_shard(row) -> bool:
+            return (
+                not is_valid_debtor_id(row[c.debtor_id])
+                and is_valid_debtor_id(row[c.debtor_id], match_parent=True)
+            )
+
+        ids_to_delete = [row[c.debtor_id] for row in rows if belongs_to_parent_shard(row)]
+        if ids_to_delete:
+            to_delete = Debtor.query.\
+                filter(Debtor.debtor_id.in_(ids_to_delete)).\
                 with_for_update(skip_locked=True).\
                 all()
 

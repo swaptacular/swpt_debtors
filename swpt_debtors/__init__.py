@@ -8,7 +8,7 @@ import os.path
 from typing import List
 from flask_cors import CORS
 from ast import literal_eval
-from swpt_pythonlib.utils import u64_to_i64
+from swpt_pythonlib.utils import u64_to_i64, ShardingRealm
 
 
 def _parse_debtor_id(s: str) -> int:
@@ -199,6 +199,11 @@ class Configuration(metaclass=MetaEnvReader):
     APP_SUPERVISOR_SUBJECT_REGEX = '^debtors-supervisor$'
     APP_DEBTOR_SUBJECT_REGEX = '^debtors:([0-9]+)$'
 
+    # Set this to "true" after splitting a parent database shard into two
+    # children shards. Set this back to "false", once all left-over records
+    # have been deleted from the child shard.
+    APP_DELETE_PARENT_SHARD_RECORDS = False
+
 
 def create_app(config_dict={}):
     from werkzeug.middleware.proxy_fix import ProxyFix
@@ -215,6 +220,7 @@ def create_app(config_dict={}):
     app.config.from_object(Configuration)
     app.config.from_mapping(config_dict)
     app.config['API_SPEC_OPTIONS'] = specs.API_SPEC_OPTIONS
+    app.config['SHARDING_REALM'] = ShardingRealm(Configuration.PROTOCOL_BROKER_QUEUE_ROUTING_KEY)
     if app.config['APP_ENABLE_CORS']:
         CORS(app, max_age=24 * 60 * 60, vary_header=False, expose_headers=['Location'])
     db.init_app(app)

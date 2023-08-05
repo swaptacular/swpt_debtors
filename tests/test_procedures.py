@@ -4,7 +4,7 @@ from datetime import datetime, date, timedelta
 from swpt_pythonlib.utils import i64_to_u64
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, \
-    FinalizeTransferSignal, ConfigureAccountSignal, MAX_INT64, ROOT_CREDITOR_ID, \
+    FinalizeTransferSignal, ConfigureAccountSignal, ROOT_CREDITOR_ID, \
     TS0, DATE0, SC_OK, SC_CANCELED_BY_THE_SENDER, HUGE_NEGLIGIBLE_AMOUNT, DEFAULT_CONFIG_FLAGS
 from swpt_debtors import procedures as p
 

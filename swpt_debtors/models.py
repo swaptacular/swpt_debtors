@@ -33,10 +33,14 @@ SC_INSUFFICIENT_AVAILABLE_AMOUNT = 'INSUFFICIENT_AVAILABLE_AMOUNT'
 SC_CANCELED_BY_THE_SENDER = 'CANCELED_BY_THE_SENDER'
 
 
-def is_valid_debtor_id(debtor_id: int) -> bool:
+def is_valid_debtor_id(debtor_id: int, match_parent=False) -> bool:
+    sharding_realm = current_app.config['SHARDING_REALM']
     min_debtor_id = current_app.config['MIN_DEBTOR_ID']
     max_debtor_id = current_app.config['MAX_DEBTOR_ID']
-    return min_debtor_id <= debtor_id <= max_debtor_id
+    return (
+        min_debtor_id <= debtor_id <= max_debtor_id
+        and sharding_realm.match(debtor_id, match_parent=match_parent)
+    )
 
 
 def get_now_utc():
@@ -56,9 +60,9 @@ class Signal(db.Model):
 
     @classmethod
     def send_signalbus_messages(cls, objects):  # pragma: no cover
-        assert(all(isinstance(obj, cls) for obj in objects))
-        messages = [obj._create_message() for obj in objects]
-        publisher.publish_messages(messages)
+        assert all(isinstance(obj, cls) for obj in objects)
+        messages = (obj._create_message() for obj in objects)
+        publisher.publish_messages([m for m in messages if m is not None])
 
     def send_signalbus_message(self):  # pragma: no cover
         self.send_signalbus_messages([self])
@@ -66,10 +70,22 @@ class Signal(db.Model):
     def _create_message(self):  # pragma: no cover
         data = self.__marshmallow_schema__.dump(self)
         message_type = data['type']
+        creditor_id = data['creditor_id']
+        debtor_id = data['debtor_id']
+
+        if not is_valid_debtor_id(debtor_id):
+            if (current_app.config['APP_DELETE_PARENT_SHARD_RECORDS']
+                    and is_valid_debtor_id(debtor_id, match_parent=True)):
+                # This message most probably is a left-over from the
+                # previous splitting of the parent shard into children
+                # shards. Therefore we should just ignore it.
+                return None
+            raise RuntimeError('The agent is not responsible for this debtor.')
+
         headers = {
             'message-type': message_type,
-            'debtor-id': data['debtor_id'],
-            'creditor-id': data['creditor_id'],
+            'debtor-id': debtor_id,
+            'creditor-id': creditor_id,
         }
         if 'coordinator_id' in data:
             headers['coordinator-id'] = data['coordinator_id']

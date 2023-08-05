@@ -84,8 +84,15 @@ def ensure_debtor_permissions():
     # to all debtors's resources. Superusers are allowed everything.
 
     user_type, debtor_id = parse_swpt_user_id_header()
+    url_debtor_id = request.view_args.get('debtorId')
+    if url_debtor_id is None:
+        url_debtor_id = debtor_id
+    else:
+        assert isinstance(url_debtor_id, int)
+        if not is_valid_debtor_id(url_debtor_id):
+            abort(404)
 
-    if user_type == UserType.DEBTOR and debtor_id != request.view_args.get('debtorId', debtor_id):
+    if user_type == UserType.DEBTOR and debtor_id != url_debtor_id:
         abort(403)
 
     if user_type == UserType.SUPERVISOR and request.method not in READ_ONLY_METHODS:
@@ -151,6 +158,8 @@ class RandomDebtorReserveEndpoint(MethodView):
         max_debtor_id = current_app.config['MAX_DEBTOR_ID']
         for _ in range(100):
             debtor_id = randint(min_debtor_id, max_debtor_id)
+            if not is_valid_debtor_id(debtor_id):  # pragma: no cover
+                abort(500, message='The /.debtor-reserve endpoint does not support shards.')
             try:
                 debtor = procedures.reserve_debtor(debtor_id)
                 break
@@ -198,7 +207,11 @@ class DebtorEnumerateEndpoint(MethodView):
 
         n = int(current_app.config['APP_DEBTORS_PER_PAGE'])
         debtor_ids, next_debtor_id = procedures.get_debtor_ids(start_from=debtorId, count=n)
-        debtor_uris = [{'uri': url_for('debtors.DebtorEndpoint', debtorId=debtor_id)} for debtor_id in debtor_ids]
+        debtor_uris = [
+            {'uri': url_for('debtors.DebtorEndpoint', debtorId=debtor_id)}
+            for debtor_id in debtor_ids
+            if is_valid_debtor_id(debtor_id)
+        ]
 
         if next_debtor_id is None:
             # The last page does not have a 'next' link.
@@ -233,7 +246,7 @@ class DebtorReserveEndpoint(MethodView):
         """
 
         if not is_valid_debtor_id(debtorId):  # pragma: no cover
-            abort(500, message='The agent is not responsible for this debtor.')
+            abort(404)
 
         try:
             debtor = procedures.reserve_debtor(debtorId)
@@ -254,7 +267,7 @@ class DebtorActivateEndpoint(MethodView):
         """Activate a debtor."""
 
         if not is_valid_debtor_id(debtorId):  # pragma: no cover
-            abort(500, message='The agent is not responsible for this debtor.')
+            abort(404)
 
         reservation_id = debtor_activation_request.get('optional_reservation_id')
         try:
@@ -277,6 +290,9 @@ class DebtorDeactivateEndpoint(MethodView):
     @admin_api.doc(operationId='deactivateDebtor', security=specs.SCOPE_DEACTIVATE)
     def post(self, debtor_deactivation_request, debtorId):
         """Deactivate a debtor."""
+
+        if not is_valid_debtor_id(debtorId):  # pragma: no cover
+            abort(404)
 
         if not g.superuser:
             abort(403)
@@ -509,6 +525,9 @@ class RedirectToDebtorsInfoEndpoint(MethodView):
 
         """
 
+        if not is_valid_debtor_id(debtorId):  # pragma: no cover
+            abort(404)
+
         debtor = procedures.get_active_debtor(debtorId) or abort(404)
         location = debtor.debtor_info_iri or abort(404)
         response = redirect(location, code=302)
@@ -577,6 +596,9 @@ class DocumentEndpoint(MethodView):
         response.
 
         """
+
+        if not is_valid_debtor_id(debtorId):  # pragma: no cover
+            abort(404)
 
         document = procedures.get_document(debtorId, documentId) or abort(404)
         headers = {'Content-Type': document.content_type, 'Cache-Control': 'max-age=31536000'}
