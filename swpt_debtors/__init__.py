@@ -170,6 +170,8 @@ class Configuration(metaclass=MetaEnvReader):
     PROTOCOL_BROKER_PREFETCH_SIZE = 0
     PROTOCOL_BROKER_PREFETCH_COUNT = 1
 
+    DELETE_PARENT_SHARD_RECORDS = False
+
     API_TITLE = 'Debtors API'
     API_VERSION = 'v1'
     OPENAPI_VERSION = '3.0.2'
@@ -198,11 +200,6 @@ class Configuration(metaclass=MetaEnvReader):
     APP_SUPERUSER_SUBJECT_REGEX = '^debtors-superuser$'
     APP_SUPERVISOR_SUBJECT_REGEX = '^debtors-supervisor$'
     APP_DEBTOR_SUBJECT_REGEX = '^debtors:([0-9]+)$'
-
-    # Set this to "true" after splitting a parent database shard into two
-    # children shards. Set this back to "false", once all left-over records
-    # have been deleted from the child shard.
-    APP_DELETE_PARENT_SHARD_RECORDS = False
 
 
 def create_app(config_dict={}):

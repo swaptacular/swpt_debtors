@@ -46,7 +46,7 @@ class DebtorScanner(TableScanner):
     @atomic
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
-        if current_app.config['APP_DELETE_PARENT_SHARD_RECORDS']:
+        if current_app.config['DELETE_PARENT_SHARD_RECORDS']:
             self._delete_parent_shard_debtors(rows, current_ts)
         self._delete_debtors_not_activated_for_long_time(rows, current_ts)
         self._delete_dead_debtors(rows, current_ts)

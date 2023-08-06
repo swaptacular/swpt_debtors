@@ -88,7 +88,7 @@ def test_delete_parent_debtors(app_unsafe_session, current_ts):
     app = app_unsafe_session
     orig_sharding_realm = app.config['SHARDING_REALM']
     app.config['SHARDING_REALM'] = ShardingRealm('1.#')
-    app.config['APP_DELETE_PARENT_SHARD_RECORDS'] = True
+    app.config['DELETE_PARENT_SHARD_RECORDS'] = True
     assert len(Debtor.query.all()) == 1
 
     db.engine.execute('ANALYZE debtor')
@@ -102,5 +102,5 @@ def test_delete_parent_debtors(app_unsafe_session, current_ts):
     Debtor.query.delete()
     ConfigureAccountSignal.query.delete()
     db.session.commit()
-    app.config['APP_DELETE_PARENT_SHARD_RECORDS'] = False
+    app.config['DELETE_PARENT_SHARD_RECORDS'] = False
     app.config['SHARDING_REALM'] = orig_sharding_realm

@@ -74,7 +74,7 @@ class Signal(db.Model):
         debtor_id = data['debtor_id']
 
         if not is_valid_debtor_id(debtor_id):
-            if (current_app.config['APP_DELETE_PARENT_SHARD_RECORDS']
+            if (current_app.config['DELETE_PARENT_SHARD_RECORDS']
                     and is_valid_debtor_id(debtor_id, match_parent=True)):
                 # This message most probably is a left-over from the
                 # previous splitting of the parent shard into children
