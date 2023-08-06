@@ -13,12 +13,12 @@ def client(app, db_session):
 
 @pytest.fixture(scope='function')
 def debtor(db_session):
-    debtor = m.Debtor(debtor_id=123, status_flags=0)
+    debtor = m.Debtor(debtor_id=4444444444, status_flags=0)
     debtor.activate()
     db_session.add(debtor)
     db_session.commit()
 
-    return p.get_debtor(123)
+    return p.get_debtor(4444444444)
 
 
 def _get_all_pages(client, url, page_type, streaming=False):
@@ -178,145 +178,159 @@ def test_get_debtors_list(client):
 
 
 def test_get_debtor(client, debtor):
-    r = client.get('/debtors/123/')
+    r = client.get('/debtors/4444444444/')
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'Debtor'
-    assert data['uri'] == '/debtors/123/'
+    assert data['uri'] == '/debtors/4444444444/'
     assert data['config'] == {
         'type': 'DebtorConfig',
-        'uri': '/debtors/123/config',
+        'uri': '/debtors/4444444444/config',
         'configData': '',
         'latestUpdateId': 1,
         'latestUpdateAt': '1970-01-01T00:00:00+00:00',
-        'debtor': {'uri': '/debtors/123/'},
+        'debtor': {'uri': '/debtors/4444444444/'},
     }
-    assert data['transfersList'] == {'uri': '/debtors/123/transfers/'}
-    assert data['createTransfer'] == {'uri': '/debtors/123/transfers/'}
+    assert data['transfersList'] == {'uri': '/debtors/4444444444/transfers/'}
+    assert data['createTransfer'] == {'uri': '/debtors/4444444444/transfers/'}
     assert data['balance'] == 0
     assert datetime.fromisoformat(data['createdAt'])
-    assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:123'}
+    assert data['identity'] == {'type': 'DebtorIdentity', 'uri': 'swpt:4444444444'}
     assert data['noteMaxBytes'] == 0
     assert 'configError' not in data
     assert 'account' not in data
 
 
 def test_change_debtor_config(client, debtor):
-    r = client.get('/debtors/123/config')
+    r = client.get('/debtors/4444444444/config')
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'DebtorConfig'
-    assert data['uri'] == '/debtors/123/config'
+    assert data['uri'] == '/debtors/4444444444/config'
     assert data['configData'] == ''
     assert data['latestUpdateId'] == 1
     latest_update_at = data['latestUpdateAt']
     assert datetime.fromisoformat(latest_update_at)
-    assert data['debtor'] == {'uri': '/debtors/123/'}
+    assert data['debtor'] == {'uri': '/debtors/4444444444/'}
 
     request = {
         'configData': 'TEST',
         'latestUpdateId': 2
     }
-    r = client.patch('/debtors/123/config', json=request)
+    r = client.patch('/debtors/4444444444/config', json=request)
     assert r.status_code == 200
 
-    r = client.get('/debtors/123/config')
+    r = client.get('/debtors/4444444444/config')
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'DebtorConfig'
-    assert data['uri'] == '/debtors/123/config'
+    assert data['uri'] == '/debtors/4444444444/config'
     assert data['configData'] == 'TEST'
     assert data['latestUpdateId'] == 2
     assert datetime.fromisoformat(data['latestUpdateAt'])
     assert latest_update_at != data['latestUpdateAt']
-    assert data['debtor'] == {'uri': '/debtors/123/'}
+    assert data['debtor'] == {'uri': '/debtors/4444444444/'}
 
     empty_request = {
         'configData': '',
         'latestUpdateId': 2,
     }
-    r = client.patch('/debtors/666/config', json=empty_request)
+    r = client.patch('/debtors/6666666666/config', json=empty_request)
     assert r.status_code == 404
 
-    r = client.patch('/debtors/123/config', json=empty_request)
+    r = client.patch('/debtors/4444444444/config', json=empty_request)
     assert r.status_code == 409
     data = r.get_json()
 
     for _ in range(9):
-        r = client.patch('/debtors/123/config', json=request)
+        r = client.patch('/debtors/4444444444/config', json=request)
         assert r.status_code == 200
-    r = client.patch('/debtors/123/config', json=request)
+    r = client.patch('/debtors/4444444444/config', json=request)
     assert r.status_code == 403
 
 
 def test_initiate_running_transfer(client, debtor):
-    r = client.get('/debtors/666/transfers/')
+    r = client.get('/debtors/6666666666/transfers/')
     assert r.status_code == 404
 
-    r = client.get('/debtors/123/transfers/')
+    r = client.get('/debtors/4444444444/transfers/')
     assert r.status_code == 200
     data = r.get_json()
-    assert data['debtor'] == {'uri': '/debtors/123/'}
+    assert data['debtor'] == {'uri': '/debtors/4444444444/'}
     assert data['type'] == 'TransfersList'
-    assert data['uri'] == '/debtors/123/transfers/'
+    assert data['uri'] == '/debtors/4444444444/transfers/'
     assert data['items'] == []
 
     json_request_body = {
         'amount': 1000,
         'noteFormat': 'fmt',
         'note': 'test',
-        'recipient': {'uri': 'swpt:123/1111'},
+        'recipient': {'uri': 'swpt:4444444444/1111'},
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
-    r = client.post('/debtors/123/transfers/', json=json_request_body)
+
+    json_request_body2 = json_request_body.copy()
+    json_request_body2['recipient'] = {'uri': 'swpt:6666666666/1111'}
+    r = client.post('/debtors/6666666666/transfers/', json=json_request_body2)
+    assert r.status_code == 404
+
+    r = client.post('/debtors/4444444444/transfers/', json=json_request_body)
     assert r.status_code == 201
     data = r.get_json()
     assert data['amount'] == 1000
     assert datetime.fromisoformat(data['initiatedAt'])
     assert 'result' not in data
-    assert data['recipient'] == {'type': 'AccountIdentity', 'uri': 'swpt:123/1111'}
+    assert data['recipient'] == {'type': 'AccountIdentity', 'uri': 'swpt:4444444444/1111'}
     assert data['type'] == 'Transfer'
-    assert data['uri'] == '/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
+    assert data['uri'] == '/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440000'
     assert data['noteFormat'] == 'fmt'
     assert data['note'] == 'test'
-    assert data['transfersList'] == {'uri': '/debtors/123/transfers/'}
-    assert r.headers['Location'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
+    assert data['transfersList'] == {'uri': '/debtors/4444444444/transfers/'}
+    assert r.headers['Location'] == \
+        'http://example.com/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440000'
 
-    r = client.get('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000')
+    r = client.get('/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440000')
     assert r.status_code == 200
     data = r.get_json()
     assert data['type'] == 'Transfer'
-    assert data['uri'] == '/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
+    assert data['uri'] == '/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440000'
     assert data['amount'] == 1000
 
-    r = client.post('/debtors/123/transfers/', json=json_request_body)
+    r = client.post('/debtors/4444444444/transfers/', json=json_request_body)
     assert r.status_code == 303
-    assert r.headers['Location'] == 'http://example.com/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000'
+    assert r.headers['Location'] == \
+        'http://example.com/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440000'
 
     json_request_body['amount'] += 1
-    r = client.post('/debtors/123/transfers/', json=json_request_body)
+    r = client.post('/debtors/4444444444/transfers/', json=json_request_body)
     assert r.status_code == 409
 
-    r = client.post('/debtors/123/transfers/', json={**json_request_body, **{'recipient': {'uri': 'INVALID'}}})
+    r = client.post('/debtors/4444444444/transfers/', json={
+        **json_request_body, **{'recipient': {'uri': 'INVALID'}}
+    })
     assert r.status_code == 422
 
-    r = client.post('/debtors/123/transfers/', json={**json_request_body, **{'recipient': {'uri': 'swpt:555/1111'}}})
+    r = client.post('/debtors/4444444444/transfers/', json={
+        **json_request_body, **{'recipient': {'uri': 'swpt:555/1111'}}
+    })
     assert r.status_code == 422
 
-    r = client.post('/debtors/555/transfers/', json={**json_request_body, **{'recipient': {'uri': 'swpt:555/1111'}}})
+    r = client.post('/debtors/555/transfers/', json={
+        **json_request_body, **{'recipient': {'uri': 'swpt:555/1111'}}
+    })
     assert r.status_code == 404
 
-    r = client.get('/debtors/123/transfers/')
+    r = client.get('/debtors/4444444444/transfers/')
     assert r.status_code == 200
     data = r.get_json()
     assert sorted(data['items']) == [
         {'uri': '123e4567-e89b-12d3-a456-426655440000'},
     ]
 
-    r = client.delete('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001')
+    r = client.delete('/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440001')
     assert r.status_code == 204
 
-    r = client.get('/debtors/123/transfers/')
+    r = client.get('/debtors/4444444444/transfers/')
     assert r.status_code == 200
     data = r.get_json()
     assert sorted(data['items']) == [
@@ -327,10 +341,10 @@ def test_initiate_running_transfer(client, debtor):
         suffix = '{:0>4}'.format(i)
         json_request_body = {
             'amount': 1,
-            'recipient': {'uri': 'swpt:123/1111'},
+            'recipient': {'uri': 'swpt:4444444444/1111'},
             'transferUuid': f'123e4567-e89b-12d3-a456-42665544{suffix}',
         }
-        r = client.post('/debtors/123/transfers/', json=json_request_body)
+        r = client.post('/debtors/4444444444/transfers/', json=json_request_body)
         if i == 11:
             assert r.status_code == 403
         else:
@@ -341,28 +355,28 @@ def test_cancel_running_transfer(client, debtor):
     json_request_body = {
         'amount': 1000,
         'note': 'test',
-        'recipient': {'uri': 'swpt:123/1111'},
+        'recipient': {'uri': 'swpt:4444444444/1111'},
         'transferUuid': '123e4567-e89b-12d3-a456-426655440000',
     }
-    r = client.post('/debtors/123/transfers/', json=json_request_body)
+    r = client.post('/debtors/4444444444/transfers/', json=json_request_body)
     assert r.status_code == 201
     data = r.get_json()
     assert 'result' not in data
 
-    r = client.post('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440001', json={})
+    r = client.post('/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440001', json={})
     assert r.status_code == 404
 
-    r = client.post('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={})
+    r = client.post('/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440000', json={})
     assert r.status_code == 200
 
-    r = client.get('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000')
+    r = client.get('/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440000')
     assert r.status_code == 200
     data = r.get_json()
     result = data['result']
     error = result['error']
     assert error['errorCode'] == 'CANCELED_BY_THE_SENDER'
 
-    r = client.post('/debtors/123/transfers/123e4567-e89b-12d3-a456-426655440000', json={})
+    r = client.post('/debtors/4444444444/transfers/123e4567-e89b-12d3-a456-426655440000', json={})
     assert r.status_code == 200
 
 
@@ -373,19 +387,25 @@ def test_unauthorized_debtor_id(debtor, client):
         'latestUpdateId': 2,
     }
 
-    r = client.get('/debtors/123/')
+    r = client.get('/debtors/4444444444/')
     assert r.status_code == 200
 
-    r = client.get('/debtors/123/', headers={'X-Swpt-User-Id': 'INVALID_USER_ID'})
+    r = client.get('/debtors/4444444444/', headers={'X-Swpt-User-Id': 'INVALID_USER_ID'})
     assert r.status_code == 403
 
-    r = client.patch('/debtors/123/config', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors-supervisor'})
+    r = client.patch('/debtors/4444444444/config',
+                     json=json_request_body,
+                     headers={'X-Swpt-User-Id': 'debtors-supervisor'})
     assert r.status_code == 403
 
-    r = client.patch('/debtors/123/config', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors:666'})
+    r = client.patch('/debtors/4444444444/config',
+                     json=json_request_body,
+                     headers={'X-Swpt-User-Id': 'debtors:6666666666'})
     assert r.status_code == 403
 
-    r = client.patch('/debtors/123/config', json=json_request_body, headers={'X-Swpt-User-Id': 'debtors:123'})
+    r = client.patch('/debtors/4444444444/config',
+                     json=json_request_body,
+                     headers={'X-Swpt-User-Id': 'debtors:4444444444'})
     assert r.status_code == 200
 
     with pytest.raises(ValueError):
@@ -410,17 +430,17 @@ def test_redirect_to_debtor(client, debtor):
 
 
 def test_redirect_to_latest_info(client, debtor):
-    r = client.get('/debtors/123/public')
+    r = client.get('/debtors/4444444444/public')
     assert r.status_code == 404
 
     request = {
         'configData': '{"info": {"iri": "https://example.com/"}}',
         'latestUpdateId': 2
     }
-    r = client.patch('/debtors/123/config', json=request)
+    r = client.patch('/debtors/4444444444/config', json=request)
     assert r.status_code == 200
 
-    debtor = p.get_debtor(123)
+    debtor = p.get_debtor(4444444444)
     current_ts = datetime.now(tz=timezone.utc)
 
     p.process_account_update_signal(
@@ -441,7 +461,7 @@ def test_redirect_to_latest_info(client, debtor):
         ts=current_ts,
         ttl=10000000,
     )
-    r = client.get('/debtors/123/public')
+    r = client.get('/debtors/4444444444/public')
     assert r.status_code == 404
 
     p.process_account_update_signal(
@@ -462,18 +482,18 @@ def test_redirect_to_latest_info(client, debtor):
         ts=current_ts,
         ttl=10000000,
     )
-    r = client.get('/debtors/123/public')
+    r = client.get('/debtors/4444444444/public')
     assert r.status_code == 302
     assert r.headers['Location'] == 'https://example.com/'
     assert r.headers['Cache-Control'] == 'max-age=86400'
 
 
 def test_save_document(client, debtor):
-    r = client.get('/debtors/123/documents/0/public')
+    r = client.get('/debtors/4444444444/documents/0/public')
     assert r.status_code == 404
 
     r = client.post(
-        '/debtors/123/documents/',
+        '/debtors/4444444444/documents/',
         content_type='application/octet-stream',
         data=101 * b'1',
     )
@@ -481,7 +501,7 @@ def test_save_document(client, debtor):
 
     content = 100 * b'1'
     r = client.post(
-        '/debtors/123/documents/',
+        '/debtors/4444444444/documents/',
         content_type='application/octet-stream',
         data=content,
     )
@@ -489,7 +509,7 @@ def test_save_document(client, debtor):
     assert r.content_type == 'application/octet-stream'
     assert r.get_data() == content
     location = r.headers['Location']
-    m = re.match(r'http://example.com/debtors/123/documents/(\d)+/public', location)
+    m = re.match(r'http://example.com/debtors/4444444444/documents/(\d)+/public', location)
     assert m is not None
     document_id = int(m.group(1))
     assert document_id >= 0
@@ -500,7 +520,7 @@ def test_save_document(client, debtor):
     assert r.get_data() == content
 
     r = client.post(
-        '/debtors/123/documents/',
+        '/debtors/4444444444/documents/',
         content_type='application/octet-stream',
         data=content,
     )
@@ -510,14 +530,14 @@ def test_save_document(client, debtor):
     assert location != r.headers['Location']
 
     r = client.post(
-        '/debtors/123/documents/',
+        '/debtors/4444444444/documents/',
         content_type='application/octet-stream',
         data=content,
     )
     assert r.status_code == 403
 
     r = client.post(
-        '/debtors/666/documents/',
+        '/debtors/6666666666/documents/',
         content_type='application/octet-stream',
         data=content,
     )

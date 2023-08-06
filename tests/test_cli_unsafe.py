@@ -4,6 +4,7 @@ from datetime import timedelta
 from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal
 from swpt_debtors.extensions import db
 from swpt_debtors import procedures
+from swpt_pythonlib.utils import ShardingRealm
 
 TEST_UUID = UUID('123e4567-e89b-12d3-a456-426655440000')
 MIN_DEBTOR_ID = 4294967296
@@ -75,3 +76,31 @@ def test_scan_debtors(app_unsafe_session, current_ts):
     Debtor.query.delete()
     ConfigureAccountSignal.query.delete()
     db.session.commit()
+
+
+def test_delete_parent_debtors(app_unsafe_session, current_ts):
+    Debtor.query.delete()
+    ConfigureAccountSignal.query.delete()
+    db.session.commit()
+
+    _create_new_debtor(MIN_DEBTOR_ID, activate=True)
+    db.session.commit()
+    app = app_unsafe_session
+    orig_sharding_realm = app.config['SHARDING_REALM']
+    app.config['SHARDING_REALM'] = ShardingRealm('1.#')
+    app.config['DELETE_PARENT_SHARD_RECORDS'] = True
+    assert len(Debtor.query.all()) == 1
+
+    db.engine.execute('ANALYZE debtor')
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=['swpt_debtors', 'scan_debtors', '--days', '0.000001', '--quit-early'])
+    assert result.exit_code == 0
+
+    debtors = Debtor.query.all()
+    assert len(debtors) == 0
+
+    Debtor.query.delete()
+    ConfigureAccountSignal.query.delete()
+    db.session.commit()
+    app.config['DELETE_PARENT_SHARD_RECORDS'] = False
+    app.config['SHARDING_REALM'] = orig_sharding_realm

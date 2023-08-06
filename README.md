@@ -124,6 +124,19 @@ PROTOCOL_BROKER_PROCESSES=1
 PROTOCOL_BROKER_THREADS=3
 PROTOCOL_BROKER_PREFETCH_COUNT=10
 
+# The binding key with which the "$PROTOCOL_BROKER_QUEUE"
+# RabbitMQ queue is bound to the "debtors_in" RabbitMQ topic
+# exchange (default "#"). The binding key must consist of zero or
+# more 0s or 1s, separated by dots, ending with a hash symbol.
+# For example: "0.1.#", "1.#", or "#".
+PROTOCOL_BROKER_QUEUE_ROUTING_KEY=#
+
+# Set this to "true" after splitting a parent database shard into
+# two children shards. You may set this back to "false", once all
+# left-over records from the parent have been deleted from the
+# child shard.
+DELETE_PARENT_SHARD_RECORDS=false
+
 # Set the minimum level of severity for log messages ("info",
 # "warning", or "error"). The default is "warning".
 APP_LOG_LEVEL=info
