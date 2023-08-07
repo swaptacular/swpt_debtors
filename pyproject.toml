@@ -6,14 +6,14 @@ authors = ["Evgeni Pandurski <epandurski@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.9"
 gunicorn = "*"
 python-json-logger = "^2.0.4"
 flask = "^2.2.5"
 flask-cors = "^3.0.9"
 flask-sqlalchemy = "^2.5.1"
 flask-migrate = "^3.1.0"
-flask-smorest = "^0.39.0"
+flask-smorest = "^0.42.0"
 psycopg2-binary = "^2.8"
 pika = "^1.3"
 sqlalchemy = "^1.4.39"
