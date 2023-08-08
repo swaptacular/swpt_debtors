@@ -69,7 +69,8 @@ COPY $FLASK_APP/ $FLASK_APP/
 RUN python -m compileall -x '^\./(migrations|tests)/' . \
     && rm -f .env \
     && chown -R "$FLASK_APP:$FLASK_APP" .
-RUN flask openapi write openapi.json
+RUN SQLALCHEMY_DATABASE_URI=sqlite:// SQLALCHEMY_ENGINE_OPTIONS={} \
+    flask openapi write openapi.json
 
 USER $FLASK_APP
 ENTRYPOINT ["/usr/src/app/entrypoint.sh"]

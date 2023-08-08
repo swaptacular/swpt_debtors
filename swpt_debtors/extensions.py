@@ -27,7 +27,6 @@ class CustomAlchemy(AtomicProceduresMixin, SignalBusMixin, SQLAlchemy):
 
 
 db = CustomAlchemy()
-db.signalbus.autoflush = False
 migrate = Migrate()
 publisher = rabbitmq.Publisher(url_config_key='PROTOCOL_BROKER_URL')
 api = Api()
