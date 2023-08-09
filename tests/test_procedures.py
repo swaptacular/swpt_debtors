@@ -197,7 +197,7 @@ def test_account_change_signal_ineffectual_config(db_session, debtor, current_ts
 
 def test_running_transfers(db_session, debtor):
     recipient_uri, recipient = acc_id(D_ID, C_ID)
-    Debtor.get_instance(D_ID).running_transfers_count = 1
+    Debtor.query.filter_by(debtor_id=D_ID).one().running_transfers_count = 1
     db_session.add(RunningTransfer(
         debtor_id=D_ID,
         transfer_uuid=TEST_UUID,
@@ -262,7 +262,7 @@ def test_initiate_running_transfer(db_session, debtor):
 
 def test_too_many_initiated_transfers(db_session, debtor):
     recipient_uri, recipient = acc_id(D_ID, C_ID)
-    Debtor.get_instance(D_ID).running_transfers_count = 1
+    Debtor.query.filter_by(debtor_id=D_ID).one().running_transfers_count = 1
     db_session.add(RunningTransfer(
         debtor_id=D_ID,
         transfer_uuid=TEST_UUID,
