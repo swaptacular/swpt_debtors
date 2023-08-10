@@ -51,6 +51,11 @@ services:
       - debtors-login
 
 
+  # This container acts as a reverse proxy. It extracts the the debtor ID
+  # from the the incoming HTTP request, calculates a sharding key, and then,
+  # based on the sharding key, decides to which server to forward the
+  # incoming request. In this simple example, `debtors-server` is the only
+  # shard.
   debtors-apiproxy:
     image: ghcr.io/swaptacular/swpt_apiproxy:latest
     volumes:
