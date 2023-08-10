@@ -97,7 +97,7 @@ class DebtorScanner(TableScanner):
 
         pks_to_set = [row[c.debtor_id] for row in rows if has_unreported_config_problem(row)]
         if pks_to_set:
-            Debtor.query.\
+            to_update = db.session.query(Debtor.debtor_id).\
                 filter(self.pk.in_(pks_to_set)).\
                 filter(or_(
                     Debtor.is_config_effectual == false(),
@@ -109,7 +109,17 @@ class DebtorScanner(TableScanner):
                 filter(Debtor.config_error == null()).\
                 filter(Debtor.last_config_ts < last_config_ts_cutoff).\
                 filter(Debtor.status_flags.op('&')(status_flags_mask) == Debtor.STATUS_IS_ACTIVATED_FLAG).\
-                update({Debtor.config_error: 'CONFIGURATION_IS_NOT_EFFECTUAL'}, synchronize_session=False)
+                with_for_update(skip_locked=True).\
+                all()
+
+            if to_update:
+                pks_to_update = [row[0] for row in to_update]
+                Debtor.query.\
+                    filter(self.pk.in_(pks_to_update)).\
+                    update(
+                        {Debtor.config_error: 'CONFIGURATION_IS_NOT_EFFECTUAL'},
+                        synchronize_session=False,
+                    )
 
     def _delete_dead_debtors(self, rows, current_ts):
         c = self.table.c

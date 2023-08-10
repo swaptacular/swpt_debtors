@@ -46,7 +46,7 @@ def spawn_worker_processes(processes: int, target, **kwargs):
     worker_processes = []
     worker_processes_have_been_terminated = False
 
-    def worker(**kwargs):
+    def worker(**kwargs):  # pragma: no cover
         try:
             target(**kwargs)
         except Exception:
