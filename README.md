@@ -131,6 +131,13 @@ PROTOCOL_BROKER_PREFETCH_COUNT=10
 # For example: "0.1.#", "1.#", or "#".
 PROTOCOL_BROKER_QUEUE_ROUTING_KEY=#
 
+# The number of seconds to wait between two sequential flushes
+# (default 2). All outgoing Swaptacular Messaging Protocol messages
+# are first recorded in the PostgreSQL database, and then are
+# "fulshed" to the RabbitMQ message broker. The specal value "stop"
+# disables collective message flushing althogether.
+FLUSH_ALL_WAIT=1.5
+
 # Set this to "true" after splitting a parent database shard into
 # two children shards. You may set this back to "false", once all
 # left-over records from the parent have been deleted from the
@@ -184,6 +191,18 @@ container allows you to execute the following *documented commands*:
   allows you to start as many additional dedicated SMP message
   processors as necessary, to handle the incoming load.
 
+* `flush_configure_accounts`, `flush_prepare_transfers`,
+  `flush_finalize_transfers`
+
+  Starts a process that sends outgoing messages to the RabbitMQ broker, and
+  removes them from the PostgreSQL database. These commands allow you to
+  start additional processes, dedicated to the flushing of particular type
+  of messages, to handle the load.
+
+  The "FLUSH_*message-type*_WAIT" environment variables control the number
+  of seconds to wait between two sequential flushes (default 2). For
+  example, configuring "FLUSH_PREPARE_TRANSFERS_WAIT=0.5" will try to flush
+  the outgoing "PrapareTransfer" messages every 0.5 seconds.
 
 This [docker-compose example](../master/docker-compose-all.yml) shows
 how to use the generated docker images, along with the PostgerSQL
