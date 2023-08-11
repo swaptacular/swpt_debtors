@@ -113,10 +113,13 @@ case $1 in
     scan_debtors)
         exec flask swpt_debtors "$@"
         ;;
-    flush_configure_accounts  | flush_prepare_transfers | flush_finalize_transfers)
+    flush_configure_accounts  | flush_prepare_transfers | flush_finalize_transfers \
+        | flush_all)
+
         flush_configure_accounts=ConfigureAccountSignal
         flush_prepare_transfers=PrepareTransferSignal
         flush_finalize_transfers=FinalizeTransferSignal
+        flush_all=
 
         # For example: if `$1` is "flush_configure_accounts",
         # `signal_name` will be "ConfigureAccountSignal".
@@ -125,8 +128,11 @@ case $1 in
         # For example: if `$1` is "flush_configure_accounts", `wait`
         # will get the value of the APP_FLUSH_CONFIGURE_ACCOUNTS_WAIT
         # environment variable, defaulting to 2 if it is not defined.
-        eval wait=\${APP_$(echo "$1" | tr [:lower:] [:upper:])_WAIT-2}
+        eval wait=\${$(echo "$1" | tr [:lower:] [:upper:])_WAIT-2}
 
+        if [[ "$wait" == "stop" ]]; then
+            exit 2
+        fi
         exec flask signalbus flushmany --repeat=$wait $signal_name
         ;;
     all)
