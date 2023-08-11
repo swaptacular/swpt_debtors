@@ -75,6 +75,8 @@ class DebtorScanner(TableScanner):
             for debtor in to_delete:
                 db.session.delete(debtor)
 
+            db.session.commit()
+
     def _set_config_errors_if_necessary(self, rows, current_ts):
         c = self.table.c
         account_last_heartbeat_ts_cutoff = current_ts - self.max_heartbeat_delay
@@ -121,6 +123,8 @@ class DebtorScanner(TableScanner):
                         synchronize_session=False,
                     )
 
+            db.session.commit()
+
     def _delete_dead_debtors(self, rows, current_ts):
         c = self.table.c
         deactivated_flag = Debtor.STATUS_IS_DEACTIVATED_FLAG
@@ -152,6 +156,8 @@ class DebtorScanner(TableScanner):
             for debtor in to_delete:
                 db.session.delete(debtor)
 
+            db.session.commit()
+
     def _delete_parent_shard_debtors(self, rows, current_ts):
         c = self.table.c
 
@@ -170,3 +176,5 @@ class DebtorScanner(TableScanner):
 
             for debtor in to_delete:
                 db.session.delete(debtor)
+
+            db.session.commit()
