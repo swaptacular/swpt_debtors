@@ -1,7 +1,9 @@
 import pytest
+from unittest.mock import Mock
 from uuid import UUID
 from datetime import timedelta
-from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, ConfigureAccountSignal
+from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, \
+    ConfigureAccountSignal, FinalizeTransferSignal
 from swpt_debtors.extensions import db
 from swpt_debtors import procedures
 from swpt_pythonlib.utils import ShardingRealm
@@ -106,3 +108,34 @@ def test_delete_parent_debtors(app_unsafe_session, current_ts):
     db.session.commit()
     app.config['DELETE_PARENT_SHARD_RECORDS'] = False
     app.config['SHARDING_REALM'] = orig_sharding_realm
+
+
+@pytest.mark.unsafe
+def test_flush_messages(mocker, app_unsafe_session):
+    send_signalbus_message = Mock()
+    mocker.patch('swpt_debtors.models.FinalizeTransferSignal.send_signalbus_message',
+                 new_callable=send_signalbus_message)
+    FinalizeTransferSignal.query.delete()
+    db.session.commit()
+    fts = FinalizeTransferSignal(
+        creditor_id=0,
+        debtor_id=-1,
+        transfer_id=666,
+        coordinator_id=0,
+        coordinator_request_id=777,
+        committed_amount=0,
+        transfer_note_format='',
+        transfer_note='',
+    )
+    db.session.add(fts)
+    db.session.commit()
+    assert len(FinalizeTransferSignal.query.all()) == 1
+    db.session.commit()
+    app = app_unsafe_session
+
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=['swpt_debtors', 'flush_messages',
+                                 'FinalizeTransferSignal', '--wait', '0.1', '--quit-early'])
+    assert result.exit_code == 1
+    assert send_signalbus_message.called_once()
+    assert len(FinalizeTransferSignal.query.all()) == 0
