@@ -170,6 +170,9 @@ class Configuration(metaclass=MetaEnvReader):
     PROTOCOL_BROKER_PREFETCH_SIZE = 0
     PROTOCOL_BROKER_PREFETCH_COUNT = 1
 
+    FLUSH_PROCESSES = 1
+    FLUSH_PERIOD = 2.0
+
     DELETE_PARENT_SHARD_RECORDS = False
 
     API_TITLE = 'Debtors API'
