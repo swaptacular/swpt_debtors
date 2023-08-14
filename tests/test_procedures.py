@@ -2,6 +2,7 @@ import pytest
 from uuid import UUID
 from datetime import datetime, date, timedelta
 from swpt_pythonlib.utils import i64_to_u64
+from swpt_debtors.extensions import db
 from swpt_debtors import __version__
 from swpt_debtors.models import Debtor, RunningTransfer, PrepareTransferSignal, \
     FinalizeTransferSignal, ConfigureAccountSignal, ROOT_CREDITOR_ID, \
@@ -23,17 +24,17 @@ def acc_id(debtor_id, credior_id):
 def debtor(db_session):
     debtor = Debtor(debtor_id=D_ID, status_flags=0)
     debtor.activate()
-    db_session.add(debtor)
-    db_session.commit()
+    db.session.add(debtor)
+    db.session.commit()
 
     return p.get_debtor(D_ID)
 
 
-def test_version(db_session):
+def test_version():
     assert __version__
 
 
-def test_deactivate_debtor(db_session, debtor):
+def test_deactivate_debtor(debtor):
     assert debtor.is_activated
     assert not debtor.is_deactivated
     p.deactivate_debtor(D_ID)
@@ -130,7 +131,7 @@ def test_process_account_update_signal_old_ts(debtor, current_ts):
     assert d.account_last_heartbeat_ts == current_ts
 
 
-def test_account_change_signal_effectual_config(db_session, debtor, current_ts):
+def test_account_change_signal_effectual_config(debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
     p.process_account_update_signal(
@@ -163,7 +164,7 @@ def test_account_change_signal_effectual_config(db_session, debtor, current_ts):
     assert d.is_config_effectual
 
 
-def test_account_change_signal_ineffectual_config(db_session, debtor, current_ts):
+def test_account_change_signal_ineffectual_config(debtor, current_ts):
     change_seqnum = 1
     change_ts = datetime.fromisoformat('2019-10-01T00:00:00+00:00')
     p.process_account_update_signal(
@@ -195,10 +196,10 @@ def test_account_change_signal_ineffectual_config(db_session, debtor, current_ts
     assert not d.is_config_effectual
 
 
-def test_running_transfers(db_session, debtor):
+def test_running_transfers(debtor):
     recipient_uri, recipient = acc_id(D_ID, C_ID)
     Debtor.query.filter_by(debtor_id=D_ID).one().running_transfers_count = 1
-    db_session.add(RunningTransfer(
+    db.session.add(RunningTransfer(
         debtor_id=D_ID,
         transfer_uuid=TEST_UUID,
         recipient=recipient,
@@ -207,7 +208,7 @@ def test_running_transfers(db_session, debtor):
         transfer_note='note',
         amount=1001,
     ))
-    db_session.commit()
+    db.session.commit()
     assert p.get_debtor(D_ID).running_transfers_count == 1
     with pytest.raises(p.DebtorDoesNotExist):
         p.get_debtor_transfer_uuids(1234567890)
@@ -232,7 +233,7 @@ def test_delete_non_existing_initiated_transfer(db_session):
         p.delete_running_transfer(D_ID, TEST_UUID)
 
 
-def test_initiate_running_transfer(db_session, debtor):
+def test_initiate_running_transfer(debtor):
     recipient_uri, recipient = acc_id(D_ID, C_ID)
     assert len(RunningTransfer.query.all()) == 0
     assert p.get_debtor_transfer_uuids(D_ID) == []
@@ -260,10 +261,10 @@ def test_initiate_running_transfer(db_session, debtor):
     assert len(RunningTransfer.query.all()) == 0
 
 
-def test_too_many_initiated_transfers(db_session, debtor):
+def test_too_many_initiated_transfers(debtor):
     recipient_uri, recipient = acc_id(D_ID, C_ID)
     Debtor.query.filter_by(debtor_id=D_ID).one().running_transfers_count = 1
-    db_session.add(RunningTransfer(
+    db.session.add(RunningTransfer(
         debtor_id=D_ID,
         transfer_uuid=TEST_UUID,
         recipient=recipient,
@@ -272,7 +273,7 @@ def test_too_many_initiated_transfers(db_session, debtor):
         transfer_note_format='',
         transfer_note='',
     ))
-    db_session.commit()
+    db.session.commit()
     assert len(RunningTransfer.query.all()) == 1
     assert p.get_debtor(D_ID).running_transfers_count == 1
     for i in range(1, 10):
@@ -285,7 +286,7 @@ def test_too_many_initiated_transfers(db_session, debtor):
         p.initiate_running_transfer(D_ID, '123e4567-e89b-12d3-a456-426655440010', *acc_id(D_ID, C_ID), 1000, '', '', 10)
 
 
-def test_successful_transfer(db_session, debtor):
+def test_successful_transfer(debtor):
     recipient_uri, recipient = acc_id(D_ID, C_ID)
     assert len(PrepareTransferSignal.query.all()) == 0
     p.initiate_running_transfer(D_ID, TEST_UUID, recipient_uri, recipient, 1000, 'fmt', 'test')
@@ -346,7 +347,7 @@ def test_successful_transfer(db_session, debtor):
     assert it.error_code is None
 
 
-def test_rejected_transfer(db_session, debtor):
+def test_rejected_transfer(debtor):
     p.initiate_running_transfer(D_ID, TEST_UUID, *acc_id(D_ID, C_ID), 1000, 'fmt', 'test')
     pts = PrepareTransferSignal.query.all()[0]
     p.process_rejected_issuing_transfer_signal(
@@ -377,7 +378,7 @@ def test_rejected_transfer(db_session, debtor):
     assert len(it_list) == 1 and it_list[0].is_finalized
 
 
-def test_failed_transfer(db_session, debtor):
+def test_failed_transfer(debtor):
     recipient_uri, recipient = acc_id(D_ID, C_ID)
     assert len(PrepareTransferSignal.query.all()) == 0
     p.initiate_running_transfer(D_ID, TEST_UUID, recipient_uri, recipient, 1000, 'fmt', 'test')
@@ -439,7 +440,7 @@ def test_failed_transfer(db_session, debtor):
     assert it.total_locked_amount == 666
 
 
-def test_process_account_purge_signal(db_session, debtor, current_ts):
+def test_process_account_purge_signal(debtor, current_ts):
     creation_date = date(2020, 1, 10)
     p.process_account_update_signal(
         debtor_id=D_ID,
@@ -471,7 +472,7 @@ def test_process_account_purge_signal(db_session, debtor, current_ts):
     assert not d.has_server_account
 
 
-def test_cancel_running_transfer_success(db_session, debtor):
+def test_cancel_running_transfer_success(debtor):
     p.initiate_running_transfer(D_ID, TEST_UUID, *acc_id(D_ID, C_ID), 1000, 'fmt', 'test')
     coordinator_request_id = PrepareTransferSignal.query.one().coordinator_request_id
 
@@ -497,7 +498,7 @@ def test_cancel_running_transfer_success(db_session, debtor):
     assert t.error_code == SC_CANCELED_BY_THE_SENDER
 
 
-def test_cancel_running_transfer_failure(db_session, debtor):
+def test_cancel_running_transfer_failure(debtor):
     p.initiate_running_transfer(D_ID, TEST_UUID, *acc_id(D_ID, C_ID), 1000, 'fmt', 'test')
     coordinator_request_id = PrepareTransferSignal.query.one().coordinator_request_id
 

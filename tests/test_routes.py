@@ -2,6 +2,7 @@ import re
 from datetime import date, datetime, timezone
 from urllib.parse import urljoin, urlparse
 import pytest
+from swpt_debtors.extensions import db
 from swpt_debtors import procedures as p
 from swpt_debtors import models as m
 
@@ -15,8 +16,8 @@ def client(app, db_session):
 def debtor(db_session):
     debtor = m.Debtor(debtor_id=4444444444, status_flags=0)
     debtor.activate()
-    db_session.add(debtor)
-    db_session.commit()
+    db.session.add(debtor)
+    db.session.commit()
 
     return p.get_debtor(4444444444)
 
