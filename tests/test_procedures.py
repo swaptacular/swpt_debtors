@@ -278,7 +278,7 @@ def test_too_many_initiated_transfers(debtor):
     assert p.get_debtor(D_ID).running_transfers_count == 1
     for i in range(1, 10):
         suffix = '{:0>4}'.format(i)
-        uuid = f'123e4567-e89b-12d3-a456-42665544{suffix}',
+        uuid = UUID(f'123e4567-e89b-12d3-a456-42665544{suffix}')
         p.initiate_running_transfer(D_ID, uuid, *acc_id(D_ID, C_ID), 1000, '', '', 10)
     assert len(RunningTransfer.query.all()) == 10
     assert p.get_debtor(D_ID).running_transfers_count == 10
