@@ -5,8 +5,6 @@ from datetime import datetime, timezone
 from swpt_debtors import create_app
 from swpt_debtors.extensions import db
 
-DB_SESSION = 'swpt_debtors.extensions.db.session'
-
 server_name = 'example.com'
 config_dict = {
     'TESTING': True,
