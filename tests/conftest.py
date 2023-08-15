@@ -26,12 +26,6 @@ config_dict = {
 }
 
 
-def _restart_savepoint(session, transaction):
-    if transaction.nested and not transaction._parent.nested:
-        session.expire_all()
-        session.begin_nested()
-
-
 @pytest.fixture(scope='module')
 def app():
     """Get a Flask application object."""
