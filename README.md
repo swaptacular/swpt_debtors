@@ -104,7 +104,7 @@ WEBSERVER_PORT=8003
 OAUTH2_INTROSPECT_URL=http://localhost:4445/oauth2/introspect
 
 # Connection string for a PostgreSQL database server to connect to.
-POSTGRES_URL=postgresql://swpt_debtors:swpt_debtors@localhost:5435/test
+POSTGRES_URL=postgresql+psycopg://swpt_debtors:swpt_debtors@localhost:5435/test
 
 # Parameters for the communication with the RabbitMQ server which is
 # responsible for brokering SMP messages. The container will connect

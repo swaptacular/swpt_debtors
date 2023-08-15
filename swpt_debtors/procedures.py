@@ -8,7 +8,7 @@ from swpt_pythonlib.utils import Seqnum, increment_seqnum
 from swpt_debtors.extensions import db
 from swpt_debtors.models import Debtor, FinalizeTransferSignal, RunningTransfer, ConfigureAccountSignal, \
     PrepareTransferSignal, Document, MAX_INT32, ROOT_CREDITOR_ID, DEFAULT_CONFIG_FLAGS, \
-    HUGE_NEGLIGIBLE_AMOUNT, SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK, MIN_INT64, MAX_INT64
+    HUGE_NEGLIGIBLE_AMOUNT, SC_UNEXPECTED_ERROR, SC_CANCELED_BY_THE_SENDER, SC_OK
 
 T = TypeVar('T')
 atomic: Callable[[T], T] = db.atomic
@@ -72,7 +72,7 @@ class TooManySavedDocuments(Exception):
 
 @atomic
 def get_debtor_ids(start_from: int, count: int = 1) -> Tuple[List[int], Optional[int]]:
-    assert(count >= 1)
+    assert count >= 1
     query = db.session.\
         query(Debtor.debtor_id).\
         filter(Debtor.debtor_id >= start_from).\
