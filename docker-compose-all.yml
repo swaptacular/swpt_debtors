@@ -227,6 +227,7 @@ services:
       sh -c 'hydra clients get debtors-webapp --fake-tls-termination ||
       hydra clients import
       /etc/hydra-config/debtors-supervisor.json
+      /etc/hydra-config/debtors-superuser.json
       /etc/hydra-config/swagger-ui.json
       /etc/hydra-config/debtors-webapp.json
       --fake-tls-termination

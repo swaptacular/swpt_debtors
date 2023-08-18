@@ -1,0 +1,14 @@
+{
+  "client_id": "debtors-superuser",
+  "client_secret": "debtors-superuser",
+  "description": "This is the debtors superuser.",
+  "scope": "access access.readonly activate deactivate restrict",
+  "grant_types": [
+    "client_credentials",
+    "refresh_token"
+  ],
+  "response_types": [
+    "token"
+  ],
+  "token_endpoint_auth_method": "client_secret_basic"
+}

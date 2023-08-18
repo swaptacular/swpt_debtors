@@ -15,7 +15,6 @@ from swpt_debtors.models import (
     DATE0,
     SC_OK,
     SC_CANCELED_BY_THE_SENDER,
-    HUGE_NEGLIGIBLE_AMOUNT,
     DEFAULT_CONFIG_FLAGS,
 )
 from swpt_debtors import procedures as p
@@ -63,6 +62,26 @@ def test_deactivate_debtor(debtor):
     assert p.get_debtor(1234567890) is None
 
 
+def test_restrict_debtor(debtor):
+    assert len(ConfigureAccountSignal.query.all()) == 0
+    assert debtor.min_balance == -9223372036854775808
+
+    debtor = p.restrict_debtor(D_ID, -5000)
+    assert debtor.min_balance == -5000
+
+    cas = ConfigureAccountSignal.query.one()
+    assert cas.debtor_id == D_ID
+    assert cas.config_data == ""
+    assert cas.config_flags == 0
+    assert cas.negligible_amount == 5000.0
+
+    with pytest.raises(p.DebtorDoesNotExist):
+        p.restrict_debtor(D_ID + 1, -6000)
+
+    assert debtor.min_balance == -5000
+    assert len(ConfigureAccountSignal.query.all()) == 1
+
+
 def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert len(Debtor.query.all()) == 0
 
@@ -91,6 +110,7 @@ def test_process_account_update_signal_no_debtor(db_session, current_ts):
     assert cas.debtor_id == D_ID
     assert cas.config_data == ""
     assert cas.config_flags & Debtor.CONFIG_SCHEDULED_FOR_DELETION_FLAG
+    assert cas.negligible_amount > -float(-9223370000000000000)
 
 
 def test_process_account_update_signal_old_ts(debtor, current_ts):
@@ -110,7 +130,7 @@ def test_process_account_update_signal_old_ts(debtor, current_ts):
         config_data="",
         account_id="0",
         transfer_note_max_bytes=100,
-        negligible_amount=HUGE_NEGLIGIBLE_AMOUNT,
+        negligible_amount=-float(debtor.min_balance),
         config_flags=DEFAULT_CONFIG_FLAGS,
         ts=current_ts - timedelta(days=1),
         ttl=10000,
@@ -132,7 +152,7 @@ def test_process_account_update_signal_old_ts(debtor, current_ts):
         config_data="",
         account_id="0",
         transfer_note_max_bytes=100,
-        negligible_amount=HUGE_NEGLIGIBLE_AMOUNT,
+        negligible_amount=-float(d.min_balance),
         config_flags=DEFAULT_CONFIG_FLAGS,
         ts=current_ts,
         ttl=1000000,
@@ -158,7 +178,7 @@ def test_account_change_signal_effectual_config(debtor, current_ts):
         config_data="",
         account_id="0",
         transfer_note_max_bytes=100,
-        negligible_amount=HUGE_NEGLIGIBLE_AMOUNT,
+        negligible_amount=-float(debtor.min_balance),
         config_flags=DEFAULT_CONFIG_FLAGS,
         ts=current_ts,
         ttl=1000000,
@@ -625,25 +645,27 @@ def test_update_debtor_config(debtor):
     assert cas.config_flags == 0
     assert cas.ts == debtor.last_config_ts
     assert cas.seqnum == debtor.last_config_seqnum
+    assert cas.negligible_amount > -float(-9223370000000000000)
 
 
 def test_process_rejected_config_signal(debtor):
     d = p.get_active_debtor(D_ID)
     assert d.config_error is None
+    negligible_amount = -float(debtor.min_balance)
 
     params = {
         "debtor_id": D_ID,
         "creditor_id": ROOT_CREDITOR_ID,
         "config_ts": debtor.last_config_ts,
         "config_seqnum": debtor.last_config_seqnum,
-        "negligible_amount": HUGE_NEGLIGIBLE_AMOUNT,
+        "negligible_amount": negligible_amount,
         "config_data": "",
         "config_flags": debtor.config_flags,
         "rejection_code": "TEST_CODE",
     }
     p.process_rejected_config_signal(**{**params, "config_data": "UNEXPECTED"})
     p.process_rejected_config_signal(
-        **{**params, "negligible_amount": HUGE_NEGLIGIBLE_AMOUNT * 1.0001}
+        **{**params, "negligible_amount": negligible_amount * 1.0001}
     )
     p.process_rejected_config_signal(
         **{**params, "config_flags": d.config_flags ^ 1}

@@ -378,6 +378,30 @@ class DebtorDeactivationRequestSchema(ValidateTypeMixin, Schema):
     )
 
 
+class DebtorRestrictionRequestSchema(ValidateTypeMixin, Schema):
+    type = fields.String(
+        load_default="DebtorRestrictionRequest",
+        load_only=True,
+        metadata=dict(
+            description=TYPE_DESCRIPTION,
+            example="DebtorRestrictionRequest",
+        ),
+    )
+    min_balance = fields.Integer(
+        required=True,
+        validate=validate.Range(min=MIN_INT64, max=0),
+        data_key="minBalance",
+        metadata=dict(
+            format="int64",
+            description=(
+                "The maximum amount that the debtor is allowed to issue, with"
+                " a negative sign. Must be a negative number or zero."
+            ),
+            example=-500000,
+        ),
+    )
+
+
 class DebtorConfigSchema(ValidateTypeMixin, MutableResourceSchema):
     uri = fields.String(
         required=True,
@@ -553,6 +577,19 @@ class DebtorSchema(ValidateTypeMixin, Schema):
                 " although theoretically possible, should be very rare."
             ),
             example=-1000000,
+        ),
+    )
+    min_balance = fields.Int(
+        required=True,
+        dump_only=True,
+        data_key="minBalance",
+        metadata=dict(
+            format="int64",
+            description=(
+                "The maximum amount that the debtor is allowed to issue, with"
+                " a negative sign. This will be a negative number or zero."
+            ),
+            example=-9223372036854775808,
         ),
     )
     transfer_note_max_bytes = fields.Integer(
