@@ -167,6 +167,7 @@ class Debtor(db.Model):
         db.TIMESTAMP(timezone=True), nullable=False, default=get_now_utc
     )
     balance = db.Column(db.BigInteger, nullable=False, default=0)
+    min_balance = db.Column(db.BigInteger, nullable=False, default=MIN_INT64)
     transfer_note_max_bytes = db.Column(db.Integer, nullable=False, default=0)
     running_transfers_count = db.Column(db.Integer, nullable=False, default=0)
     actions_count = db.Column(db.Integer, nullable=False, default=0)
@@ -222,6 +223,7 @@ class Debtor(db.Model):
             )
         ),
         db.CheckConstraint(actions_count >= 0),
+        db.CheckConstraint(min_balance <= 0),
     )
 
     @property
@@ -337,7 +339,7 @@ class ConfigureAccountSignal(Signal):
         creditor_id = fields.Constant(ROOT_CREDITOR_ID)
         ts = fields.DateTime()
         seqnum = fields.Integer()
-        negligible_amount = fields.Constant(HUGE_NEGLIGIBLE_AMOUNT)
+        negligible_amount = fields.Float()
         config_data = fields.String()
         config_flags = fields.Integer()
 
@@ -348,6 +350,7 @@ class ConfigureAccountSignal(Signal):
     seqnum = db.Column(db.Integer, primary_key=True)
     config_data = db.Column(db.String, nullable=False)
     config_flags = db.Column(db.Integer, nullable=False)
+    negligible_amount = db.Column(db.REAL, nullable=False)
 
     @classproperty
     def signalbus_burst_count(self):

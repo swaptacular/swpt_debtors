@@ -151,6 +151,10 @@ SCOPE_DEACTIVATE = [
     {"oauth2": ["deactivate"]},
 ]
 
+SCOPE_RESTRICT = [
+    {"oauth2": ["restrict"]},
+]
+
 API_DESCRIPTION = """Since interchangeability of client applications for
 currency issuing is not of critical importance, Swaptacular does not make
 recommendations about the Issuing Web API. The current reference
@@ -193,6 +197,7 @@ API_SPEC_OPTIONS = {
                             "access": "read-write access",
                             "activate": "activate new debtors",
                             "deactivate": "deactivate existing debtors",
+                            "restrict": "restrict maximum issued amounts",
                         },
                     },
                 },

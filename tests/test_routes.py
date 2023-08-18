@@ -143,6 +143,7 @@ def test_create_debtor(client):
     assert data["type"] == "Debtor"
     assert data["uri"] == "/debtors/8589934591/"
     assert data["balance"] == 0
+    assert data["minBalance"] == -9223372036854775808
     assert datetime.fromisoformat(data["createdAt"])
     assert "info" not in data
 
@@ -155,6 +156,7 @@ def test_create_debtor(client):
     assert data["type"] == "Debtor"
     assert data["uri"] == "/debtors/4294967296/"
     assert data["balance"] == 0
+    assert data["minBalance"] == -9223372036854775808
     assert datetime.fromisoformat(data["createdAt"])
 
     r = client.get("/debtors/8589934591/")
@@ -236,6 +238,7 @@ def test_get_debtor(client, debtor):
     assert data["transfersList"] == {"uri": "/debtors/4444444444/transfers/"}
     assert data["createTransfer"] == {"uri": "/debtors/4444444444/transfers/"}
     assert data["balance"] == 0
+    assert data["minBalance"] == -9223372036854775808
     assert datetime.fromisoformat(data["createdAt"])
     assert data["identity"] == {
         "type": "DebtorIdentity",
@@ -244,6 +247,53 @@ def test_get_debtor(client, debtor):
     assert data["noteMaxBytes"] == 0
     assert "configError" not in data
     assert "account" not in data
+
+
+def test_restrict_debtor(client, debtor):
+    request_body = {
+        "type": "DebtorRestrictionRequest",
+        "minBalance": -5500,
+    }
+
+    r = client.post(
+        "/debtors/4444444445/restrict",
+        headers={"X-Swpt-User-Id": "debtors-superuser"},
+        json=request_body,
+    )
+    assert r.status_code == 404
+
+    r = client.post(
+        "/debtors/4444444444/restrict",
+        headers={"X-Swpt-User-Id": "debtors:4444444444"},
+        json=request_body,
+    )
+    assert r.status_code == 403
+
+    r = client.post(
+        "/debtors/4444444444/restrict",
+        headers={"X-Swpt-User-Id": "debtors-supervisor"},
+        json=request_body,
+    )
+    assert r.status_code == 403
+
+    # Assert that there are no changes to minBalance.
+    r = client.get("/debtors/4444444444/")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["minBalance"] == -9223372036854775808
+
+    r = client.post(
+        "/debtors/4444444444/restrict",
+        headers={"X-Swpt-User-Id": "debtors-superuser"},
+        json=request_body,
+    )
+
+    # Assert that minBalance has changed.
+    assert r.status_code == 200
+    r = client.get("/debtors/4444444444/")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["minBalance"] == -5500
 
 
 def test_change_debtor_config(client, debtor):
@@ -544,7 +594,7 @@ def test_redirect_to_latest_info(client, debtor):
         interest_rate=0.0,
         last_config_ts=debtor.last_config_ts,
         last_config_seqnum=debtor.last_config_seqnum,
-        negligible_amount=p.HUGE_NEGLIGIBLE_AMOUNT,
+        negligible_amount=-float(debtor.min_balance),
         config_data="INCORRECT CONFIG DATA",
         config_flags=debtor.config_flags,
         account_id="",
@@ -565,7 +615,7 @@ def test_redirect_to_latest_info(client, debtor):
         interest_rate=0.0,
         last_config_ts=debtor.last_config_ts,
         last_config_seqnum=debtor.last_config_seqnum,
-        negligible_amount=p.HUGE_NEGLIGIBLE_AMOUNT,
+        negligible_amount=-float(debtor.min_balance),
         config_data=debtor.config_data,
         config_flags=debtor.config_flags,
         account_id="",

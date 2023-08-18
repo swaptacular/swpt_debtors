@@ -21,6 +21,7 @@ from swpt_debtors.schemas import (
     ObjectReferencesPageSchema,
     DebtorActivationRequestSchema,
     DebtorDeactivationRequestSchema,
+    DebtorRestrictionRequestSchema,
     DebtorConfigSchema,
 )
 from swpt_debtors.models import MIN_INT64, is_valid_debtor_id
@@ -150,12 +151,12 @@ admin_api = Blueprint(
     __name__,
     url_prefix="/debtors",
     description="""**View debtors list, create new debtors, deactivate inactive
-    debtors.** The creation of new debtors can optionally be done
-    in two-phases: First a debtors ID can be *reserved*, and only
-    then, the debtor can be *activated*. This is useful when the
-    client wants to know the new debtor ID in advance. If this is
-    not needed, the debtor can also be activated directly, by a
-    single request.""",
+    debtors, restrict debtors' maximum issued amounts.** The creation of new
+    debtors can optionally be done in two-phases: First a debtors ID can be
+    *reserved*, and only then, the debtor can be *activated*. This is useful
+    when the client wants to know the new debtor ID in advance. If this is
+    not needed, the debtor can also be activated directly, by a single request.
+    """,
 )
 admin_api.before_request(ensure_admin)
 
@@ -353,6 +354,31 @@ class DebtorDeactivateEndpoint(MethodView):
             abort(403)
 
         procedures.deactivate_debtor(debtorId)
+
+
+@admin_api.route("/<i64:debtorId>/restrict", parameters=[specs.DEBTOR_ID])
+class DebtorRestrictEndpoint(MethodView):
+    @admin_api.arguments(DebtorRestrictionRequestSchema)
+    @admin_api.response(200, DebtorSchema(context=context))
+    @admin_api.doc(
+        operationId="restrictDebtor", security=specs.SCOPE_RESTRICT
+    )
+    def post(self, debtor_restriction_request, debtorId):
+        """Restricts the maximum amount that a debtor is allowed to issue."""
+
+        if not is_valid_debtor_id(debtorId):  # pragma: no cover
+            abort(404)
+
+        if not g.superuser:
+            abort(403)
+
+        min_balance = debtor_restriction_request["min_balance"]
+        try:
+            debtor = procedures.restrict_debtor(debtorId, min_balance)
+        except procedures.DebtorDoesNotExist:
+            abort(404)
+
+        return debtor
 
 
 debtors_api = Blueprint(

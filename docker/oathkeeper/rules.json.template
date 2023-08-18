@@ -125,7 +125,7 @@
       "preserve_host": true
     },
     "match": {
-      "url": "<https?://[^/]+/debtors/(?!.*[./-](lookup|reserve|activate|deactivate)$).*>",
+      "url": "<https?://[^/]+/debtors/(?!.*[./-](lookup|reserve|activate|deactivate|restrict)$).*>",
       "methods": [
         "POST", "PUT", "PATCH", "DELETE"
       ]
@@ -197,6 +197,37 @@
         "handler": "oauth2_introspection",
         "config": {
           "required_scope": ["deactivate"]
+        }
+      }
+    ],
+    "authorizer": {
+      "handler": "allow"
+    },
+    "mutators": [
+      {
+        "handler": "header"
+      }
+    ]
+  },
+
+  {
+    "id": "restrict",
+    "version": "v0.36.0-beta.4",
+    "upstream": {
+      "url": "$RESOURCE_SERVER",
+      "preserve_host": true
+    },
+    "match": {
+      "url": "<https?://[^/]+/debtors/.*[./-](restrict)$>",
+      "methods": [
+        "POST"
+      ]
+    },
+    "authenticators": [
+      {
+        "handler": "oauth2_introspection",
+        "config": {
+          "required_scope": ["restrict"]
         }
       }
     ],

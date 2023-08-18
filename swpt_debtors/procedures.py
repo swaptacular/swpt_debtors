@@ -149,6 +149,18 @@ def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
 
 
 @atomic
+def restrict_debtor(debtor_id: int, min_balance: int) -> Debtor:
+    debtor = get_active_debtor(debtor_id, lock=True)
+    if debtor is None:
+        raise DebtorDoesNotExist()
+
+    debtor.min_balance = min_balance
+    _insert_configure_account_signal(debtor)
+
+    return debtor
+
+
+@atomic
 def get_debtor(
     debtor_id: int, *, lock: bool = False, active: bool = False
 ) -> Optional[Debtor]:
@@ -338,7 +350,7 @@ def process_rejected_config_signal(
             config_error=None,
         )
         .filter(
-            func.abs(HUGE_NEGLIGIBLE_AMOUNT - negligible_amount)
+            func.abs(Debtor.min_balance + negligible_amount)
             <= EPS * negligible_amount
         )
         .with_for_update()
@@ -547,7 +559,7 @@ def process_account_update_signal(
         and last_config_seqnum == debtor.last_config_seqnum
         and config_flags == debtor.config_flags
         and config_data == debtor.config_data
-        and abs(HUGE_NEGLIGIBLE_AMOUNT - negligible_amount)
+        and abs(debtor.min_balance + negligible_amount)
         <= EPS * negligible_amount
     )
 
@@ -680,6 +692,7 @@ def _insert_configure_account_signal(debtor: Debtor) -> None:
             seqnum=debtor.last_config_seqnum,
             config_data=debtor.config_data,
             config_flags=debtor.config_flags,
+            negligible_amount=-float(debtor.min_balance),
         )
     )
 
@@ -754,7 +767,9 @@ def _discard_orphaned_account(
                 ts=datetime.now(tz=timezone.utc),
                 seqnum=0,
                 config_data="",
-                config_flags=DEFAULT_CONFIG_FLAGS
-                | scheduled_for_deletion_flag,
+                config_flags=(
+                    DEFAULT_CONFIG_FLAGS | scheduled_for_deletion_flag
+                ),
+                negligible_amount=HUGE_NEGLIGIBLE_AMOUNT,
             )
         )
