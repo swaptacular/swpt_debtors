@@ -274,13 +274,21 @@ command:
 
     $ docker-compose -f docker-compose-all.yml up --build
 
-Then, you can open a browser window at
-https://localhost:44302/debtors-webapp/ to use the debtors UI webapp, or if
-you want to experiment with the Swagger UI client, go to
-https://localhost:44302/debtors-swagger-ui/ and use client ID `swagger-ui`,
-and client secret `swagger-ui` to authorize Swagger UI to use the server
-API. In this testing environment, user registration emails will be sent to a
-fake email server, whose messages can be read at http://localhost:8026/
+Before you begin experimenting with the "Debtors Agent" server, you
+will need to add `127.0.0.1 host.docker.internal` to the hosts file on
+your machine. You can do this by executing the following command:
+
+    $ sudo sh -c 'echo "127.0.0.1 host.docker.internal" >> /etc/hosts'
+
+Once you have added `host.docker.internal` to your hosts file, you can
+open a browser window at
+https://host.docker.internal:44302/debtors-webapp/ to use the debtors
+UI webapp, or if you want to experiment with the Swagger UI client, go
+to https://host.docker.internal:44302/debtors-swagger-ui/ and use
+client ID `swagger-ui`, and client secret `swagger-ui` to authorize
+Swagger UI to use the server API. In this testing environment, user
+registration emails will be sent to a fake email server, whose
+messages can be read at http://localhost:8026/
 
 Note that the `docker/nodedata` directory contains an already populated
 [root-CA database](https://github.com/swaptacular/swpt_ca_scripts), which
