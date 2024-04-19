@@ -151,6 +151,8 @@ services:
       - 'CLIENT_ID=debtors-webapp'
       - 'REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
       - 'TRANSFER_DELETION_DELAY_SECONDS=1296000'
+      - 'DEFAULT_PEG_ABBR='
+      - 'DEFAULT_PEG_COIN='
 
 
   # This container runs an OAuth 2.0 authorization server, which
