@@ -16,6 +16,7 @@ MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
 MAX_UINT64 = (1 << 64) - 1
 TS0 = datetime(1970, 1, 1, tzinfo=timezone.utc)
+T_INFINITY = datetime(9999, 12, 31, 12, 59, 59, tzinfo=timezone.utc)
 DATE0 = TS0.date()
 HUGE_NEGLIGIBLE_AMOUNT = 1e30
 TRANSFER_NOTE_MAX_BYTES = 500
@@ -373,7 +374,7 @@ class PrepareTransferSignal(Signal):
         recipient = fields.String()
         inserted_at = fields.DateTime(data_key="ts")
         max_commit_delay = fields.Constant(MAX_INT32)
-        min_interest_rate = fields.Constant(-100.0)
+        final_interest_rate_ts = fields.DateTime()
 
     __marshmallow_schema__ = __marshmallow__()
 
@@ -382,6 +383,10 @@ class PrepareTransferSignal(Signal):
     amount = db.Column(db.BigInteger, nullable=False)
     recipient = db.Column(db.String, nullable=False)
     __table_args__ = (db.CheckConstraint(amount >= 0),)
+
+    @property
+    def final_interest_rate_ts(self) -> datetime:
+        return T_INFINITY  # pragma: no cover
 
     @classproperty
     def signalbus_burst_count(self):
