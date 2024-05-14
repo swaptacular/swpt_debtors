@@ -16,7 +16,7 @@ MIN_INT64 = -1 << 63
 MAX_INT64 = (1 << 63) - 1
 MAX_UINT64 = (1 << 64) - 1
 TS0 = datetime(1970, 1, 1, tzinfo=timezone.utc)
-T_INFINITY = datetime(9999, 12, 31, 12, 59, 59, tzinfo=timezone.utc)
+T_INFINITY = datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
 DATE0 = TS0.date()
 HUGE_NEGLIGIBLE_AMOUNT = 1e30
 TRANSFER_NOTE_MAX_BYTES = 500
