@@ -713,10 +713,10 @@ class TransferErrorSchema(Schema):
                 " available on the   sender\'s account.\n*"
                 ' `"TIMEOUT"` signifies that the transfer has been terminated'
                 " due to expired deadline.\n*"
-                ' `"TOO_LOW_INTEREST_RATE"` signifies that the transfer has'
+                ' `"NEWER_INTEREST_RATE"` signifies that the transfer has'
                 " been terminated because the current interest rate on the"
-                " account is smaller than the minimal approved interest"
-                " rate.\n"
+                " account is more recent than the specified final interest"
+                " rate timestamp.\n"
             ),
             example="INSUFFICIENT_AVAILABLE_AMOUNT",
         ),
