@@ -33,6 +33,7 @@ services:
     volumes:
       - './docker/nginx/nginx.conf:/etc/nginx/nginx.conf'
       - './docker/nginx/templates:/etc/nginx/templates'
+      - './docker/nginx/static/:/usr/share/nginx/html'
       - './docker/nginx/ssl/cert.pem:/etc/nginx/ssl/cert.pem'
       - './docker/nginx/ssl/key.pem:/etc/nginx/ssl/key.pem'
     ports:
@@ -151,8 +152,8 @@ services:
       - 'CLIENT_ID=debtors-webapp'
       - 'REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
       - 'TRANSFER_DELETION_DELAY_SECONDS=1296000'
-      - 'DEFAULT_PEG_ABBR='
-      - 'DEFAULT_PEG_COIN='
+      - 'DEFAULT_PEG_ABBR=USD'
+      - 'DEFAULT_PEG_COIN=https://host.docker.internal:44302/USD#swpt:666'
 
 
   # This container runs an OAuth 2.0 authorization server, which
