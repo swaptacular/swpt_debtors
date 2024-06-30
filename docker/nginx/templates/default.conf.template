@@ -1,6 +1,10 @@
 server {
     listen ${PORT} ssl;
     server_name $hostname;
+    location / {
+       root /usr/share/nginx/html;
+       default_type application/vnd.swaptacular.coin-info+json;
+    }
     location /debtors-hydra/oauth2/ {
         proxy_pass ${DEBTORS_HYDRA_URL}/oauth2/;
         proxy_redirect default;
