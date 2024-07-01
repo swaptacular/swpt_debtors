@@ -4,6 +4,7 @@ server {
     location / {
        root /usr/share/nginx/html;
        default_type application/vnd.swaptacular.coin-info+json;
+       add_header Access-Control-Allow-Origin *;
     }
     location /debtors-hydra/oauth2/ {
         proxy_pass ${DEBTORS_HYDRA_URL}/oauth2/;
