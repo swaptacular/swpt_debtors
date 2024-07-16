@@ -18,9 +18,6 @@ config_dict = {
     "APP_MAX_TRANSFERS_PER_MONTH": 10,
     "APP_DOCUMENT_MAX_CONTENT_LENGTH": 100,
     "APP_DOCUMENT_MAX_SAVES_PER_YEAR": 2,
-    "APP_SUPERUSER_SUBJECT_REGEX": "^debtors-superuser$",
-    "APP_SUPERVISOR_SUBJECT_REGEX": "^debtors-supervisor$",
-    "APP_DEBTOR_SUBJECT_REGEX": "^debtors:([0-9]+)$",
 }
 
 
