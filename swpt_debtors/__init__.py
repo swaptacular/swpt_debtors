@@ -5,6 +5,7 @@ import json
 import sys
 import os
 import os.path
+import re
 from typing import List
 from flask_cors import CORS
 from ast import literal_eval
@@ -108,6 +109,10 @@ def _filter_pika_connection_reset_errors(
     return not is_pika_connection_reset_error
 
 
+def _as_regex(s: str) -> str:
+    return f"^{re.escape(s)}$"
+
+
 def configure_logging(
     level: str, format: str, associated_loggers: List[str]
 ) -> None:
@@ -173,6 +178,9 @@ class Configuration(metaclass=MetaEnvReader):
     MIN_DEBTOR_ID: _parse_debtor_id = None
     MAX_DEBTOR_ID: _parse_debtor_id = None
 
+    OAUTH2_SUPERUSER_USERNAME = "debtors-superuser"
+    OAUTH2_SUPERVISOR_USERNAME = "debtors-supervisor"
+
     SQLALCHEMY_DATABASE_URI = ""
     SQLALCHEMY_ENGINE_OPTIONS: _parse_dict = _parse_dict('{"pool_size": 0}')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -218,8 +226,8 @@ class Configuration(metaclass=MetaEnvReader):
     APP_DEBTORS_PER_PAGE = 2000
     APP_DOCUMENT_MAX_CONTENT_LENGTH = 50000
     APP_DOCUMENT_MAX_SAVES_PER_YEAR = 1000
-    APP_SUPERUSER_SUBJECT_REGEX = "^debtors-superuser$"
-    APP_SUPERVISOR_SUBJECT_REGEX = "^debtors-supervisor$"
+    APP_SUPERUSER_SUBJECT_REGEX = ""
+    APP_SUPERVISOR_SUBJECT_REGEX = ""
     APP_DEBTOR_SUBJECT_REGEX = "^debtors:([0-9]+)$"
 
 
@@ -243,9 +251,18 @@ def create_app(config_dict={}):
     app.url_map.converters["i64"] = Int64Converter
     app.config.from_object(Configuration)
     app.config.from_mapping(config_dict)
+
+    if not app.config["APP_SUPERUSER_SUBJECT_REGEX"]:
+        app.config["APP_SUPERUSER_SUBJECT_REGEX"] = _as_regex(
+            app.config["OAUTH2_SUPERUSER_USERNAME"]
+        )
+    if not app.config["APP_SUPERVISOR_SUBJECT_REGEX"]:
+        app.config["APP_SUPERVISOR_SUBJECT_REGEX"] = _as_regex(
+            app.config["OAUTH2_SUPERVISOR_USERNAME"]
+        )
     app.config["API_SPEC_OPTIONS"] = specs.API_SPEC_OPTIONS
     app.config["SHARDING_REALM"] = ShardingRealm(
-        Configuration.PROTOCOL_BROKER_QUEUE_ROUTING_KEY
+        app.config["PROTOCOL_BROKER_QUEUE_ROUTING_KEY"]
     )
     if app.config["APP_ENABLE_CORS"]:
         CORS(
