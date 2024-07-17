@@ -1,9 +1,9 @@
-FROM oryd/oathkeeper:v0.40.6 as oathkeeper-image
+FROM oryd/oathkeeper:v0.40.7 as oathkeeper-image
 
-FROM python:3.11.5-alpine3.18 AS venv-image
+FROM python:3.11.9-alpine3.20 AS venv-image
 WORKDIR /usr/src/app
 
-ENV POETRY_VERSION="1.5.1"
+ENV POETRY_VERSION="1.8.3"
 RUN apk add --no-cache \
     file \
     make \
@@ -29,7 +29,7 @@ RUN poetry config virtualenvs.create false --local \
 
 # This is the final app image. Starting from a clean alpine image, it
 # copies over the previously created virtual environment.
-FROM python:3.11.5-alpine3.18 AS app-image
+FROM python:3.11.9-alpine3.20 AS app-image
 ARG FLASK_APP=swpt_debtors
 
 ENV FLASK_APP=$FLASK_APP
@@ -80,12 +80,9 @@ CMD ["all"]
 # copies the auto-generated OpenAPI spec file. The entrypoint
 # substitutes the placeholders in the spec file with values from
 # environment variables.
-FROM swaggerapi/swagger-ui:v3.42.0 AS swagger-ui-image
+FROM swaggerapi/swagger-ui:v5.17.14 AS swagger-ui-image
 
 ENV SWAGGER_JSON=/openapi.json
 
 COPY --from=app-image /usr/src/app/openapi.json /openapi.template
-COPY docker/swagger-ui/entrypoint.sh /
-
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["sh", "/usr/share/nginx/run.sh"]
+COPY docker/swagger-ui/envsubst-on-openapi.sh /docker-entrypoint.d/25-envsubst-on-openapi.sh
