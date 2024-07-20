@@ -282,7 +282,7 @@ services:
     command:
       migrate sql --read-from-env --yes
     depends_on:
-      - debtors-hydra
+      - pg
     restart: on-failure
 
 
@@ -304,6 +304,8 @@ services:
     ports:
       - $SWPT_SERVER_LOCAL_PORT:1234
     command: swpt-server
+    depends_on:
+      - rabbitmq
     restart: always
 
 
@@ -326,6 +328,8 @@ services:
       - './docker/nodedata/server.key:/secrets/swpt-server.key'
       - './docker/nodedata:/var/lib/swpt-nodedata'
     command: configure-queue 1234abcd da.1234abcd
+    depends_on:
+      - rabbitmq
     restart: on-failure
 
 
@@ -349,6 +353,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: swpt-client 1234abcd da.1234abcd
+    depends_on:
+      - rabbitmq
     restart: always
 
 
