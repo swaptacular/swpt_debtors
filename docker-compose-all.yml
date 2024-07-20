@@ -47,10 +47,11 @@ services:
       - 'DEBTORS_WEBAPP_URL=http://debtors-webapp:80'
       - 'NGINX_ENTRYPOINT_QUIET_LOGS=1'
     depends_on:
-      - debtors-server
-      - debtors-swagger-ui
-      - debtors-login
       - debtors-hydra
+      - debtors-login
+      - debtors-apiproxy
+      - debtors-swagger-ui
+      - debtors-webapp
 
 
   # This container acts as a reverse proxy. It extracts the the debtor ID
@@ -193,6 +194,7 @@ services:
       - pg
       - redis
       - mail
+      - debtors-hydra
 
 
   # The purpose of this container is to initialize the database of the
