@@ -40,7 +40,7 @@ services:
       - $PUBLIC_PORT:$PUBLIC_PORT
     environment:
       - 'PORT=$PUBLIC_PORT'
-      - 'DEBTORS_HYDRA_URL=http://debtors-login:4444'
+      - 'DEBTORS_HYDRA_URL=http://debtors-hydra:4444'
       - 'DEBTORS_LOGIN_URL=http://debtors-login:8080'
       - 'DEBTORS_SERVER_URL=http://debtors-apiproxy:8080'
       - 'DEBTORS_SWAGGER_UI_URL=http://debtors-swagger-ui:8080'
@@ -50,6 +50,7 @@ services:
       - debtors-server
       - debtors-swagger-ui
       - debtors-login
+      - debtors-hydra
 
 
   # This container acts as a reverse proxy. It extracts the the debtor ID
@@ -77,7 +78,7 @@ services:
     environment:
       - 'MIN_DEBTOR_ID=$MIN_DEBTOR_ID'
       - 'MAX_DEBTOR_ID=$MAX_DEBTOR_ID'
-      - 'OAUTH2_INTROSPECT_URL=http://debtors-login:4445/oauth2/introspect'
+      - 'OAUTH2_INTROSPECT_URL=http://debtors-hydra:4445/oauth2/introspect'
       - 'OAUTH2_SUPERUSER_USERNAME=debtors-superuser'
       - 'OAUTH2_SUPERVISOR_USERNAME=debtors-supervisor'
       - 'WEBSERVER_PROCESSES=1'
@@ -98,6 +99,8 @@ services:
       - 'SUBSTITUTE_LOCALHOST_IN_VARS=PROTOCOL_BROKER_URL'
     depends_on:
       - pg
+      - rabbitmq
+      - debtors-hydra
 
 
   # The purpose of this container is to create the database schema for
@@ -125,6 +128,7 @@ services:
     command: configure
     depends_on:
       - pg
+      - rabbitmq
 
 
   # From the `swagger-ui-image`, runs a Swagger UI cleint for the
@@ -158,19 +162,100 @@ services:
       - 'DEFAULT_PEG_COIN=https://host.docker.internal:44302/USD#swpt:666'
 
 
-  # This container runs an OAuth 2.0 authorization server, which
-  # maintains its own user database, and provides UI for user
-  # registration, login, and authorization consent.
+  # This container runs the Web UI for user registrations, login, and
+  # OAuth2 authorization consent.
   debtors-login:
     image: ghcr.io/swaptacular/swpt_login:$SWPT_LOGIN_VERSION
+    environment:
+      - 'HYDRA_ADMIN_URL=http://debtors-hydra:4445/'
+      - 'SUBJECT_PREFIX=debtors:'
+      - 'WEBSERVER_PORT=8080'
+      - 'WEBSERVER_PROCESSES=1'
+      - 'WEBSERVER_THREADS=3'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
+      - 'REDIS_URL=redis://redis:6379/1?health_check_interval=30'
+      - 'SITE_TITLE=Swaptacular'
+      - 'ABOUT_URL=https://swaptacular.github.io/overview'
+      - 'MAIL_SERVER=mail'
+      - 'MAIL_PORT=1025'
+      - 'MAIL_DEFAULT_SENDER=Swaptacular <no-reply@example.com>'
+      - 'RECAPTCHA_PUBLIC_KEY=6Lc902MUAAAAAJL22lcbpY3fvg3j4LSERDDQYe37'
+      - 'RECAPTCHA_PIVATE_KEY=6Lc902MUAAAAAN--r4vUr8Vr7MU1PF16D9k2Ds9Q'
+      - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
+      - 'SUPERVISOR_CLIENT_SECRET=debtors-supervisor'
+      - 'API_AUTH2_TOKEN_URL=https://nginx:$PUBLIC_PORT/debtors-hydra/oauth2/token'
+      - 'API_RESOURCE_SERVER=https://nginx:$PUBLIC_PORT'
+      - 'API_TIMEOUT_SECONDS=5'
+      - 'APP_SIGNUP_REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
+      - 'APP_LOG_LEVEL=warning'
+      - 'APP_LOG_FORMAT=json'
+    depends_on:
+      - pg
+      - redis
+      - mail
+
+
+  # The purpose of this container is to initialize the database of the
+  # `debtors-login` container, and to create a predefined set of
+  # OAuth2 clients (like "swagger-ui"). It has to be run only once,
+  # but running it multiple times should not do any harm.
+  #
+  # IMPORTANT NOTE: The method of defining OAuth2 clients which we use
+  # here will not work with Ory Hydra version 2 or newer. Also, to
+  # configure the default admin API endpoint in Ory Hydra >= 2, you
+  # should use the "ORY_SDK_URL" environment variable instead of
+  # "HYDRA_ADMIN_URL" ('ORY_SDK_URL=http://debtors-hydra:4445/').
+  debtors-login-config:
+    image: ghcr.io/swaptacular/swpt_login:$SWPT_LOGIN_VERSION
+    volumes:
+      - './docker/hydra:/etc/hydra-config'
+    environment:
+      - 'HYDRA_ADMIN_URL=http://debtors-hydra:4445/'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
+    command: >
+      sh -c '/usr/src/app/entrypoint.sh configure
+      && (
+      hydra clients get debtors-webapp --fake-tls-termination > /dev/null
+      || hydra clients import
+      /etc/hydra-config/debtors-supervisor.json
+      /etc/hydra-config/debtors-superuser.json
+      /etc/hydra-config/swagger-ui.json
+      /etc/hydra-config/debtors-webapp.json
+      --fake-tls-termination
+      )'
+    depends_on:
+      - pg
+      - debtors-hydra
+    restart: on-failure
+
+
+  # This container runs the Ory Hydra open source OAuth 2.0 server
+  # (https://github.com/ory/hydra), which is used to generate and
+  # verify access tokens.
+  #
+  # IMPORTANT NOTE: Here we use an old version (v1.11.10) of Ory
+  # Hydra. The reason for this is that from version 2, Ory Hydra does
+  # not allow users to chose client IDs (they are always automatically
+  # generated UUIDs). However, for this demo to work without
+  # complicated parameters tweaking, we need to be able to choose the
+  # client IDs.
+  #
+  # Another important backward incompatible change that Ory Hydra 2
+  # brings is that it prefixes all admin API endpoints with "/admin/".
+  #
+  # Therefore, in the client containers, instead of:
+  # 'HYDRA_ADMIN_URL=http://debtors-hydra:4445/' and
+  # 'OAUTH2_INTROSPECT_URL=http://debtors-hydra:4445/oauth2/introspect'
+  #
+  # with Ory Hydra >= 2, we would have:
+  # 'HYDRA_ADMIN_URL=http://debtors-hydra:4445/admin/' and
+  # 'OAUTH2_INTROSPECT_URL=http://debtors-hydra:4445/admin/oauth2/introspect'
+  debtors-hydra:
+    image: oryd/hydra:v1.11.10
     environment:
       - 'SERVE_PUBLIC_PORT=4444'
       - 'SERVE_ADMIN_PORT=4445'
       - 'SERVE_TLS_ALLOW_TERMINATION_FROM=0.0.0.0/0'
-      - 'WEBSERVER_PORT=8080'
-      - 'WEBSERVER_PROCESSES=1'
-      - 'WEBSERVER_THREADS=3'
-      - 'SUBJECT_PREFIX=debtors:'
       - 'TTL_ACCESS_TOKEN=24h'
       - 'TTL_REFRESH_TOKEN=720h'
       - 'SECRETS_SYSTEM=$HYDRA_SYSTEM_SECRET'
@@ -178,67 +263,26 @@ services:
       - 'URLS_LOGIN=https://$PUBLIC_HOST/debtors-login/'
       - 'URLS_CONSENT=https://$PUBLIC_HOST/debtors-consent/'
       - 'URLS_ERROR=https://github.com/swaptacular/swpt_login'
-      - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
-      - 'REDIS_URL=redis://redis:6379/1?health_check_interval=30'
-      - 'HYDRA_ADMIN_URL=http://debtors-login:4445'
-      - 'SITE_TITLE=Swaptacular'
-      - 'STYLE_URL='
-      - 'ABOUT_URL=https://swaptacular.github.io/overview'
-      - 'RECAPTCHA_PUBLIC_KEY=6Lc902MUAAAAAJL22lcbpY3fvg3j4LSERDDQYe37'
-      - 'RECAPTCHA_PIVATE_KEY=6Lc902MUAAAAAN--r4vUr8Vr7MU1PF16D9k2Ds9Q'
-      - 'MAIL_SERVER=mail'
-      - 'MAIL_PORT=1025'
-      - 'MAIL_DEFAULT_SENDER=Swaptacular <no-reply@example.com>'
-      - 'API_AUTH2_TOKEN_URL=https://nginx:$PUBLIC_PORT/debtors-hydra/oauth2/token'
-      - 'API_RESOURCE_SERVER=https://nginx:$PUBLIC_PORT'
-      - 'API_TIMEOUT_SECONDS=5'
-      - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
-      - 'SUPERVISOR_CLIENT_SECRET=debtors-supervisor'
-      - 'APP_LOG_LEVEL=warning'
-      - 'APP_LOG_FORMAT=json'
-      - 'HYDRA_LOG_LEVEL=warning'
-      - 'HYDRA_LOG_FORMAT=json'
-      - 'APP_SIGNUP_REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
+      - 'DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
+      - 'SQA_OPT_OUT=true'
+      - 'LOG_LEVEL=warn'
+      - 'LOG_FORMAT=json'
     depends_on:
       - pg
-      - redis
-      - mail
+    restart: on-failure
 
 
-  # The purpose of this container is to create the database schemas
-  # for the `debtors-login` container. It has to be run only once,
-  # but running it multiple times should not do any harm.
-  debtors-login-config:
-    image: ghcr.io/swaptacular/swpt_login:$SWPT_LOGIN_VERSION
-    environment:
-      - 'HYDRA_DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
-    command: configure
-    depends_on:
-      - pg
-
-
-  # The purpose of this container is to create a predefined set of
-  # OAuth2 clients (like "swagger-ui"). It has to be run only once,
-  # but running it multiple times should not do any harm.
+  # The purpose of this container is to initialize the database of the
+  # `debtors-hydra` container. It has to be run only once, but running
+  # it multiple times should not do any harm.
   debtors-hydra-config:
-    image: ghcr.io/swaptacular/swpt_login:$SWPT_LOGIN_VERSION
+    image: oryd/hydra:v1.11.10
     environment:
-      - 'HYDRA_ADMIN_URL=http://debtors-login:4445'
-    volumes:
-      - './docker/hydra:/etc/hydra-config'
+      - 'DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
     command:
-      sh -c 'hydra clients get debtors-webapp --fake-tls-termination ||
-      hydra clients import
-      /etc/hydra-config/debtors-supervisor.json
-      /etc/hydra-config/debtors-superuser.json
-      /etc/hydra-config/swagger-ui.json
-      /etc/hydra-config/debtors-webapp.json
-      --fake-tls-termination
-      --fail-after 5m'
+      migrate sql --read-from-env --yes
     depends_on:
-      - debtors-login
+      - debtors-hydra
     restart: on-failure
 
 
