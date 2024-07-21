@@ -164,7 +164,9 @@ services:
 
 
   # This container runs the Web UI for user registrations, login, and
-  # OAuth2 authorization consent.
+  # OAuth2 authorization consent. Note that in production it is
+  # recommended to also run one "login" container with the `flush`
+  # command.
   debtors-login:
     image: ghcr.io/swaptacular/swpt_login:$SWPT_LOGIN_VERSION
     environment:
