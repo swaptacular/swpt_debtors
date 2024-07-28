@@ -58,7 +58,11 @@ def subscribe():  # pragma: no cover
     )
 
     # declare a corresponding dead-letter queue
-    channel.queue_declare(dead_letter_queue_name, durable=True)
+    channel.queue_declare(
+        dead_letter_queue_name,
+        durable=True,
+        arguments={"x-queue-type": "stream"},
+    )
     logger.info('Declared "%s" dead-letter queue.', dead_letter_queue_name)
 
     # declare the queue
@@ -66,6 +70,8 @@ def subscribe():  # pragma: no cover
         queue_name,
         durable=True,
         arguments={
+            "x-queue-type": "quorum",
+            "overflow": "reject-publish",
             "x-dead-letter-exchange": "",
             "x-dead-letter-routing-key": dead_letter_queue_name,
         },
