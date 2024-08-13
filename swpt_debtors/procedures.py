@@ -171,7 +171,7 @@ def get_debtor(
             == Debtor.STATUS_IS_ACTIVATED_FLAG
         )
     if lock:
-        query = query.with_for_update()
+        query = query.with_for_update(key_share=True)
 
     return query.one_or_none()
 
@@ -213,7 +213,7 @@ def update_debtor_config(
 
 @atomic
 def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
-    debtor = get_active_debtor(debtor_id, lock=True)
+    debtor = get_active_debtor(debtor_id)
     if debtor is None:
         raise DebtorDoesNotExist()
 
@@ -234,7 +234,7 @@ def get_running_transfer(
         debtor_id=debtor_id, transfer_uuid=transfer_uuid
     )
     if lock:
-        query = query.with_for_update()
+        query = query.with_for_update(key_share=True)
 
     return query.one_or_none()
 
@@ -353,7 +353,7 @@ def process_rejected_config_signal(
             func.abs(Debtor.min_balance + negligible_amount)
             <= EPS * negligible_amount
         )
-        .with_for_update()
+        .with_for_update(key_share=True)
         .one_or_none()
     )
 
@@ -374,7 +374,7 @@ def process_account_purge_signal(
             has_server_account=True,
         )
         .filter(Debtor.account_creation_date <= creation_date)
-        .with_for_update()
+        .with_for_update(key_share=True)
         .one_or_none()
     )
 
