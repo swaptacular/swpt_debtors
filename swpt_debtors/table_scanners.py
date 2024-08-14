@@ -141,7 +141,7 @@ class DebtorScanner(TableScanner):
                     Debtor.status_flags.op("&")(status_flags_mask)
                     == Debtor.STATUS_IS_ACTIVATED_FLAG
                 )
-                .with_for_update(skip_locked=True)
+                .with_for_update(skip_locked=True, key_share=True)
                 .all()
             )
 
