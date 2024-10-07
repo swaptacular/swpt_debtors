@@ -69,9 +69,10 @@ def test_scan_debtors(app, db_session, current_ts):
     assert result.exit_code == 0
 
     debtors = Debtor.query.all()
-    assert len(debtors) == 4
+    assert len(debtors) == 5
     assert sorted([d.debtor_id - MIN_DEBTOR_ID for d in debtors]) == [
         2,
+        3,
         4,
         5,
         6,
