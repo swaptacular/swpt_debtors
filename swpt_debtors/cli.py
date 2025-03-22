@@ -90,26 +90,6 @@ def subscribe():  # pragma: no cover
     )
 
 
-@swpt_debtors.command()
-@with_appcontext
-def delete_queue():  # pragma: no cover
-    """Deletes the RabbitMQ queue.
-    """
-
-    logger = logging.getLogger(__name__)
-    queue_name = current_app.config["PROTOCOL_BROKER_QUEUE"]
-    broker_url = current_app.config["PROTOCOL_BROKER_URL"]
-    connection = pika.BlockingConnection(pika.URLParameters(broker_url))
-    channel = connection.channel()
-
-    channel.queue_delete(
-        queue_name,
-        if_empty=True,
-        if_unused=True,
-    )
-    logger.info('Deleted "%s" queue.', queue_name)
-
-
 @swpt_debtors.command("scan_debtors")
 @with_appcontext
 @click.option("-d", "--days", type=float, help="The number of days.")
