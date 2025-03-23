@@ -240,6 +240,7 @@ def create_app(config_dict={}):
         debtors_api,
         transfers_api,
         documents_api,
+        health_api,
         specs,
     )
     from .cli import swpt_debtors
@@ -278,6 +279,7 @@ def create_app(config_dict={}):
     api.register_blueprint(debtors_api)
     api.register_blueprint(transfers_api)
     api.register_blueprint(documents_api)
+    api.register_blueprint(health_api)
     app.cli.add_command(swpt_debtors)
     return app
 

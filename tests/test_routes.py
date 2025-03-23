@@ -686,3 +686,9 @@ def test_save_document(client, debtor):
         data=content,
     )
     assert r.status_code == 404
+
+
+def test_health_check(client):
+    r = client.get("/debtors/health/check/public")
+    assert r.status_code == 200
+    assert r.content_type == "text/plain"
