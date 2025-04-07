@@ -1,3 +1,4 @@
+import pytest
 import sqlalchemy
 from unittest.mock import Mock
 from uuid import UUID
@@ -164,3 +165,16 @@ def test_consume_messages(app):
         args=["swpt_debtors", "consume_messages", "--url=INVALID"]
     )
     assert result.exit_code == 1
+
+
+def test_alembic_current_head(app, request, capfd):
+    if request.config.option.capture != "no":
+        pytest.skip("needs to be run with --capture=no")
+
+    runner = app.test_cli_runner()
+    result = runner.invoke(
+        args=["db", "current"]
+    )
+    assert result.exit_code == 0
+    captured = capfd.readouterr()
+    assert captured.out.strip().endswith(" (head)")
