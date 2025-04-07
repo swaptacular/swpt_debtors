@@ -133,6 +133,12 @@ case $1 in
         generate_oathkeeper_configuration
         exec supervisord -c "$APP_ROOT_DIR/supervisord-all.conf"
         ;;
+    await_migrations)
+        echo Awaiting database migrations to be applied...
+        while ! flask db current 2> /dev/null | grep '(head)'; do
+            sleep 10
+        done
+        ;;
     *)
         exec "$@"
         ;;
