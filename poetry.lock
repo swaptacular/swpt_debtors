@@ -1507,8 +1507,8 @@ SQLAlchemy = ">=1.4.18"
 [package.source]
 type = "git"
 url = "https://github.com/swaptacular/swpt_pythonlib.git"
-reference = "v0.10.4"
-resolved_reference = "5c28508a739d5f4da33e0812bf54ccb0c7f1b409"
+reference = "v0.10.5"
+resolved_reference = "6924a90a93f6e025041c773a7944a868e6e1d90e"
 
 [[package]]
 name = "tomli"
@@ -1842,4 +1842,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9"
-content-hash = "c5bfeda6a0acebb15442fb9b0ae677fd9a7342241ed8f955815a2a6f75ed75da"
+content-hash = "0b278d7eabac06ef90aaaacea7eb70dd54dfd7f8c3fa7c722260f37fe8066b06"
