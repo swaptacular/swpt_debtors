@@ -127,14 +127,14 @@ def activate_debtor(debtor_id: int, reservation_id: str) -> Debtor:
     if debtor is None:
         raise InvalidReservationId()
 
-    if not debtor.is_activated:
-        if (
-            reservation_id != str(debtor.reservation_id)
-            or debtor.is_deactivated
-        ):
-            raise InvalidReservationId()
-        debtor.activate()
-        _insert_configure_account_signal(debtor)
+    if reservation_id == str(debtor.reservation_id):
+        if not debtor.is_activated:
+            debtor.activate()
+            _insert_configure_account_signal(debtor)
+    elif debtor.is_activated:
+        raise DebtorExists()  # pragma: no cover
+    else:
+        raise InvalidReservationId()
 
     return debtor
 
