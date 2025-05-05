@@ -165,8 +165,8 @@ services:
 
   # This container runs the Web UI for user registrations, login, and
   # OAuth2 authorization consent. Note that in production it is
-  # recommended to also run one "login" container with the `flush`
-  # command.
+  # recommended to also run two additional "login" containers with
+  # `flush_activate_users` and `flush_deactivate_users` commands.
   debtors-login:
     image: ghcr.io/swaptacular/swpt_login:$SWPT_LOGIN_VERSION
     environment:
@@ -175,7 +175,7 @@ services:
       - 'WEBSERVER_PORT=8080'
       - 'WEBSERVER_PROCESSES=1'
       - 'WEBSERVER_THREADS=3'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql+psycopg://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
       - 'REDIS_URL=redis://redis:6379/1?health_check_interval=30'
       - 'SITE_TITLE=Swaptacular'
       - 'ABOUT_URL=https://swaptacular.github.io/overview'
@@ -183,12 +183,13 @@ services:
       - 'MAIL_PORT=1025'
       - 'MAIL_DEFAULT_SENDER=Swaptacular <no-reply@example.com>'
       - 'SHOW_CAPTCHA_ON_SIGNUP=False'
-      - 'SUPERVISOR_CLIENT_ID=debtors-supervisor'
-      - 'SUPERVISOR_CLIENT_SECRET=debtors-supervisor'
+      - 'SUPERUSER_CLIENT_ID=debtors-superuser'
+      - 'SUPERUSER_CLIENT_SECRET=debtors-superuser'
       - 'API_AUTH2_TOKEN_URL=https://nginx:$PUBLIC_PORT/debtors-hydra/oauth2/token'
       - 'API_RESOURCE_SERVER=https://nginx:$PUBLIC_PORT'
       - 'API_TIMEOUT_SECONDS=5'
       - 'APP_SIGNUP_REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
+      - 'APP_VERIFY_SSL_CERTIFICATES=False'
       - 'APP_LOG_LEVEL=warning'
       - 'APP_LOG_FORMAT=json'
     depends_on:
@@ -214,7 +215,7 @@ services:
       - './docker/hydra:/etc/hydra-config'
     environment:
       - 'HYDRA_ADMIN_URL=http://debtors-hydra:4445/'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
+      - 'SQLALCHEMY_DATABASE_URI=postgresql+psycopg://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
     command: >
       sh -c '/usr/src/app/entrypoint.sh configure
       && (
