@@ -214,6 +214,7 @@ services:
     volumes:
       - './docker/hydra:/etc/hydra-config'
     environment:
+      - 'SUBJECT_PREFIX=debtors:'
       - 'HYDRA_ADMIN_URL=http://debtors-hydra:4445/'
       - 'SQLALCHEMY_DATABASE_URI=postgresql+psycopg://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
     command: >
