@@ -190,7 +190,7 @@ services:
       - 'API_TIMEOUT_SECONDS=5'
       - 'APP_SIGNUP_REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
       - 'APP_VERIFY_SSL_CERTIFICATES=False'
-      - 'APP_LOG_LEVEL=warning'
+      - 'APP_LOG_LEVEL=info'
       - 'APP_LOG_FORMAT=json'
     depends_on:
       - pg
