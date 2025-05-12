@@ -175,10 +175,11 @@ services:
       - 'WEBSERVER_PORT=8080'
       - 'WEBSERVER_PROCESSES=1'
       - 'WEBSERVER_THREADS=3'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql+psycopg://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
+      - 'POSTGRES_URL=postgresql+psycopg://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
       - 'REDIS_URL=redis://redis:6379/1?health_check_interval=30'
       - 'SITE_TITLE=Swaptacular'
       - 'ABOUT_URL=https://swaptacular.github.io/overview'
+      - 'SIGNED_UP_REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
       - 'MAIL_SERVER=mail'
       - 'MAIL_PORT=1025'
       - 'MAIL_DEFAULT_SENDER=Swaptacular <no-reply@example.com>'
@@ -188,7 +189,6 @@ services:
       - 'API_AUTH2_TOKEN_URL=https://nginx:$PUBLIC_PORT/debtors-hydra/oauth2/token'
       - 'API_RESOURCE_SERVER=https://nginx:$PUBLIC_PORT'
       - 'API_TIMEOUT_SECONDS=5'
-      - 'APP_SIGNUP_REDIRECT_URL=https://$PUBLIC_HOST/debtors-webapp/'
       - 'APP_VERIFY_SSL_CERTIFICATES=False'
       - 'APP_LOG_LEVEL=info'
       - 'APP_LOG_FORMAT=json'
@@ -216,7 +216,7 @@ services:
     environment:
       - 'SUBJECT_PREFIX=debtors:'
       - 'HYDRA_ADMIN_URL=http://debtors-hydra:4445/'
-      - 'SQLALCHEMY_DATABASE_URI=postgresql+psycopg://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
+      - 'POSTGRES_URL=postgresql+psycopg://swpt_debtors_login:swpt_debtors_login@pg/${POSTGRES_DB}'
     command: >
       sh -c '/usr/src/app/entrypoint.sh configure
       && (
