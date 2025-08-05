@@ -103,11 +103,7 @@ case $1 in
             setup_rabbitmq_bindings
         fi
         ;;
-    subscribe)
-        export SQLALCHEMY_DATABASE_URI=postgresql+psycopg://localhost:5432/dummy
-        exec flask swpt_debtors "$@"
-        ;;
-    unsubscribe)
+    subscribe | unsubscribe | delete_queue)
         export SQLALCHEMY_DATABASE_URI=postgresql+psycopg://localhost:5432/dummy
         exec flask swpt_debtors "$@"
         ;;
