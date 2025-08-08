@@ -242,6 +242,11 @@ container allows you to execute the following *documented commands*:
   Tries to safely delete a RabbitMQ queue. Normally, this command
   should not be executed directly.
 
+* `verify_shard_content`
+
+  Verifies that the shard contains only records belonging to the
+  shard. Normally, this command should not be executed directly.
+
 This [docker-compose example](../master/docker-compose-all.yml) shows
 how to use the generated docker images, along with the PostgerSQL
 server, the RabbitMQ server, the OAuth 2.0 authorization server, and
