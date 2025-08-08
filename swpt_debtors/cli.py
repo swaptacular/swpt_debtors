@@ -7,9 +7,11 @@ import pika
 import click
 from typing import Optional, Any
 from datetime import timedelta
+from sqlalchemy import select
 from flask import current_app
 from flask.cli import with_appcontext
 from flask_sqlalchemy.model import Model
+from swpt_pythonlib.utils import ShardingRealm
 from swpt_debtors.extensions import db
 from swpt_debtors.table_scanners import DebtorScanner
 from swpt_pythonlib.multiproc_utils import (
@@ -218,6 +220,48 @@ def delete_queue(url, queue):  # pragma: no cover
             if e.reply_code != REPLY_CODE_PRECONDITION_FAILED:
                 raise
             time.sleep(3.0)
+
+
+@swpt_debtors.command("verify_shard_content")
+@with_appcontext
+def verify_shard_content():
+    """Verify that the shard contains only records belonging to the
+    shard.
+
+    If the verification is successful, the exit code will be 0. If a
+    record has been found that does not belong to the shard, the exit
+    code will be 1.
+    """
+
+    from swpt_debtors.models import Debtor
+
+    class InvalidRecord(Exception):
+        """The record does not belong the shard."""
+
+    sharding_realm: ShardingRealm = current_app.config["SHARDING_REALM"]
+    yield_per = current_app.config["APP_VERIFY_SHARD_YIELD_PER"]
+    sleep_seconds = current_app.config["APP_VERIFY_SHARD_SLEEP_SECONDS"]
+
+    def verify_table(conn, *table_columns):
+        with conn.execution_options(yield_per=yield_per).execute(
+                select(*table_columns)
+        ) as result:
+            for n, row in enumerate(result):
+                if n % yield_per == 0 and sleep_seconds > 0.0:
+                    time.sleep(sleep_seconds)
+                if not sharding_realm.match(*row):
+                    raise InvalidRecord
+
+    with db.engine.connect() as conn:
+        logger = logging.getLogger(__name__)
+        try:
+            verify_table(conn, Debtor.debtor_id)
+        except InvalidRecord:
+            logger.error(
+                "At least one record has been found that does not belong to"
+                " the shard."
+            )
+            sys.exit(1)
 
 
 @swpt_debtors.command("scan_debtors")
