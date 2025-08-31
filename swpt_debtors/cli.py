@@ -243,7 +243,7 @@ def verify_shard_content():
     code will be 1.
     """
 
-    from swpt_debtors.models import Debtor
+    import swpt_debtors.models as m
 
     class InvalidRecord(Exception):
         """The record does not belong the shard."""
@@ -265,7 +265,10 @@ def verify_shard_content():
     with db.engine.connect() as conn:
         logger = logging.getLogger(__name__)
         try:
-            verify_table(conn, Debtor.debtor_id)
+            verify_table(conn, m.Debtor.debtor_id)
+            verify_table(conn, m.ConfigureAccountSignal.debtor_id)
+            verify_table(conn, m.PrepareTransferSignal.debtor_id)
+            verify_table(conn, m.FinalizeTransferSignal.debtor_id)
         except InvalidRecord:
             logger.error(
                 "At least one record has been found that does not belong to"
