@@ -292,10 +292,7 @@ def scan_debtors(days, quit_early):
 
     The specified number of days determines the intended duration of a
     single pass through the debtors table. If the number of days is
-    not specified, the value of the configuration variable
-    APP_DEBTORS_SCAN_DAYS is taken. If it is not set, the default
-    number of days is 7.
-
+    not specified, the default is 7 days.
     """
 
     logger = logging.getLogger(__name__)
