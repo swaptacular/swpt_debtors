@@ -4,6 +4,7 @@ from datetime import datetime, date
 from marshmallow import ValidationError
 from swpt_pythonlib import rabbitmq
 import swpt_pythonlib.protocol_schemas as ps
+from swpt_debtors.extensions import db
 from swpt_debtors import procedures
 from swpt_debtors.models import CT_ISSUING, is_valid_debtor_id
 from swpt_debtors.schemas import ActivateDebtorMessageSchema
@@ -244,4 +245,5 @@ class SmpConsumer(rabbitmq.Consumer):
             raise RuntimeError("The agent is not responsible for this debtor.")
 
         actor(**message_content)
+        db.session.close()
         return True
