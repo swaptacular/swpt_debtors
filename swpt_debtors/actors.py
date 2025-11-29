@@ -173,7 +173,7 @@ def _on_activate_debtor_signal(
 ) -> None:
     try:
         procedures.activate_debtor(debtor_id, reservation_id)
-    except procedures.InvalidReservationId:
+    except (procedures.InvalidReservationId, procedures.DebtorExists):
         pass
 
 

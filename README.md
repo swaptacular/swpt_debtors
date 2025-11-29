@@ -194,6 +194,11 @@ container allows you to execute the following *documented commands*:
   **IMPORTANT NOTE: This command has to be run only once (at the
   beginning), but running it multiple times should not do any harm.**
 
+* `await_migrations`
+
+  Blocks until the latest migration applied to the PostgreSQL server
+  instance matches the latest known migration.
+
 * `webserver`
 
   Starts only the "Simple Issuing Web API" server. This command allows
@@ -204,7 +209,9 @@ container allows you to execute the following *documented commands*:
 
   Starts only the processes that consume SMP messages. This command
   allows you to start as many additional dedicated SMP message
-  processors as necessary, to handle the incoming load.
+  processors as necessary, to handle the incoming load. If the
+  `--draining-mode` option is specified, periodic pauses will be made
+  during consumption, to allow the queue to be deleted safely.
 
 * `flush_all`
 
@@ -219,6 +226,28 @@ container allows you to execute the following *documented commands*:
   PostgreSQL database. These commands allow you to start processes dedicated
   to the flushing of particular type of messages. (See "FLUSH_PROCESSES" and
   "FLUSH_PERIOD" environment variables.)
+
+* `subscribe`
+
+  Declares a RabbitMQ queue, and subscribes it to receive incoming
+  messages. Normally, this command should not be executed directly.
+
+* `unsubscribe`
+
+  Unsubscribes a RabbitMQ queue from receiving incoming messages.
+  Normally, this command should not be executed directly.
+
+* `delete_queue`
+
+  Tries to safely delete a RabbitMQ queue. Normally, this command
+  should not be executed directly.
+
+* `verify_shard_content`
+
+  Verifies that the shard contains only records belonging to the
+  shard. Normally, this command should not be executed directly.
+
+**Note:** The Docker image comes with `sh` and `psql` installed.
 
 This [docker-compose example](../master/docker-compose-all.yml) shows
 how to use the generated docker images, along with the PostgerSQL

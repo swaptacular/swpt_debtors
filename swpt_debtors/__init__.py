@@ -216,10 +216,11 @@ class Configuration(metaclass=MetaEnvReader):
     APP_FLUSH_CONFIGURE_ACCOUNTS_BURST_COUNT = 10000
     APP_FLUSH_PREPARE_TRANSFERS_BURST_COUNT = 10000
     APP_FLUSH_FINALIZE_TRANSFERS_BURST_COUNT = 10000
+    APP_VERIFY_SHARD_YIELD_PER = 10000
+    APP_VERIFY_SHARD_SLEEP_SECONDS = 0.005
     APP_DEBTORS_SCAN_DAYS = 7
     APP_DEBTORS_SCAN_BLOCKS_PER_QUERY = 40
     APP_DEBTORS_SCAN_BEAT_MILLISECS = 100
-    APP_DEACTIVATED_DEBTOR_RETENTION_DAYS = 7305.0
     APP_INACTIVE_DEBTOR_RETENTION_DAYS = 14.0
     APP_MAX_HEARTBEAT_DELAY_DAYS = 365
     APP_MAX_CONFIG_DELAY_HOURS = 24
@@ -241,6 +242,7 @@ def create_app(config_dict={}):
         debtors_api,
         transfers_api,
         documents_api,
+        health_api,
         specs,
     )
     from .cli import swpt_debtors
@@ -279,6 +281,7 @@ def create_app(config_dict={}):
     api.register_blueprint(debtors_api)
     api.register_blueprint(transfers_api)
     api.register_blueprint(documents_api)
+    api.register_blueprint(health_api)
     app.cli.add_command(swpt_debtors)
     return app
 

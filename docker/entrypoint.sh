@@ -78,7 +78,7 @@ perform_db_initialization() {
 }
 
 generate_oathkeeper_configuration() {
-    envsubst '$WEBSERVER_PORT $OAUTH2_INTROSPECT_URL' \
+    envsubst '$WEBSERVER_PORT $OAUTH2_INTROSPECT_URL $TOKEN_INTROSPECTION_CACHE_MAX_COST' \
              < "$APP_ROOT_DIR/oathkeeper/config.yaml.template" \
              > "$APP_ROOT_DIR/oathkeeper/config.yaml"
     envsubst '$RESOURCE_SERVER' \
@@ -102,6 +102,13 @@ case $1 in
         if [[ "$SETUP_RABBITMQ_BINDINGS" == "yes" ]]; then
             setup_rabbitmq_bindings
         fi
+        ;;
+    subscribe | unsubscribe | delete_queue)
+        export SQLALCHEMY_DATABASE_URI=postgresql+psycopg://localhost:5432/dummy
+        exec flask swpt_debtors "$@"
+        ;;
+    verify_shard_content)
+        exec flask swpt_debtors "$@"
         ;;
     webserver)
         generate_oathkeeper_configuration
@@ -132,6 +139,12 @@ case $1 in
         # Spawns all the necessary processes in one container.
         generate_oathkeeper_configuration
         exec supervisord -c "$APP_ROOT_DIR/supervisord-all.conf"
+        ;;
+    await_migrations)
+        echo Awaiting database migrations to be applied...
+        while ! flask db current 2> /dev/null | grep '(head)'; do
+            sleep 10
+        done
         ;;
     *)
         exec "$@"
