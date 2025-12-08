@@ -1,6 +1,7 @@
 from typing import TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_pythonlib.scan_table import TableScanner
+from sqlalchemy.orm import load_only
 from sqlalchemy.sql.expression import and_, or_, null, true, false
 from flask import current_app
 from swpt_debtors.extensions import db
@@ -58,23 +59,28 @@ class DebtorScanner(TableScanner):
 
     def _delete_debtors_not_activated_for_long_time(self, rows, current_ts):
         c = self.table.c
+        c_debtor_id = c.debtor_id
+        c_status_flags = c.status_flags
+        c_created_at = c.created_at
         activated_flag = Debtor.STATUS_IS_ACTIVATED_FLAG
         inactive_cutoff_ts = current_ts - self.inactive_interval
 
         def not_activated_for_long_time(row) -> bool:
             return (
-                row[c.status_flags] & activated_flag == 0
-                and row[c.created_at] < inactive_cutoff_ts
+                row[c_status_flags] & activated_flag == 0
+                and row[c_created_at] < inactive_cutoff_ts
             )
 
         ids_to_delete = [
-            row[c.debtor_id]
+            row[c_debtor_id]
             for row in rows
             if not_activated_for_long_time(row)
         ]
         if ids_to_delete:
             to_delete = (
-                Debtor.query.filter(Debtor.debtor_id.in_(ids_to_delete))
+                Debtor.query
+                .options(load_only(Debtor.debtor_id))
+                .filter(Debtor.debtor_id.in_(ids_to_delete))
                 .filter(Debtor.status_flags.op("&")(activated_flag) == 0)
                 .filter(Debtor.created_at < inactive_cutoff_ts)
                 .with_for_update(skip_locked=True)
@@ -88,6 +94,13 @@ class DebtorScanner(TableScanner):
 
     def _set_config_errors_if_necessary(self, rows, current_ts):
         c = self.table.c
+        c_debtor_id = c.debtor_id
+        c_is_config_effectual = c.is_config_effectual
+        c_has_server_account = c.has_server_account
+        c_account_last_heartbeat_ts = c.account_last_heartbeat_ts
+        c_config_error = c.config_error
+        c_last_config_ts = c.last_config_ts
+        c_status_flags = c.status_flags
         account_last_heartbeat_ts_cutoff = (
             current_ts - self.max_heartbeat_delay
         )
@@ -99,21 +112,21 @@ class DebtorScanner(TableScanner):
         def has_unreported_config_problem(row) -> bool:
             return (
                 (
-                    not row[c.is_config_effectual]
+                    not row[c_is_config_effectual]
                     or (
-                        row[c.has_server_account]
-                        and row[c.account_last_heartbeat_ts]
+                        row[c_has_server_account]
+                        and row[c_account_last_heartbeat_ts]
                         < account_last_heartbeat_ts_cutoff
                     )
                 )
-                and row[c.config_error] is None
-                and row[c.last_config_ts] < last_config_ts_cutoff
-                and row[c.status_flags] & status_flags_mask
+                and row[c_config_error] is None
+                and row[c_last_config_ts] < last_config_ts_cutoff
+                and row[c_status_flags] & status_flags_mask
                 == Debtor.STATUS_IS_ACTIVATED_FLAG
             )
 
         pks_to_set = [
-            row[c.debtor_id]
+            row[c_debtor_id]
             for row in rows
             if has_unreported_config_problem(row)
         ]
@@ -152,18 +165,21 @@ class DebtorScanner(TableScanner):
 
     def _delete_parent_shard_debtors(self, rows, current_ts):
         c = self.table.c
+        c_debtor_id = c.debtor_id
 
         def belongs_to_parent_shard(row) -> bool:
             return not is_valid_debtor_id(
-                row[c.debtor_id]
-            ) and is_valid_debtor_id(row[c.debtor_id], match_parent=True)
+                row[c_debtor_id]
+            ) and is_valid_debtor_id(row[c_debtor_id], match_parent=True)
 
         ids_to_delete = [
-            row[c.debtor_id] for row in rows if belongs_to_parent_shard(row)
+            row[c_debtor_id] for row in rows if belongs_to_parent_shard(row)
         ]
         if ids_to_delete:
             to_delete = (
-                Debtor.query.filter(Debtor.debtor_id.in_(ids_to_delete))
+                Debtor.query
+                .options(load_only(Debtor.debtor_id))
+                .filter(Debtor.debtor_id.in_(ids_to_delete))
                 .with_for_update(skip_locked=True)
                 .all()
             )

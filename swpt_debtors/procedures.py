@@ -2,6 +2,7 @@ import json
 from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, List, Tuple, Dict, Any
+from sqlalchemy.orm import load_only
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import func
 from swpt_pythonlib.utils import Seqnum, increment_seqnum
@@ -341,7 +342,9 @@ def process_rejected_config_signal(
         return
 
     debtor = (
-        Debtor.query.filter_by(
+        Debtor.query
+        .options(load_only(Debtor.debtor_id))
+        .filter_by(
             debtor_id=debtor_id,
             last_config_ts=config_ts,
             last_config_seqnum=config_seqnum,
@@ -369,7 +372,9 @@ def process_account_purge_signal(
         return
 
     debtor = (
-        Debtor.query.filter_by(
+        Debtor.query
+        .options(load_only(Debtor.debtor_id))
+        .filter_by(
             debtor_id=debtor_id,
             has_server_account=True,
         )
