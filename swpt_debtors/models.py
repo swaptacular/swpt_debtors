@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timezone
 from flask import current_app
 from marshmallow import Schema, fields
+from sqlalchemy import text
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql.expression import null, or_
 from swpt_debtors.extensions import db, publisher, DEBTORS_OUT_EXCHANGE
@@ -25,6 +26,7 @@ INTEREST_RATE_CEIL = 100.0
 CONFIG_DATA_MAX_BYTES = 2000
 ROOT_CREDITOR_ID = 0
 DEFAULT_CONFIG_FLAGS = 0
+SET_SEQSCAN_ON = text("SET LOCAL enable_seqscan = on")
 
 CT_ISSUING = "issuing"
 

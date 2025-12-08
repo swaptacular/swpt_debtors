@@ -264,6 +264,7 @@ def verify_shard_content():
                     raise InvalidRecord
 
     with db.engine.connect() as conn:
+        conn.execute(m.SET_SEQSCAN_ON)
         logger = logging.getLogger(__name__)
         try:
             verify_table(conn, m.Debtor.debtor_id)
