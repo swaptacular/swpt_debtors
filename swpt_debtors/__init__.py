@@ -205,10 +205,12 @@ class Configuration(metaclass=MetaEnvReader):
     OPENAPI_URL_PREFIX = "/debtors/.docs"
     OPENAPI_REDOC_PATH = ""
     OPENAPI_REDOC_URL = (
-        "https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"
+        "https://swaptacular.github.io/public/docs/swpt_debtors/redoc.standalone.js"
     )
     OPENAPI_SWAGGER_UI_PATH = "swagger-ui"
-    OPENAPI_SWAGGER_UI_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+    OPENAPI_SWAGGER_UI_URL = (
+        None  # or 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/'
+    )
 
     APP_ENABLE_CORS = False
     APP_TRANSFERS_FINALIZATION_APPROX_SECONDS = 20.0
