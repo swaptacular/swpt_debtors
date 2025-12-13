@@ -243,7 +243,7 @@ def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
 
 @atomic
 def get_running_transfer(
-        debtor_id: int, transfer_uuid: UUID, lock=False, defer_toasted=False
+    debtor_id: int, transfer_uuid: UUID, lock=False, defer_toasted=False
 ) -> Optional[RunningTransfer]:
     query = RunningTransfer.query.filter_by(
         debtor_id=debtor_id, transfer_uuid=transfer_uuid
