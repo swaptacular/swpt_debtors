@@ -54,3 +54,27 @@ def test_debtor_attrs(debtor, current_ts):
     debtor.deactivate()
     assert debtor.is_activated
     assert debtor.is_deactivated
+
+
+def test_debtor_tuple_size(db_session, current_ts):
+    from sqlalchemy import text
+
+    db_session.add(
+        Debtor(
+            debtor_id=D_ID,
+            status_flags=Debtor.STATUS_IS_ACTIVATED_FLAG,
+            account_id=100 * 'x',
+            config_error='CONFIGURATION_IS_NOT_EFFECTUAL',
+            debtor_info_iri=(
+                "https://www.swaptacular.org/debtors/12345678901234567890/"
+                "documents/12345678901234567890/public",
+            ),
+        )
+    )
+    db_session.flush()
+    tuple_byte_size = db_session.execute(
+        text("SELECT pg_column_size(debtor.*) FROM debtor;")
+    ).scalar()
+    toast_tuple_target = 430
+    some_extra_bytes = 20
+    assert tuple_byte_size + some_extra_bytes <= toast_tuple_target

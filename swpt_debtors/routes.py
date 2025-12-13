@@ -675,7 +675,10 @@ class RedirectToDebtorsInfoEndpoint(MethodView):
         if not is_valid_debtor_id(debtorId):  # pragma: no cover
             abort(404)
 
-        debtor = procedures.get_active_debtor(debtorId) or abort(404)
+        debtor = (
+            procedures.get_active_debtor(debtorId, defer_toasted=True)
+            or abort(404)
+        )
         location = debtor.debtor_info_iri or abort(404)
         response = redirect(location, code=302)
         response.headers["Cache-Control"] = "max-age=86400"
