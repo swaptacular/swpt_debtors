@@ -33,7 +33,7 @@ def upgrade():
 
     set_storage_params(
         'debtor',
-        toast_tuple_target=430,
+        toast_tuple_target=450,
         fillfactor=80,
         autovacuum_vacuum_scale_factor=0.08,
         autovacuum_vacuum_insert_scale_factor=0.2,
