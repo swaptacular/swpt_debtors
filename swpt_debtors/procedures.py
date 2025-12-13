@@ -2,7 +2,7 @@ import json
 from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, List, Tuple, Dict, Any
-from sqlalchemy.orm import load_only
+from sqlalchemy.orm import load_only, defer
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import func
 from swpt_pythonlib.utils import Seqnum, increment_seqnum
@@ -26,6 +26,8 @@ from swpt_debtors.models import (
 T = TypeVar("T")
 atomic: Callable[[T], T] = db.atomic
 
+DEFER_DEBTOR_TOASTED_COLUMNS = [defer(Debtor.config_data)]
+DEFER_RUNNING_TRANSFER_TOASTED_COLUMNS = [defer(RunningTransfer.transfer_note)]
 STATUS_FLAGS_MASK = (
     Debtor.STATUS_IS_ACTIVATED_FLAG | Debtor.STATUS_IS_DEACTIVATED_FLAG
 )
@@ -142,7 +144,7 @@ def activate_debtor(debtor_id: int, reservation_id: str) -> Debtor:
 
 @atomic
 def deactivate_debtor(debtor_id: int, deleted_account: bool = False) -> None:
-    debtor = get_active_debtor(debtor_id, lock=True)
+    debtor = get_active_debtor(debtor_id, lock=True, defer_toasted=True)
     if debtor:
         debtor.deactivate()
         _insert_configure_account_signal(debtor)
@@ -163,7 +165,11 @@ def restrict_debtor(debtor_id: int, min_balance: int) -> Debtor:
 
 @atomic
 def get_debtor(
-    debtor_id: int, *, lock: bool = False, active: bool = False
+    debtor_id: int,
+    *,
+    lock: bool = False,
+    active: bool = False,
+    defer_toasted: bool = False,
 ) -> Optional[Debtor]:
     query = Debtor.query.filter_by(debtor_id=debtor_id)
     if active:
@@ -171,6 +177,8 @@ def get_debtor(
             Debtor.status_flags.op("&")(STATUS_FLAGS_MASK)
             == Debtor.STATUS_IS_ACTIVATED_FLAG
         )
+    if defer_toasted:
+        query = query.options(*DEFER_DEBTOR_TOASTED_COLUMNS)
     if lock:
         query = query.with_for_update(key_share=True)
 
@@ -178,8 +186,14 @@ def get_debtor(
 
 
 @atomic
-def get_active_debtor(debtor_id: int, lock: bool = False) -> Optional[Debtor]:
-    return get_debtor(debtor_id, lock=lock, active=True)
+def get_active_debtor(
+    debtor_id: int,
+    lock: bool = False,
+    defer_toasted: bool = False,
+) -> Optional[Debtor]:
+    return get_debtor(
+        debtor_id, lock=lock, active=True, defer_toasted=defer_toasted
+    )
 
 
 @atomic
@@ -214,7 +228,7 @@ def update_debtor_config(
 
 @atomic
 def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
-    debtor = get_active_debtor(debtor_id)
+    debtor = get_active_debtor(debtor_id, defer_toasted=True)
     if debtor is None:
         raise DebtorDoesNotExist()
 
@@ -229,11 +243,13 @@ def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
 
 @atomic
 def get_running_transfer(
-    debtor_id: int, transfer_uuid: UUID, lock=False
+    debtor_id: int, transfer_uuid: UUID, lock=False, defer_toasted=False
 ) -> Optional[RunningTransfer]:
     query = RunningTransfer.query.filter_by(
         debtor_id=debtor_id, transfer_uuid=transfer_uuid
     )
+    if defer_toasted:
+        query = query.options(*DEFER_RUNNING_TRANSFER_TOASTED_COLUMNS)
     if lock:
         query = query.with_for_update(key_share=True)
 
@@ -300,7 +316,7 @@ def initiate_running_transfer(
         raise TransferExists()
 
     debtor = _throttle_debtor_actions(
-        debtor_id, max_actions_per_month, current_ts
+        debtor_id, max_actions_per_month, current_ts, True
     )
     debtor.running_transfers_count += 1
     if debtor.running_transfers_count > max_actions_per_month:
@@ -401,7 +417,9 @@ def process_rejected_issuing_transfer_signal(
     debtor_id: int,
     creditor_id: int
 ) -> None:
-    rt = _find_running_transfer(coordinator_id, coordinator_request_id)
+    rt = _find_running_transfer(
+        coordinator_id, coordinator_request_id, defer_toasted=True
+    )
     if rt and not rt.is_finalized:
         if (
             status_code != SC_OK
@@ -487,8 +505,9 @@ def process_finalized_issuing_transfer_signal(
     status_code: str,
     total_locked_amount: int
 ) -> None:
-    rt = _find_running_transfer(coordinator_id, coordinator_request_id)
-
+    rt = _find_running_transfer(
+        coordinator_id, coordinator_request_id, defer_toasted=True
+    )
     the_signal_matches_the_transfer = (
         rt is not None
         and rt.debtor_id == debtor_id
@@ -634,9 +653,14 @@ def _get_debtor_info_iri_from_config_data(config_data: str) -> Optional[str]:
 
 
 def _throttle_debtor_actions(
-    debtor_id: int, max_actions_per_month: int, current_ts: datetime
+    debtor_id: int,
+    max_actions_per_month: int,
+    current_ts: datetime,
+    defer_toasted: bool = False,
 ) -> Debtor:
-    debtor = get_active_debtor(debtor_id, lock=True)
+    debtor = get_active_debtor(
+        debtor_id, lock=True, defer_toasted=defer_toasted
+    )
     if debtor is None:
         raise DebtorDoesNotExist()
 
@@ -658,7 +682,7 @@ def _throttle_debtor_actions(
 def _throttle_document_saves(
     debtor_id: int, max_saves_per_year: int, current_ts: datetime
 ) -> Debtor:
-    debtor = get_active_debtor(debtor_id, lock=True)
+    debtor = get_active_debtor(debtor_id, lock=True, defer_toasted=True)
     if debtor is None:
         raise DebtorDoesNotExist()
 
@@ -678,11 +702,18 @@ def _throttle_document_saves(
 
 
 def _find_running_transfer(
-    coordinator_id: int, coordinator_request_id: int
+    coordinator_id: int,
+    coordinator_request_id: int,
+    defer_toasted: bool = False,
 ) -> Optional[RunningTransfer]:
-    return RunningTransfer.query.filter_by(
-        debtor_id=coordinator_id, coordinator_request_id=coordinator_request_id
-    ).one_or_none()
+    query = RunningTransfer.query.filter_by(
+        debtor_id=coordinator_id,
+        coordinator_request_id=coordinator_request_id,
+    )
+    if defer_toasted:
+        query = query.options(*DEFER_RUNNING_TRANSFER_TOASTED_COLUMNS)
+
+    return query.one_or_none()
 
 
 def _insert_configure_account_signal(debtor: Debtor) -> None:
