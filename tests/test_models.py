@@ -73,7 +73,7 @@ def test_debtor_tuple_size(db_session, current_ts):
     )
     db_session.flush()
     tuple_byte_size = db_session.execute(
-        text("SELECT pg_column_size(debtor.*) FROM debtor;")
+        text("SELECT pg_column_size(debtor.*) FROM debtor")
     ).scalar()
     toast_tuple_target = 450
     some_extra_bytes = 40
