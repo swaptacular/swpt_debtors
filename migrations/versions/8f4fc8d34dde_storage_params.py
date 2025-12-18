@@ -41,10 +41,10 @@ def upgrade():
     set_storage_params(
         'running_transfer',
         fillfactor=100,
-        autovacuum_vacuum_threshold=100000,
-        autovacuum_vacuum_scale_factor=0.0005,
-        autovacuum_vacuum_insert_threshold=100000,
-        autovacuum_vacuum_insert_scale_factor=0.0005,
+        autovacuum_vacuum_threshold=10000,
+        autovacuum_vacuum_scale_factor=0.004,
+        autovacuum_vacuum_insert_threshold=10000,
+        autovacuum_vacuum_insert_scale_factor=0.004,
     )
     set_storage_params(
         'document',
