@@ -677,7 +677,7 @@ class RedirectToDebtorsInfoEndpoint(MethodView):
 
         debtor = (
             procedures.get_active_debtor(debtorId, defer_toasted=True)
-            or abort(404)
+            or abort(410)
         )
         location = debtor.debtor_info_iri or abort(404)
         response = redirect(location, code=302)
