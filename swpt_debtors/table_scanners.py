@@ -80,9 +80,11 @@ class DebtorScanner(TableScanner):
             to_delete = (
                 Debtor.query
                 .options(load_only(Debtor.debtor_id))
-                .filter(Debtor.debtor_id.in_(ids_to_delete))
-                .filter(Debtor.status_flags.op("&")(activated_flag) == 0)
-                .filter(Debtor.created_at < inactive_cutoff_ts)
+                .filter(
+                    Debtor.debtor_id.in_(ids_to_delete),
+                    Debtor.status_flags.op("&")(activated_flag) == 0,
+                    Debtor.created_at < inactive_cutoff_ts,
+                )
                 .with_for_update(skip_locked=True)
                 .all()
             )
@@ -133,8 +135,8 @@ class DebtorScanner(TableScanner):
         if pks_to_set:
             to_update = (
                 db.session.query(Debtor.debtor_id)
-                .filter(self.pk.in_(pks_to_set))
                 .filter(
+                    self.pk.in_(pks_to_set),
                     or_(
                         Debtor.is_config_effectual == false(),
                         and_(
@@ -142,13 +144,11 @@ class DebtorScanner(TableScanner):
                             Debtor.account_last_heartbeat_ts
                             < account_last_heartbeat_ts_cutoff,
                         ),
-                    )
-                )
-                .filter(Debtor.config_error == null())
-                .filter(Debtor.last_config_ts < last_config_ts_cutoff)
-                .filter(
+                    ),
+                    Debtor.config_error == null(),
+                    Debtor.last_config_ts < last_config_ts_cutoff,
                     Debtor.status_flags.op("&")(status_flags_mask)
-                    == Debtor.STATUS_IS_ACTIVATED_FLAG
+                    == Debtor.STATUS_IS_ACTIVATED_FLAG,
                 )
                 .with_for_update(skip_locked=True, key_share=True)
                 .all()
