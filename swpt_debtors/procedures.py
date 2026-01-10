@@ -94,8 +94,8 @@ def get_debtor_ids(
     assert count >= 1
     query = (
         db.session.query(Debtor.debtor_id)
-        .filter(Debtor.debtor_id >= start_from)
         .filter(
+            Debtor.debtor_id >= start_from,
             Debtor.status_flags.op("&")(STATUS_FLAGS_MASK)
             == Debtor.STATUS_IS_ACTIVATED_FLAG
         )
