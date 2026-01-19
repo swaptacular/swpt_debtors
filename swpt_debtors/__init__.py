@@ -212,6 +212,11 @@ class Configuration(metaclass=MetaEnvReader):
         None  # or 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/'
     )
 
+    # Limit Flask content lengths.
+    MAX_CONTENT_LENGTH = 20480
+    MAX_FORM_MEMORY_SIZE = 20480
+    MAX_FORM_PARTS = 10
+
     APP_ENABLE_CORS = False
     APP_TRANSFERS_FINALIZATION_APPROX_SECONDS = 20.0
     APP_MAX_TRANSFERS_PER_MONTH = 300
