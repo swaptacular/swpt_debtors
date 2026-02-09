@@ -1,4 +1,3 @@
-from typing import TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_pythonlib.scan_table import TableScanner
 from sqlalchemy import select, update
@@ -8,8 +7,6 @@ from flask import current_app
 from swpt_debtors.extensions import db
 from swpt_debtors.models import Debtor, is_valid_debtor_id
 
-T = TypeVar("T")
-atomic: Callable[[T], T] = db.atomic
 SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
 
 
@@ -50,13 +47,13 @@ class DebtorScanner(TableScanner):
     def target_beat_duration(self) -> int:
         return int(current_app.config["APP_DEBTORS_SCAN_BEAT_MILLISECS"])
 
-    @atomic
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
         if current_app.config["DELETE_PARENT_SHARD_RECORDS"]:
             self._delete_parent_shard_debtors(rows, current_ts)
         self._delete_debtors_not_activated_for_long_time(rows, current_ts)
         self._set_config_errors_if_necessary(rows, current_ts)
+        db.session.close()
 
     def _delete_debtors_not_activated_for_long_time(self, rows, current_ts):
         c = self.table.c
