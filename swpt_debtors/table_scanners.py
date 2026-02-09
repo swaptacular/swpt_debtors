@@ -11,7 +11,6 @@ from swpt_debtors.models import Debtor, is_valid_debtor_id
 T = TypeVar("T")
 atomic: Callable[[T], T] = db.atomic
 SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
-DEBTOR_PK = tuple_(Debtor.debtor_id)
 
 
 class DebtorScanner(TableScanner):
@@ -29,7 +28,7 @@ class DebtorScanner(TableScanner):
         Debtor.config_error,
         Debtor.deactivation_date,
     ]
-    pk = table.c.debtor_id
+    pk = tuple_(Debtor.debtor_id)
 
     def __init__(self):
         super().__init__()
@@ -83,7 +82,7 @@ class DebtorScanner(TableScanner):
             to_delete = (
                 Debtor.query
                 .options(load_only(Debtor.debtor_id))
-                .join(chosen, DEBTOR_PK == tuple_(*chosen.c))
+                .join(chosen, self.pk == tuple_(*chosen.c))
                 .filter(
                     Debtor.status_flags.op("&")(activated_flag) == 0,
                     Debtor.created_at < inactive_cutoff_ts,
@@ -141,7 +140,7 @@ class DebtorScanner(TableScanner):
                 (row.debtor_id,)
                 for row in db.session.execute(
                         select(Debtor.debtor_id)
-                        .join(chosen, DEBTOR_PK == tuple_(*chosen.c))
+                        .join(chosen, self.pk == tuple_(*chosen.c))
                         .where(
                             or_(
                                 Debtor.is_config_effectual == false(),
@@ -164,7 +163,7 @@ class DebtorScanner(TableScanner):
                 db.session.execute(
                     update(Debtor)
                     .execution_options(synchronize_session=False)
-                    .where(DEBTOR_PK == tuple_(*to_update.c))
+                    .where(self.pk == tuple_(*to_update.c))
                     .values(config_error="CONFIGURATION_IS_NOT_EFFECTUAL")
                 )
 
@@ -189,7 +188,7 @@ class DebtorScanner(TableScanner):
             to_delete = (
                 Debtor.query
                 .options(load_only(Debtor.debtor_id))
-                .join(chosen, DEBTOR_PK == tuple_(*chosen.c))
+                .join(chosen, self.pk == tuple_(*chosen.c))
                 .with_for_update(skip_locked=True)
                 .all()
             )
