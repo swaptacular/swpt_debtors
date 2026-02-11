@@ -5,7 +5,12 @@ from sqlalchemy.orm import load_only
 from sqlalchemy.sql.expression import and_, or_, null, true, false, tuple_
 from flask import current_app
 from swpt_debtors.extensions import db
-from swpt_debtors.models import Debtor, is_valid_debtor_id
+from swpt_debtors.models import (
+    Debtor,
+    is_valid_debtor_id,
+    SET_INDEXSCAN_ON,
+    SET_INDEXSCAN_OFF,
+)
 
 SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
 
@@ -75,6 +80,7 @@ class DebtorScanner(TableScanner):
             if not_activated_for_long_time(row)
         ]
         if pks_to_delete:
+            db.session.execute(SET_INDEXSCAN_OFF)
             chosen = Debtor.choose_rows(pks_to_delete)
             to_delete = (
                 Debtor.query
@@ -87,6 +93,7 @@ class DebtorScanner(TableScanner):
                 .with_for_update(skip_locked=True)
                 .all()
             )
+            db.session.execute(SET_INDEXSCAN_ON)
 
             for debtor in to_delete:
                 db.session.delete(debtor)
@@ -132,6 +139,7 @@ class DebtorScanner(TableScanner):
             if has_unreported_config_problem(row)
         ]
         if pks_to_lock:
+            db.session.execute(SET_INDEXSCAN_OFF)
             chosen = Debtor.choose_rows(pks_to_lock)
             pks_to_update = [
                 (row.debtor_id,)
@@ -181,6 +189,7 @@ class DebtorScanner(TableScanner):
             if belongs_to_parent_shard(row)
         ]
         if pks_to_delete:
+            db.session.execute(SET_INDEXSCAN_OFF)
             chosen = Debtor.choose_rows(pks_to_delete)
             to_delete = (
                 Debtor.query
@@ -189,6 +198,7 @@ class DebtorScanner(TableScanner):
                 .with_for_update(skip_locked=True)
                 .all()
             )
+            db.session.execute(SET_INDEXSCAN_ON)
 
             for debtor in to_delete:
                 db.session.delete(debtor)

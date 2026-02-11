@@ -28,6 +28,8 @@ CONFIG_DATA_MAX_BYTES = 2000
 ROOT_CREDITOR_ID = 0
 DEFAULT_CONFIG_FLAGS = 0
 SET_SEQSCAN_ON = text("SET LOCAL enable_seqscan = on")
+SET_INDEXSCAN_ON = text("SET LOCAL enable_indexscan = on")
+SET_INDEXSCAN_OFF = text("SET LOCAL enable_indexscan = off")
 
 CT_ISSUING = "issuing"
 
