@@ -1,15 +1,14 @@
-from typing import TypeVar, Callable
 from datetime import datetime, timedelta, timezone
 from swpt_pythonlib.scan_table import TableScanner
+from sqlalchemy import select, update
 from sqlalchemy.orm import load_only
-from sqlalchemy.sql.expression import and_, or_, null, true, false
+from sqlalchemy.sql.expression import and_, or_, null, true, false, tuple_
 from flask import current_app
 from swpt_debtors.extensions import db
-from swpt_debtors.models import Debtor, is_valid_debtor_id
+from swpt_debtors.models import Debtor, is_valid_debtor_id, DISCARD_PLANS
 
-T = TypeVar("T")
-atomic: Callable[[T], T] = db.atomic
 SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
+PLANS_DISCARD_INTERVAL = timedelta(seconds=10.0)
 
 
 class DebtorScanner(TableScanner):
@@ -27,10 +26,11 @@ class DebtorScanner(TableScanner):
         Debtor.config_error,
         Debtor.deactivation_date,
     ]
-    pk = table.c.debtor_id
+    pk = tuple_(Debtor.debtor_id)
 
     def __init__(self):
         super().__init__()
+        self.latest_plans_discard_ts = datetime.now(tz=timezone.utc)
         self.inactive_interval = timedelta(
             days=current_app.config["APP_INACTIVE_DEBTOR_RETENTION_DAYS"]
         )
@@ -49,13 +49,26 @@ class DebtorScanner(TableScanner):
     def target_beat_duration(self) -> int:
         return int(current_app.config["APP_DEBTORS_SCAN_BEAT_MILLISECS"])
 
-    @atomic
+    def _process_rows_done(self):
+        db.session.expunge_all()
+        current_ts = datetime.now(tz=timezone.utc)
+        if (
+                current_ts - self.latest_plans_discard_ts
+                >= PLANS_DISCARD_INTERVAL
+        ):  # pragma: no cover
+            # Discard possibly outdated execution plans.
+            db.session.execute(DISCARD_PLANS)
+            db.session.commit()
+            db.session.close()
+            self.latest_plans_discard_ts = current_ts
+
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
         if current_app.config["DELETE_PARENT_SHARD_RECORDS"]:
             self._delete_parent_shard_debtors(rows, current_ts)
         self._delete_debtors_not_activated_for_long_time(rows, current_ts)
         self._set_config_errors_if_necessary(rows, current_ts)
+        self._process_rows_done()
 
     def _delete_debtors_not_activated_for_long_time(self, rows, current_ts):
         c = self.table.c
@@ -71,17 +84,18 @@ class DebtorScanner(TableScanner):
                 and row[c_created_at] < inactive_cutoff_ts
             )
 
-        ids_to_delete = [
-            row[c_debtor_id]
+        pks_to_delete = [
+            (row[c_debtor_id],)
             for row in rows
             if not_activated_for_long_time(row)
         ]
-        if ids_to_delete:
+        if pks_to_delete:
+            chosen = Debtor.choose_rows(pks_to_delete)
             to_delete = (
                 Debtor.query
                 .options(load_only(Debtor.debtor_id))
+                .join(chosen, self.pk == tuple_(*chosen.c))
                 .filter(
-                    Debtor.debtor_id.in_(ids_to_delete),
                     Debtor.status_flags.op("&")(activated_flag) == 0,
                     Debtor.created_at < inactive_cutoff_ts,
                 )
@@ -127,38 +141,42 @@ class DebtorScanner(TableScanner):
                 == Debtor.STATUS_IS_ACTIVATED_FLAG
             )
 
-        pks_to_set = [
-            row[c_debtor_id]
+        pks_to_lock = [
+            (row[c_debtor_id],)
             for row in rows
             if has_unreported_config_problem(row)
         ]
-        if pks_to_set:
-            to_update = (
-                db.session.query(Debtor.debtor_id)
-                .filter(
-                    self.pk.in_(pks_to_set),
-                    or_(
-                        Debtor.is_config_effectual == false(),
-                        and_(
-                            Debtor.has_server_account == true(),
-                            Debtor.account_last_heartbeat_ts
-                            < account_last_heartbeat_ts_cutoff,
-                        ),
-                    ),
-                    Debtor.config_error == null(),
-                    Debtor.last_config_ts < last_config_ts_cutoff,
-                    Debtor.status_flags.op("&")(status_flags_mask)
-                    == Debtor.STATUS_IS_ACTIVATED_FLAG,
-                )
-                .with_for_update(skip_locked=True, key_share=True)
-                .all()
-            )
-
-            if to_update:
-                pks_to_update = [row[0] for row in to_update]
-                Debtor.query.filter(self.pk.in_(pks_to_update)).update(
-                    {Debtor.config_error: "CONFIGURATION_IS_NOT_EFFECTUAL"},
-                    synchronize_session=False,
+        if pks_to_lock:
+            chosen = Debtor.choose_rows(pks_to_lock)
+            pks_to_update = [
+                (row.debtor_id,)
+                for row in db.session.execute(
+                        select(Debtor.debtor_id)
+                        .join(chosen, self.pk == tuple_(*chosen.c))
+                        .where(
+                            or_(
+                                Debtor.is_config_effectual == false(),
+                                and_(
+                                    Debtor.has_server_account == true(),
+                                    Debtor.account_last_heartbeat_ts
+                                    < account_last_heartbeat_ts_cutoff,
+                                ),
+                            ),
+                            Debtor.config_error == null(),
+                            Debtor.last_config_ts < last_config_ts_cutoff,
+                            Debtor.status_flags.op("&")(status_flags_mask)
+                            == Debtor.STATUS_IS_ACTIVATED_FLAG,
+                        )
+                        .with_for_update(skip_locked=True, key_share=True)
+                ).all()
+            ]
+            if pks_to_update:
+                to_update = Debtor.choose_rows(pks_to_update)
+                db.session.execute(
+                    update(Debtor)
+                    .execution_options(synchronize_session=False)
+                    .where(self.pk == tuple_(*to_update.c))
+                    .values(config_error="CONFIGURATION_IS_NOT_EFFECTUAL")
                 )
 
             db.session.commit()
@@ -172,14 +190,17 @@ class DebtorScanner(TableScanner):
                 row[c_debtor_id]
             ) and is_valid_debtor_id(row[c_debtor_id], match_parent=True)
 
-        ids_to_delete = [
-            row[c_debtor_id] for row in rows if belongs_to_parent_shard(row)
+        pks_to_delete = [
+            (row[c_debtor_id],)
+            for row in rows
+            if belongs_to_parent_shard(row)
         ]
-        if ids_to_delete:
+        if pks_to_delete:
+            chosen = Debtor.choose_rows(pks_to_delete)
             to_delete = (
                 Debtor.query
                 .options(load_only(Debtor.debtor_id))
-                .filter(Debtor.debtor_id.in_(ids_to_delete))
+                .join(chosen, self.pk == tuple_(*chosen.c))
                 .with_for_update(skip_locked=True)
                 .all()
             )

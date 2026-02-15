@@ -2,6 +2,7 @@ import json
 from datetime import datetime, date, timedelta, timezone
 from uuid import UUID
 from typing import TypeVar, Optional, Callable, List, Tuple, Dict, Any
+from sqlalchemy import select
 from sqlalchemy.orm import load_only, defer
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import func
@@ -92,18 +93,20 @@ def get_debtor_ids(
     start_from: int, count: int = 1
 ) -> Tuple[List[int], Optional[int]]:
     assert count >= 1
-    query = (
-        db.session.query(Debtor.debtor_id)
-        .filter(
-            Debtor.debtor_id >= start_from,
-            Debtor.status_flags.op("&")(STATUS_FLAGS_MASK)
-            == Debtor.STATUS_IS_ACTIVATED_FLAG
+    debtor_ids = (
+        db.session.execute(
+            select(Debtor.debtor_id)
+            .where(
+                Debtor.debtor_id >= start_from,
+                Debtor.status_flags.op("&")(STATUS_FLAGS_MASK)
+                == Debtor.STATUS_IS_ACTIVATED_FLAG
+            )
+            .order_by(Debtor.debtor_id)
+            .limit(count + 1)
         )
-        .order_by(Debtor.debtor_id)
-        .limit(count + 1)
+        .scalars()
+        .all()
     )
-    debtor_ids = [t[0] for t in query.all()]
-
     if len(debtor_ids) > count:
         next_debtor_id = debtor_ids.pop()
     else:
@@ -232,13 +235,14 @@ def get_debtor_transfer_uuids(debtor_id: int) -> List[UUID]:
     if debtor is None:
         raise DebtorDoesNotExist()
 
-    rows = (
-        db.session.query(RunningTransfer.transfer_uuid)
-        .filter_by(debtor_id=debtor_id)
+    return (
+        db.session.execute(
+            select(RunningTransfer.transfer_uuid)
+            .where(RunningTransfer.debtor_id == debtor_id)
+        )
+        .scalars()
         .all()
     )
-
-    return [uuid for (uuid,) in rows]
 
 
 @atomic
