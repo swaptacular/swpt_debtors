@@ -5,14 +5,10 @@ from sqlalchemy.orm import load_only
 from sqlalchemy.sql.expression import and_, or_, null, true, false, tuple_
 from flask import current_app
 from swpt_debtors.extensions import db
-from swpt_debtors.models import (
-    Debtor,
-    is_valid_debtor_id,
-    SET_HASHJOIN_OFF,
-    SET_MERGEJOIN_OFF,
-)
+from swpt_debtors.models import Debtor, is_valid_debtor_id, DISCARD_PLANS
 
 SECONDS_IN_YEAR = 365.25 * 24 * 60 * 60
+PLANS_DISCARD_INTERVAL = timedelta(seconds=10.0)
 
 
 class DebtorScanner(TableScanner):
@@ -34,6 +30,7 @@ class DebtorScanner(TableScanner):
 
     def __init__(self):
         super().__init__()
+        self.latest_plans_discard_ts = datetime.now(tz=timezone.utc)
         self.inactive_interval = timedelta(
             days=current_app.config["APP_INACTIVE_DEBTOR_RETENTION_DAYS"]
         )
@@ -52,13 +49,26 @@ class DebtorScanner(TableScanner):
     def target_beat_duration(self) -> int:
         return int(current_app.config["APP_DEBTORS_SCAN_BEAT_MILLISECS"])
 
+    def _process_rows_done(self):
+        db.session.expunge_all()
+        current_ts = datetime.now(tz=timezone.utc)
+        if (
+                current_ts - self.latest_plans_discard_ts
+                >= PLANS_DISCARD_INTERVAL
+        ):  # pragma: no cover
+            # Discard possibly outdated execution plans.
+            db.session.execute(DISCARD_PLANS)
+            db.session.commit()
+            db.session.close()
+            self.latest_plans_discard_ts = current_ts
+
     def process_rows(self, rows):
         current_ts = datetime.now(tz=timezone.utc)
         if current_app.config["DELETE_PARENT_SHARD_RECORDS"]:
             self._delete_parent_shard_debtors(rows, current_ts)
         self._delete_debtors_not_activated_for_long_time(rows, current_ts)
         self._set_config_errors_if_necessary(rows, current_ts)
-        db.session.close()
+        self._process_rows_done()
 
     def _delete_debtors_not_activated_for_long_time(self, rows, current_ts):
         c = self.table.c
@@ -80,8 +90,6 @@ class DebtorScanner(TableScanner):
             if not_activated_for_long_time(row)
         ]
         if pks_to_delete:
-            db.session.execute(SET_MERGEJOIN_OFF)
-            db.session.execute(SET_HASHJOIN_OFF)
             chosen = Debtor.choose_rows(pks_to_delete)
             to_delete = (
                 Debtor.query
@@ -139,8 +147,6 @@ class DebtorScanner(TableScanner):
             if has_unreported_config_problem(row)
         ]
         if pks_to_lock:
-            db.session.execute(SET_MERGEJOIN_OFF)
-            db.session.execute(SET_HASHJOIN_OFF)
             chosen = Debtor.choose_rows(pks_to_lock)
             pks_to_update = [
                 (row.debtor_id,)
@@ -190,8 +196,6 @@ class DebtorScanner(TableScanner):
             if belongs_to_parent_shard(row)
         ]
         if pks_to_delete:
-            db.session.execute(SET_MERGEJOIN_OFF)
-            db.session.execute(SET_HASHJOIN_OFF)
             chosen = Debtor.choose_rows(pks_to_delete)
             to_delete = (
                 Debtor.query
