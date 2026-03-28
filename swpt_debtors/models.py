@@ -392,7 +392,7 @@ class PrepareTransferSignal(Signal):
         recipient = fields.String()
         inserted_at = fields.DateTime(data_key="ts")
         max_commit_delay = fields.Constant(MAX_INT32)
-        final_interest_rate_ts = fields.DateTime()
+        final_interest_rate_ts = fields.Constant(T_INFINITY.isoformat())
 
     __marshmallow_schema__ = __marshmallow__()
 
@@ -401,10 +401,6 @@ class PrepareTransferSignal(Signal):
     amount = db.Column(db.BigInteger, nullable=False)
     recipient = db.Column(db.String, nullable=False)
     __table_args__ = (db.CheckConstraint(amount >= 0),)
-
-    @property
-    def final_interest_rate_ts(self) -> datetime:
-        return T_INFINITY  # pragma: no cover
 
     @classproperty
     def signalbus_burst_count(self):
