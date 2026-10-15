@@ -256,7 +256,7 @@ services:
   # 'HYDRA_ADMIN_URL=http://debtors-hydra:4445/admin/' and
   # 'OAUTH2_INTROSPECT_URL=http://debtors-hydra:4445/admin/oauth2/introspect'
   debtors-hydra:
-    image: oryd/hydra:v1.11.10
+    image: ghcr.io/swaptacular/hydra:v1.11.10
     environment:
       - 'SERVE_PUBLIC_PORT=4444'
       - 'SERVE_ADMIN_PORT=4445'
@@ -281,7 +281,7 @@ services:
   # `debtors-hydra` container. It has to be run only once, but running
   # it multiple times should not do any harm.
   debtors-hydra-config:
-    image: oryd/hydra:v1.11.10
+    image: ghcr.io/swaptacular/hydra:v1.11.10
     environment:
       - 'DSN=postgres://hydra_debtors:hydra_debtors@pg/${POSTGRES_DB}?sslmode=disable&max_conns=2&max_idle_conns=1&max_conn_lifetime=30s'
     command:
@@ -375,7 +375,7 @@ services:
   # instance. This runs a dummy mail server which is useful only for
   # testing.
   mail:
-    image: mailhog/mailhog:v1.0.1
+    image: ghcr.io/swaptacular/mailhog:v1.0.1
     ports:
       - $MAILHOG_LOCAL_PORT:8025
 
