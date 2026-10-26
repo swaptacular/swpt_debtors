@@ -714,6 +714,42 @@ def test_save_document_without_content_length(client, debtor):
     assert r.get_data() == 100 * b"1"
 
 
+@pytest.mark.parametrize(
+    "content_type, is_attachment",
+    [
+        (None, True),
+        ("text/html; charset=utf-8", True),
+        (" Text/HTML ", True),
+        ("image/svg+xml", True),
+        ("application/xhtml+xml", True),
+        ("application/xml", True),
+        ("text/plain", False),
+        ("application/pdf", False),
+        ("image/png", False),
+    ],
+)
+def test_document_security_headers(
+    client, debtor, content_type, is_attachment
+):
+    r = client.post(
+        "/debtors/4444444444/documents/",
+        headers={} if content_type is None else {"Content-Type": content_type},
+        data=b"<script>alert(document.domain)</script>",
+    )
+    assert r.status_code == 201
+    location = r.headers["Location"]
+
+    for r in [r, client.get(location)]:
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert (
+            r.headers["Content-Security-Policy"]
+            == "sandbox; default-src 'none'"
+        )
+        assert (
+            r.headers.get("Content-Disposition") == "attachment"
+        ) == is_attachment
+
+
 def test_save_document_bigger_than_flask_limit(app, client, debtor):
     content = (app.config["MAX_CONTENT_LENGTH"] + 1) * b"1"
     app.config["APP_DOCUMENT_MAX_CONTENT_LENGTH"] = len(content)

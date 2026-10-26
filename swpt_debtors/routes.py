@@ -29,6 +29,12 @@ from swpt_debtors import specs
 from swpt_debtors import procedures
 
 READ_ONLY_METHODS = ["GET", "HEAD", "OPTIONS"]
+ACTIVE_CONTENT_MEDIA_TYPES = {
+    "text/html",
+    "text/xml",
+    "application/xml",
+    "text/xsl",
+}
 
 
 class UserType(IntEnum):
@@ -132,6 +138,25 @@ def calc_checkup_datetime(debtor_id: int, initiated_at: datetime) -> datetime:
         seconds=current_app.config["APP_TRANSFERS_FINALIZATION_APPROX_SECONDS"]
     )
     return current_ts + max(current_delay, average_delay)
+
+
+def calc_document_security_headers(content_type: str) -> dict:
+    # NOTE: Saved documents are arbitrary user content, served from
+    # the same origin as the API. The "sandbox" CSP directive puts the
+    # document in a unique opaque origin, with scripts, forms, and
+    # popups disabled. Document types which browsers render as active
+    # content (HTML, SVG, XML) are downloaded instead of displayed.
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "sandbox; default-src 'none'",
+    }
+    media_type = content_type.split(";", 1)[0].strip().lower()
+    if media_type in ACTIVE_CONTENT_MEDIA_TYPES or media_type.endswith(
+        "+xml"
+    ):
+        headers["Content-Disposition"] = "attachment"
+
+    return headers
 
 
 context = {
@@ -755,7 +780,13 @@ class SaveDocumentEndpoint(MethodView):
         )
 
         return make_response(
-            content, 201, {"Content-Type": content_type, "Location": location}
+            content,
+            201,
+            {
+                "Content-Type": content_type,
+                "Location": location,
+                **calc_document_security_headers(content_type),
+            },
         )
 
 
@@ -784,6 +815,7 @@ class DocumentEndpoint(MethodView):
         headers = {
             "Content-Type": document.content_type,
             "Cache-Control": "max-age=31536000",
+            **calc_document_security_headers(document.content_type),
         }
 
         return make_response(document.content, headers)
