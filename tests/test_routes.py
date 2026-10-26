@@ -1,4 +1,5 @@
 import re
+import io
 from datetime import date, datetime, timezone
 from urllib.parse import urljoin, urlparse
 import pytest
@@ -686,6 +687,47 @@ def test_save_document(client, debtor):
         data=content,
     )
     assert r.status_code == 404
+
+
+def test_save_document_without_content_length(client, debtor):
+    def post_chunked(content, input_terminated=True):
+        return client.post(
+            "/debtors/4444444444/documents/",
+            input_stream=io.BytesIO(content),
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Transfer-Encoding": "chunked",
+            },
+            environ_overrides=(
+                {"wsgi.input_terminated": True} if input_terminated else {}
+            ),
+        )
+
+    r = post_chunked(100 * b"1", input_terminated=False)
+    assert r.status_code == 411
+
+    r = post_chunked(101 * b"1")
+    assert r.status_code == 413
+
+    r = post_chunked(100 * b"1")
+    assert r.status_code == 201
+    assert r.get_data() == 100 * b"1"
+
+
+def test_save_document_bigger_than_flask_limit(app, client, debtor):
+    content = (app.config["MAX_CONTENT_LENGTH"] + 1) * b"1"
+    app.config["APP_DOCUMENT_MAX_CONTENT_LENGTH"] = len(content)
+    try:
+        r = client.post(
+            "/debtors/4444444444/documents/",
+            content_type="application/octet-stream",
+            data=content,
+        )
+    finally:
+        app.config["APP_DOCUMENT_MAX_CONTENT_LENGTH"] = 100
+
+    assert r.status_code == 201
+    assert r.get_data() == content
 
 
 def test_health_check(client):

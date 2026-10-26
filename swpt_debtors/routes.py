@@ -713,14 +713,26 @@ class SaveDocumentEndpoint(MethodView):
 
         ensure_debtor_permissions()
 
-        if (
-            request.content_length
-            > current_app.config["APP_DOCUMENT_MAX_CONTENT_LENGTH"]
+        # NOTE: Documents may be bigger than the app-wide Flask
+        # `MAX_CONTENT_LENGTH` limit. Also, the request may have no
+        # "Content-Length" header (chunked transfer encoding). In this
+        # case Werkzeug silently truncates the body at the limit, so
+        # we allow one extra byte to detect too big documents. When
+        # the WSGI server does not terminate the input stream,
+        # Werkzeug would return an empty body instead.
+        max_content_length = current_app.config[
+            "APP_DOCUMENT_MAX_CONTENT_LENGTH"
+        ]
+        if request.content_length is None and not request.environ.get(
+            "wsgi.input_terminated"
         ):
-            abort(413)
+            abort(411)
 
+        request.max_content_length = max_content_length + 1
         content_type = request.content_type or "text/html; charset=utf-8"
         content = request.get_data() or b""
+        if len(content) > max_content_length:
+            abort(413)
         try:
             document = procedures.save_document(
                 debtor_id=debtorId,
