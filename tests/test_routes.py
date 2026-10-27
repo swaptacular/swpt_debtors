@@ -1,4 +1,5 @@
 import re
+import io
 from datetime import date, datetime, timezone
 from urllib.parse import urljoin, urlparse
 import pytest
@@ -686,6 +687,83 @@ def test_save_document(client, debtor):
         data=content,
     )
     assert r.status_code == 404
+
+
+def test_save_document_without_content_length(client, debtor):
+    def post_chunked(content, input_terminated=True):
+        return client.post(
+            "/debtors/4444444444/documents/",
+            input_stream=io.BytesIO(content),
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Transfer-Encoding": "chunked",
+            },
+            environ_overrides=(
+                {"wsgi.input_terminated": True} if input_terminated else {}
+            ),
+        )
+
+    r = post_chunked(100 * b"1", input_terminated=False)
+    assert r.status_code == 411
+
+    r = post_chunked(101 * b"1")
+    assert r.status_code == 413
+
+    r = post_chunked(100 * b"1")
+    assert r.status_code == 201
+    assert r.get_data() == 100 * b"1"
+
+
+@pytest.mark.parametrize(
+    "content_type, is_attachment",
+    [
+        (None, True),
+        ("text/html; charset=utf-8", True),
+        (" Text/HTML ", True),
+        ("image/svg+xml", True),
+        ("application/xhtml+xml", True),
+        ("application/xml", True),
+        ("text/plain", True),
+        ("application/pdf", True),
+        ("image/png", True),
+    ],
+)
+def test_document_security_headers(
+    client, debtor, content_type, is_attachment
+):
+    r = client.post(
+        "/debtors/4444444444/documents/",
+        headers={} if content_type is None else {"Content-Type": content_type},
+        data=b"<script>alert(document.domain)</script>",
+    )
+    assert r.status_code == 201
+    location = r.headers["Location"]
+
+    for r in [r, client.get(location)]:
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert (
+            r.headers["Content-Security-Policy"]
+            == "sandbox; default-src 'none'"
+        )
+        assert (
+            r.headers.get("Content-Disposition") == "attachment"
+        ) == is_attachment
+
+
+def test_save_document_bigger_than_flask_limit(app, client, debtor):
+    content = (app.config["MAX_CONTENT_LENGTH"] + 1) * b"1"
+    app.config["APP_DOCUMENT_MAX_CONTENT_LENGTH"] = len(content)
+    try:
+        r = client.post(
+            "/debtors/4444444444/documents/",
+            content_type="application/octet-stream",
+            data=content,
+        )
+    finally:
+        app.config["APP_DOCUMENT_MAX_CONTENT_LENGTH"] = 100
+
+    assert r.status_code == 201
+    assert r.get_data() == content
 
 
 def test_health_check(client):

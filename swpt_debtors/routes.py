@@ -134,6 +134,19 @@ def calc_checkup_datetime(debtor_id: int, initiated_at: datetime) -> datetime:
     return current_ts + max(current_delay, average_delay)
 
 
+def calc_document_security_headers(content_type: str) -> dict:
+    # NOTE: Saved documents are arbitrary user content, served from
+    # the same origin as the API. The "sandbox" CSP directive puts the
+    # document in a unique opaque origin, with scripts, forms, and
+    # popups disabled. Document types which browsers render as active
+    # content (HTML, SVG, XML) are downloaded instead of displayed.
+    return {
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "sandbox; default-src 'none'",
+        "Content-Disposition": "attachment",
+    }
+
+
 context = {
     "Debtor": "debtors.DebtorEndpoint",
     "DebtorConfig": "debtors.DebtorConfigEndpoint",
@@ -713,14 +726,26 @@ class SaveDocumentEndpoint(MethodView):
 
         ensure_debtor_permissions()
 
-        if (
-            request.content_length
-            > current_app.config["APP_DOCUMENT_MAX_CONTENT_LENGTH"]
+        # NOTE: Documents may be bigger than the app-wide Flask
+        # `MAX_CONTENT_LENGTH` limit. Also, the request may have no
+        # "Content-Length" header (chunked transfer encoding). In this
+        # case Werkzeug silently truncates the body at the limit, so
+        # we allow one extra byte to detect too big documents. When
+        # the WSGI server does not terminate the input stream,
+        # Werkzeug would return an empty body instead.
+        max_content_length = current_app.config[
+            "APP_DOCUMENT_MAX_CONTENT_LENGTH"
+        ]
+        if request.content_length is None and not request.environ.get(
+            "wsgi.input_terminated"
         ):
-            abort(413)
+            abort(411)
 
+        request.max_content_length = max_content_length + 1
         content_type = request.content_type or "text/html; charset=utf-8"
         content = request.get_data() or b""
+        if len(content) > max_content_length:
+            abort(413)
         try:
             document = procedures.save_document(
                 debtor_id=debtorId,
@@ -743,7 +768,13 @@ class SaveDocumentEndpoint(MethodView):
         )
 
         return make_response(
-            content, 201, {"Content-Type": content_type, "Location": location}
+            content,
+            201,
+            {
+                "Content-Type": content_type,
+                "Location": location,
+                **calc_document_security_headers(content_type),
+            },
         )
 
 
@@ -772,6 +803,7 @@ class DocumentEndpoint(MethodView):
         headers = {
             "Content-Type": document.content_type,
             "Cache-Control": "max-age=31536000",
+            **calc_document_security_headers(document.content_type),
         }
 
         return make_response(document.content, headers)
