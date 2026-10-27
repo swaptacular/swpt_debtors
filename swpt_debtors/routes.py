@@ -29,12 +29,6 @@ from swpt_debtors import specs
 from swpt_debtors import procedures
 
 READ_ONLY_METHODS = ["GET", "HEAD", "OPTIONS"]
-ACTIVE_CONTENT_MEDIA_TYPES = {
-    "text/html",
-    "text/xml",
-    "application/xml",
-    "text/xsl",
-}
 
 
 class UserType(IntEnum):
@@ -146,17 +140,11 @@ def calc_document_security_headers(content_type: str) -> dict:
     # document in a unique opaque origin, with scripts, forms, and
     # popups disabled. Document types which browsers render as active
     # content (HTML, SVG, XML) are downloaded instead of displayed.
-    headers = {
+    return {
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy": "sandbox; default-src 'none'",
+        "Content-Disposition": "attachment",
     }
-    media_type = content_type.split(";", 1)[0].strip().lower()
-    if media_type in ACTIVE_CONTENT_MEDIA_TYPES or media_type.endswith(
-        "+xml"
-    ):
-        headers["Content-Disposition"] = "attachment"
-
-    return headers
 
 
 context = {

@@ -723,9 +723,9 @@ def test_save_document_without_content_length(client, debtor):
         ("image/svg+xml", True),
         ("application/xhtml+xml", True),
         ("application/xml", True),
-        ("text/plain", False),
-        ("application/pdf", False),
-        ("image/png", False),
+        ("text/plain", True),
+        ("application/pdf", True),
+        ("image/png", True),
     ],
 )
 def test_document_security_headers(
